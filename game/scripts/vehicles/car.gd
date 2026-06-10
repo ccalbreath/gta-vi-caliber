@@ -10,6 +10,7 @@ extends VehicleBody3D
 ## Below this forward speed (m/s) a press of "back" engages reverse; above it the
 ## same press brakes the still-forward-rolling car instead.
 const REVERSE_SPEED_THRESHOLD: float = 1.0
+const GRAVITY: float = 9.81
 
 ## Peak crankshaft torque (N·m). Tuned with the gearing below so first gear
 ## launches this 300 kg greybox at a sporty ~10 m/s² rather than a rocket.
@@ -48,6 +49,12 @@ const REVERSE_SPEED_THRESHOLD: float = 1.0
 @export var drag_area: float = 0.7
 ## Downforce area Cl·A (m²): presses the car into the road harder with speed.
 @export var downforce_area: float = 0.4
+## Peak grip coefficient of the tyres. ~1.6 is a sticky sport-street tyre; the
+## traction limiter pulls drive force that would exceed grip · load.
+@export var tire_friction: float = 1.6
+## Fraction of weight (and downforce) over the driven axle. Rear-drive, so
+## rear-biased; also stands in for the squat that loads the rears on launch.
+@export var drive_axle_load_share: float = 0.55
 
 var health: float = 100.0
 var gear: int = 1
@@ -119,6 +126,7 @@ func _drive(delta: float) -> void:
 	var force := Powertrain.wheel_force(
 		torque, pedal, ratio, final_drive, wheel_radius, drivetrain_efficiency
 	)
+	force *= _traction_scale(speed, force)
 	engine_force = force * VehicleDamage.engine_multiplier(health, max_health, limp_floor)
 
 	var target := VehicleMotion.steer_target(steer_input, speed, max_steer, steer_falloff_speed)
@@ -131,6 +139,18 @@ func _drive(delta: float) -> void:
 		brake = max_brake * 0.7
 	else:
 		brake = 0.0
+
+
+## Fraction of demanded drive force the driven tyres can actually lay down right
+## now, given their load (weight + downforce share) and how much of the grip
+## budget cornering is already using (lateral accel ≈ speed · yaw rate).
+func _traction_scale(speed: float, drive_force: float) -> float:
+	var downforce_share := Aerodynamics.downforce(speed, downforce_area) * drive_axle_load_share
+	var load := Traction.normal_load(mass * drive_axle_load_share, GRAVITY, downforce_share)
+	var grip := Traction.grip_limit(load, tire_friction)
+	var lateral_force := mass * absf(speed * angular_velocity.y)
+	var available := Traction.longitudinal_grip(grip, lateral_force)
+	return Traction.traction_scale(drive_force, available)
 
 
 func _apply_aero() -> void:
