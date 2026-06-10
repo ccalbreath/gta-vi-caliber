@@ -1,0 +1,39 @@
+{
+  "world_origin": {
+    "lat": 34.0503318,
+    "lon": -118.2523673
+  },
+  "attribution": "\u00a9 OpenStreetMap contributors, ODbL",
+  "districts": [
+    {
+      "name": "downtown_la",
+      "data": "res://assets/world/downtown_la.json",
+      "scene": "res://scenes/world/districts/downtown_la.tscn",
+      "centroid": {
+        "lat": 34.0503318,
+        "lon": -118.2523673
+      },
+      "world_offset": {
+        "x": 0.0,
+        "z": -0.0
+      },
+      "buildings": 199,
+      "roads": 901
+    },
+    {
+      "name": "hollywood",
+      "data": "res://assets/world/hollywood.json",
+      "scene": "res://scenes/world/districts/hollywood.tscn",
+      "centroid": {
+        "lat": 34.1023657,
+        "lon": -118.3335721
+      },
+      "world_offset": {
+        "x": -7489.8,
+        "z": -5792.4
+      },
+      "buildings": 377,
+      "roads": 531
+    }
+  ]
+}

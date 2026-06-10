@@ -12,6 +12,8 @@ const SCENES: PackedStringArray = [
 	"res://scenes/world/sandbox.tscn",
 	"res://scenes/world/playground.tscn",
 	"res://scenes/world/districts/downtown_la.tscn",
+	"res://scenes/world/districts/hollywood.tscn",
+	"res://scenes/world/los_angeles.tscn",
 ]
 
 var _index: int = -1
