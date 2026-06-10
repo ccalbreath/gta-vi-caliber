@@ -44,7 +44,7 @@ upstream PR link each — see [VISION.md](VISION.md).
 | `scenes/player/` | Player rig | Player logic talks to world via signals/groups only |
 | `scenes/ui/` | HUD, menus, map | No game logic — UI observes, emits |
 | `scripts/` | GDScript, mirroring `scenes/` (`scripts/player/`, …) | Typed GDScript, tabs, `snake_case` |
-| `assets/{models,textures,materials,audio}/` | Binary assets via LFS | Provenance ledger in [ASSETS.md](ASSETS.md) |
+| `assets/` | Binary assets via LFS, by category: `characters/`, `buildings/`, `vehicles/`, `props/`, `environment/`, `ui/`, `audio/`, plus shared `materials/` & `textures/` | Provenance ledger in [ASSETS.md](ASSETS.md) |
 | `addons/` | Vendored third-party plugins | Never hand-edit; replace wholesale on upgrade |
 | `bin/` | Compiled `engine/` libraries + `.gdextension` manifests | Build artifacts, gitignored |
 | `tests/unit/` | Unit tests (`test_*.gd`) | Run by `tools/check.sh` |
