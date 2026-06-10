@@ -25,14 +25,37 @@ const PITCH_MAX: float = 0.5
 ## sync with Player.walk_speed / Player.sprint_speed.
 @export var fov_walk_speed: float = 5.0
 @export var fov_sprint_speed: float = 8.5
+## Field of view while aiming down sights; the view eases to this and the
+## sprint FOV kick is suppressed for the duration.
+@export var aim_fov: float = 55.0
+@export var aim_smoothing: float = 12.0
+## How fast a recoil kick eases back to zero (1/s).
+@export var recoil_recovery: float = 9.0
 
 @onready var _arm: SpringArm3D = $SpringArm
 @onready var _camera: Camera3D = $SpringArm/Camera
+
+var _pitch: float = 0.0
+var _recoil: float = 0.0
+var _aiming: bool = false
 
 
 func _ready() -> void:
 	_arm.position = shoulder_offset
 	_camera.fov = base_fov
+	_pitch = _arm.rotation.x
+
+
+## Hold the camera in the tighter aim FOV. WeaponController sets this each frame
+## while the aim button is held.
+func set_aiming(value: bool) -> void:
+	_aiming = value
+
+
+## Kick the view up by `amount` radians; it eases back via recoil_recovery so a
+## burst climbs and then re-settles on the original aim.
+func add_recoil(amount: float) -> void:
+	_recoil += amount
 
 
 ## Re-activate this rig's camera (e.g. after stepping out of a vehicle).
@@ -47,9 +70,15 @@ func _physics_process(delta: float) -> void:
 	var speed := Vector2(body.velocity.x, body.velocity.z).length()
 	var blend := CameraFeel.sprint_blend(speed, fov_walk_speed, fov_sprint_speed)
 	var target := CameraFeel.fov_for_blend(base_fov, sprint_fov_kick, blend)
-	_camera.fov = CameraFeel.exp_smoothed(_camera.fov, target, fov_smoothing, delta)
+	var smoothing := fov_smoothing
+	if _aiming:
+		target = aim_fov
+		smoothing = aim_smoothing
+	_camera.fov = CameraFeel.exp_smoothed(_camera.fov, target, smoothing, delta)
 
 	_apply_stick_look(delta)
+	_recoil = move_toward(_recoil, 0.0, recoil_recovery * delta)
+	_arm.rotation.x = clampf(_pitch, PITCH_MIN, PITCH_MAX) + _recoil
 
 
 ## Gamepad right-stick look, read as continuous axis state each frame (unlike
@@ -63,7 +92,7 @@ func _apply_stick_look(delta: float) -> void:
 	if look == Vector2.ZERO:
 		return
 	rotation.y -= look.x
-	_arm.rotation.x = clampf(_arm.rotation.x - look.y, PITCH_MIN, PITCH_MAX)
+	_pitch = clampf(_pitch - look.y, PITCH_MIN, PITCH_MAX)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -73,6 +102,4 @@ func _unhandled_input(event: InputEvent) -> void:
 	if motion == null:
 		return
 	rotation.y -= motion.relative.x * sensitivity
-	_arm.rotation.x = clampf(
-		_arm.rotation.x - motion.relative.y * sensitivity, PITCH_MIN, PITCH_MAX
-	)
+	_pitch = clampf(_pitch - motion.relative.y * sensitivity, PITCH_MIN, PITCH_MAX)
