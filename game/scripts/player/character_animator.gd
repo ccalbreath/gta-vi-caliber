@@ -10,6 +10,11 @@ extends Node3D
 ## real animation clips land (M1), this same input contract can drive an
 ## AnimationTree instead and the rig nodes become bones.
 
+# Air pose: a relaxed running-in-air shape, crossfaded in while airborne.
+const AIR_SHOULDER: float = -0.5
+const AIR_HIP_LEAD: float = -0.35
+const AIR_HIP_TRAIL: float = 0.25
+
 ## Speeds must mirror the Player export values so blend/state thresholds agree.
 @export var walk_speed: float = 5.0
 @export var run_speed: float = 8.5
@@ -29,17 +34,6 @@ extends Node3D
 ## How fast the air pose crossfades in/out (1/s).
 @export var air_rate: float = 8.0
 
-# Air pose: a relaxed running-in-air shape, crossfaded in while airborne.
-const AIR_SHOULDER: float = -0.5
-const AIR_HIP_LEAD: float = -0.35
-const AIR_HIP_TRAIL: float = 0.25
-
-@onready var _hips: Node3D = $Hips
-@onready var _hip_l: Node3D = $Hips/HipL
-@onready var _hip_r: Node3D = $Hips/HipR
-@onready var _shoulder_l: Node3D = $Hips/ShoulderL
-@onready var _shoulder_r: Node3D = $Hips/ShoulderR
-
 var _phase: float = 0.0
 var _facing: float = 0.0
 var _blend: float = 0.0
@@ -47,6 +41,12 @@ var _lean: float = 0.0
 var _air: float = 0.0
 var _hips_rest_y: float = 0.0
 var _prev_speed: float = 0.0
+
+@onready var _hips: Node3D = $Hips
+@onready var _hip_l: Node3D = $Hips/HipL
+@onready var _hip_r: Node3D = $Hips/HipR
+@onready var _shoulder_l: Node3D = $Hips/ShoulderL
+@onready var _shoulder_r: Node3D = $Hips/ShoulderR
 
 
 func _ready() -> void:
