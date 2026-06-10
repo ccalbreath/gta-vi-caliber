@@ -20,7 +20,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var body := get_parent() as VehicleBody3D
+	var body := get_parent() as RigidBody3D
 	if body == null:
 		return
 	var speed := body.linear_velocity.length()
