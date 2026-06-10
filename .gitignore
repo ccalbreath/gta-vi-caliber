@@ -1,0 +1,42 @@
+# Godot
+game/.godot/
+game/*.translation
+game/export_presets.cfg
+
+# Built native libraries (artifacts only — never committed)
+game/bin/*.so
+game/bin/*.dylib
+game/bin/*.dll
+game/bin/*.framework/
+
+# Engine build artifacts
+engine/**/*.o
+engine/**/*.os
+engine/**/*.obj
+engine/.sconsign.dblite
+engine/.sconf_temp/
+.sconsign.dblite
+
+# Reference footage — copyrighted study material, local only
+reference/*
+!reference/README.md
+
+# OS junk
+.DS_Store
+Thumbs.db
+*.swp
+
+# Python tooling
+__pycache__/
+.venv/
+
+# Editors
+.vscode/
+.idea/
+
+# Env files — keep the template, never the secrets
+.env*
+!.env.example
+
+# Claude Code session config
+.claude/

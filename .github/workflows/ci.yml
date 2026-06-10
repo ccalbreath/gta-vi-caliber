@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  GODOT_VERSION: "4.6.3"
+
+jobs:
+  lint:
+    name: Format & lint (GDScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install gdtoolkit
+        run: pip install "gdtoolkit==4.*"
+      - name: gdformat --check
+        run: gdformat --check game/scripts game/tests
+      - name: gdlint
+        run: gdlint game/scripts game/tests
+
+  game:
+    name: Import, smoke & unit tests (headless Godot)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-bin
+          curl -sSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          mv "/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
+      - name: Headless import
+        run: ~/godot-bin/godot --headless --path game --import
+      - name: Smoke test
+        run: ~/godot-bin/godot --headless --path game --script res://tests/smoke_test.gd
+      - name: Unit tests
+        run: ~/godot-bin/godot --headless --path game --script res://tests/run_tests.gd

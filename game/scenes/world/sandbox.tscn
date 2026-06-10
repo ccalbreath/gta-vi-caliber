@@ -1,0 +1,90 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
+[ext_resource type="PackedScene" path="res://scenes/ui/debug_hud.tscn" id="2_hud"]
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
+sky_horizon_color = Color(0.66, 0.67, 0.69, 1)
+ground_horizon_color = Color(0.66, 0.67, 0.69, 1)
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="ground_mat"]
+albedo_color = Color(0.36, 0.42, 0.31, 1)
+roughness = 1.0
+
+[sub_resource type="PlaneMesh" id="ground_mesh"]
+material = SubResource("ground_mat")
+size = Vector2(200, 200)
+
+[sub_resource type="BoxShape3D" id="ground_shape"]
+size = Vector3(200, 1, 200)
+
+[sub_resource type="StandardMaterial3D" id="grey_mat"]
+albedo_color = Color(0.55, 0.55, 0.6, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="crate_mesh"]
+material = SubResource("grey_mat")
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxShape3D" id="crate_shape"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxMesh" id="platform_mesh"]
+material = SubResource("grey_mat")
+size = Vector3(6, 1, 6)
+
+[sub_resource type="BoxShape3D" id="platform_shape"]
+size = Vector3(6, 1, 6)
+
+[node name="Sandbox" type="Node3D" groups=["world"]]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, 0.383022, -0.321394, 0, 0.642788, 0.766044, 0.5, -0.663414, 0.55667, 0, 20, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="Ground" type="StaticBody3D" parent="."]
+
+[node name="GroundMesh" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("ground_mesh")
+
+[node name="GroundCollision" type="CollisionShape3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("ground_shape")
+
+[node name="Crate" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 1, -4)
+
+[node name="CrateMesh" type="MeshInstance3D" parent="Crate"]
+mesh = SubResource("crate_mesh")
+
+[node name="CrateCollision" type="CollisionShape3D" parent="Crate"]
+shape = SubResource("crate_shape")
+
+[node name="Platform" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.5, -6)
+
+[node name="PlatformMesh" type="MeshInstance3D" parent="Platform"]
+mesh = SubResource("platform_mesh")
+
+[node name="PlatformCollision" type="CollisionShape3D" parent="Platform"]
+shape = SubResource("platform_shape")
+
+[node name="SpawnPoint" type="Marker3D" parent="." groups=["spawn_points"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="Player" parent="." instance=ExtResource("1_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="DebugHud" parent="." instance=ExtResource("2_hud")]
