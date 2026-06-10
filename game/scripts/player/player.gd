@@ -6,6 +6,11 @@ extends CharacterBody3D
 ## is owned by the CameraRig child (OrbitCamera); we only read its yaw so
 ## input is camera-relative.
 
+## Fired on each footfall while running on the ground. `surface` is a key from
+## Footsteps (e.g. "grass") and `is_left` alternates feet. Surface-typed audio
+## listens here once step samples land; cadence/surface logic is in Footsteps.
+signal footstep(surface: String, is_left: bool)
+
 @export var walk_speed: float = 5.0
 @export var sprint_speed: float = 8.5
 @export var acceleration: float = 30.0
@@ -21,11 +26,17 @@ extends CharacterBody3D
 ## move vector via StickInput.movement (the harder-pushed source wins).
 @export_range(0.0, 0.9) var move_stick_deadzone: float = 0.2
 @export_range(1.0, 4.0) var move_stick_exponent: float = 1.6
+## Ground distance (m) between footfalls at walk and at sprint; the gait
+## stretches between them with speed so a sprint doesn't machine-gun steps.
+@export var walk_stride: float = 1.4
+@export var run_stride: float = 2.2
 
 var _time_since_grounded: float = 0.0
 var _time_since_jump_pressed: float = 1.0
 var _jump_spent: bool = false
 var _vehicle: Node3D = null
+var _stride_accum: float = 0.0
+var _step_is_left: bool = false
 
 @onready var _camera_rig: OrbitCamera = $CameraRig
 @onready var _rig: CharacterAnimator = $Rig
@@ -78,6 +89,7 @@ func _physics_process(delta: float) -> void:
 	velocity = PlayerMotion.accelerated(velocity, target, rate, delta)
 	move_and_slide()
 	_drive_rig(delta, false)
+	_update_footsteps(delta)
 
 
 ## Feed the procedural animator this frame's motion. Called after move_and_slide
@@ -85,6 +97,32 @@ func _physics_process(delta: float) -> void:
 func _drive_rig(delta: float, is_climbing: bool) -> void:
 	var planar := Vector3(velocity.x, 0.0, velocity.z)
 	_rig.animate(planar, is_on_floor(), velocity.y, is_climbing, delta)
+
+
+## Bank ground distance and emit `footstep` each time a full stride is covered,
+## tagging the surface under the foot. Pure cadence math lives in Footsteps.
+func _update_footsteps(delta: float) -> void:
+	var planar_speed := Vector2(velocity.x, velocity.z).length()
+	var stride := Footsteps.stride_length(
+		planar_speed, walk_speed, sprint_speed, walk_stride, run_stride
+	)
+	_stride_accum = Footsteps.accumulate(_stride_accum, planar_speed, is_on_floor(), delta)
+	if Footsteps.should_step(_stride_accum, stride):
+		_stride_accum = Footsteps.consume(_stride_accum, stride)
+		_step_is_left = not _step_is_left
+		footstep.emit(_floor_surface(), _step_is_left)
+
+
+## Surface key under the player, read from the floor collider's groups. Falls
+## back to the default surface when there's no contact or the floor is untagged.
+func _floor_surface() -> String:
+	var collision := get_last_slide_collision()
+	if collision == null:
+		return Footsteps.DEFAULT_SURFACE
+	var collider := collision.get_collider(0)
+	if collider is Node:
+		return Footsteps.surface_for_groups((collider as Node).get_groups())
+	return Footsteps.DEFAULT_SURFACE
 
 
 func _is_on_ladder() -> bool:
