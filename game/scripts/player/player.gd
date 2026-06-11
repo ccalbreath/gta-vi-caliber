@@ -45,6 +45,11 @@ signal footstep(surface: String, is_left: bool)
 ## stretches between them with speed so a sprint doesn't machine-gun steps.
 @export var walk_stride: float = 1.4
 @export var run_stride: float = 2.2
+## Steep-slope slide: floors whose up-normal y falls below slide_max_walk_normal_y
+## (cos of the steepest stable angle, ~0.82 ≈ 35°) push the player down the fall
+## line at up to slide_accel (m/s²), so steep ground can't be casually walked up.
+@export var slide_max_walk_normal_y: float = 0.82
+@export var slide_accel: float = 18.0
 ## Landing camera shake: downward speed (m/s) at touchdown below which nothing
 ## registers, the speed mapped to a full jolt, and that jolt's peak trauma.
 @export var land_shake_min_speed: float = 4.5
@@ -154,6 +159,11 @@ func _physics_process(delta: float) -> void:
 		not input_dir.is_zero_approx(), is_on_floor(), acceleration, deceleration, air_control
 	)
 	velocity = PlayerMotion.accelerated(velocity, target, rate, delta)
+	if is_on_floor():
+		velocity += (
+			PlayerMotion.slope_slide(get_floor_normal(), slide_max_walk_normal_y, slide_accel)
+			* delta
+		)
 	var impact_speed := maxf(-velocity.y, 0.0)
 	move_and_slide()
 	_drive_rig(delta, false)

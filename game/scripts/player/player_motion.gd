@@ -60,6 +60,26 @@ static func should_jump(
 	return time_since_grounded <= coyote_time and time_since_jump_pressed <= buffer_time
 
 
+## Downhill slide acceleration (m/s², horizontal) on a floor too steep to stand
+## on cleanly. `floor_normal` is the contact normal; once its y drops below
+## max_walk_normal_y (= cos of the steepest stable angle) the character is
+## pushed down the fall line, scaled by how far past the threshold the slope is.
+## Returns ZERO on flat-enough or degenerate ground. The fall line is the
+## horizontal part of the normal (the steepest-descent direction on the plane).
+static func slope_slide(
+	floor_normal: Vector3, max_walk_normal_y: float, slide_accel: float
+) -> Vector3:
+	if floor_normal.y >= max_walk_normal_y or floor_normal.y >= 1.0:
+		return Vector3.ZERO
+	var downhill := Vector3(floor_normal.x, 0.0, floor_normal.z)
+	if downhill.length() < 0.0001:
+		return Vector3.ZERO
+	var steepness := clampf(
+		(max_walk_normal_y - floor_normal.y) / maxf(max_walk_normal_y, 0.0001), 0.0, 1.0
+	)
+	return downhill.normalized() * slide_accel * steepness
+
+
 ## Velocity while latched to a ladder: forward input climbs, back input
 ## descends, and the world-space move direction is kept at half speed so the
 ## player can steer off the ladder sideways or over the top lip.

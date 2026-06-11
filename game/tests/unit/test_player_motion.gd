@@ -97,3 +97,28 @@ func test_climb_without_vertical_input_hangs() -> bool:
 func test_climb_keeps_half_speed_lateral_steering() -> bool:
 	var v := PlayerMotion.climb_velocity(Vector2.ZERO, Vector3(1, 0, 0), 3.0)
 	return v.is_equal_approx(Vector3(1.5, 0, 0))
+
+
+func test_slope_slide_flat_ground_is_zero() -> bool:
+	return PlayerMotion.slope_slide(Vector3.UP, 0.82, 18.0) == Vector3.ZERO
+
+
+func test_slope_slide_points_down_the_fall_line() -> bool:
+	# A normal tilted toward +X (ramp rising toward -X): the fall line is +X.
+	var slide := PlayerMotion.slope_slide(Vector3(0.707, 0.707, 0.0), 0.82, 18.0)
+	return slide.x > 0.0 and absf(slide.z) < 0.0001 and slide.y == 0.0
+
+
+func test_slope_slide_is_horizontal() -> bool:
+	var slide := PlayerMotion.slope_slide(Vector3(0.5, 0.6, 0.6).normalized(), 0.82, 18.0)
+	return slide.y == 0.0
+
+
+func test_slope_slide_grows_with_steepness() -> bool:
+	var gentle := PlayerMotion.slope_slide(Vector3(0.3, 0.81, 0.0).normalized(), 0.82, 18.0)
+	var steep := PlayerMotion.slope_slide(Vector3(0.9, 0.3, 0.0).normalized(), 0.82, 18.0)
+	return steep.length() > gentle.length()
+
+
+func test_slope_slide_not_steep_enough_is_zero() -> bool:
+	return PlayerMotion.slope_slide(Vector3(0.0, 0.95, 0.0), 0.82, 18.0) == Vector3.ZERO
