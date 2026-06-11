@@ -38,6 +38,8 @@ func _run() -> bool:
 		demo.step(1.0 / 60.0)
 
 	var sum_speed := 0.0
+	var sum_goal_dist := 0.0
+	var goal: Vector2 = demo.current_goal()
 	var valid := true
 	for i in demo.agent_count:
 		var p: Vector2 = demo.positions[i]
@@ -50,19 +52,26 @@ func _run() -> bool:
 			valid = false
 			break
 		sum_speed += demo.velocities[i].length()
+		sum_goal_dist += p.distance_to(goal)
 
 	if not valid:
 		return false
 
 	var avg_speed := sum_speed / float(demo.agent_count)
-	if avg_speed < 0.1:
-		print("  FAIL: crowd frozen (avg speed %.3f)" % avg_speed)
+	var avg_goal_dist := sum_goal_dist / float(demo.agent_count)
+	# Crowd must be moving (not frozen) AND gathering toward the goal: a scattered
+	# field averages ~0.5*field from any point; a navigating crowd is well under
+	# half_extent. One combined gate keeps the return count within lint limits.
+	if avg_speed < 0.1 or avg_goal_dist > demo.half_extent:
+		print(
+			"  FAIL: crowd not navigating (speed %.2f, goal-dist %.1f)" % [avg_speed, avg_goal_dist]
+		)
 		return false
 
 	print(
 		(
-			"  OK: %d agents simulated, avg speed %.2f m/s, all finite + in-bounds"
-			% [demo.agent_count, avg_speed]
+			"  OK: %d agents, avg speed %.2f m/s, avg goal-dist %.1f, finite + in-bounds + navigating"
+			% [demo.agent_count, avg_speed, avg_goal_dist]
 		)
 	)
 	return true

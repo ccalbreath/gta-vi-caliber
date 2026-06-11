@@ -13,20 +13,28 @@ extends Node3D
 @export var half_extent: float = 60.0  # agents wrap within [-he, he] on X/Z
 @export var max_speed: float = 7.0
 @export var neighbor_radius: float = 5.0
+@export var goal_weight: float = 1.2  # pull toward the wandering goal
+@export var avoid_weight: float = 2.5  # push away from obstacle pillars
+@export var slow_radius: float = 8.0  # arrival slowdown band around the goal
 @export var seed: int = 1234
 
 var positions: PackedVector2Array = PackedVector2Array()
 var velocities: PackedVector2Array = PackedVector2Array()
+var obstacle_positions: PackedVector2Array = PackedVector2Array()
+var obstacle_radii: PackedFloat32Array = PackedFloat32Array()
 
 var _hash: Object = null
 var _steer: Object = null
 var _mm: MultiMesh = null
 var _rng := RandomNumberGenerator.new()
+var _goal := Vector2.ZERO
+var _t := 0.0
 
 
 func _ready() -> void:
 	_rng.seed = seed
 	_spawn_agents()
+	_setup_obstacles()
 	_setup_native()
 	_setup_multimesh()
 	_sync_multimesh()
@@ -35,6 +43,11 @@ func _ready() -> void:
 ## True when the native crowd modules are present and wired.
 func native_active() -> bool:
 	return _hash != null and _steer != null
+
+
+## Current wandering goal the crowd is steering toward (for probes/debug).
+func current_goal() -> Vector2:
+	return _goal
 
 
 func _spawn_agents() -> void:
@@ -58,9 +71,31 @@ func _setup_native() -> void:
 	_steer = ClassDB.instantiate("CrowdSteering")
 	_steer.set("neighbor_radius", neighbor_radius)
 	_steer.set("max_force", 10.0)
+	_steer.set("max_speed", max_speed)
 	_steer.set("separation_weight", 1.6)
 	_steer.set("alignment_weight", 1.0)
 	_steer.set("cohesion_weight", 0.9)
+
+
+## A ring of static obstacle pillars the crowd must steer around, rendered as
+## cylinders. Positions/radii feed CrowdSteering.avoid each frame.
+func _setup_obstacles() -> void:
+	var ring := half_extent * 0.5
+	var count := 4
+	for k in count:
+		var ang := TAU * float(k) / float(count)
+		var pos := Vector2(cos(ang), sin(ang)) * ring
+		var radius := 4.0
+		obstacle_positions.append(pos)
+		obstacle_radii.append(radius)
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = radius
+		cyl.bottom_radius = radius
+		cyl.height = 6.0
+		var mi := MeshInstance3D.new()
+		mi.mesh = cyl
+		mi.position = Vector3(pos.x, 3.0, pos.y)
+		add_child(mi)
 
 
 func _setup_multimesh() -> void:
@@ -90,6 +125,11 @@ func step(delta: float) -> void:
 	if not native_active():
 		return
 
+	# The goal slowly orbits the field; the crowd flows toward it (arrive) while
+	# flocking (steer) and parting around the pillars (avoid).
+	_t += delta
+	_goal = Vector2(cos(_t * 0.2), sin(_t * 0.2)) * (half_extent * 0.55)
+
 	_hash.call("clear")
 	for i in agent_count:
 		_hash.call("insert", i, positions[i])
@@ -112,7 +152,15 @@ func step(delta: float) -> void:
 			npos.append(positions[id])
 			nvel.append(velocities[id])
 
-		var force: Vector2 = _steer.call("steer", positions[i], velocities[i], npos, nvel)
+		var flock: Vector2 = _steer.call("steer", positions[i], velocities[i], npos, nvel)
+		var to_goal: Vector2 = _steer.call(
+			"arrive", positions[i], velocities[i], _goal, slow_radius
+		)
+		var dodge: Vector2 = _steer.call(
+			"avoid", positions[i], obstacle_positions, obstacle_radii, 1.5
+		)
+		var force: Vector2 = flock + to_goal * goal_weight + dodge * avoid_weight
+
 		var v: Vector2 = velocities[i] + force * delta
 		if v.length() > max_speed:
 			v = v.normalized() * max_speed
