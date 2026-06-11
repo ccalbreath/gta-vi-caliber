@@ -193,5 +193,26 @@ void fragment() {
 	float sflit = ground * (1.0 - sf_frame) * wall;
 	vec3 emis = lamp * lit * (1.2 + 1.6 * hash21(mcell + vec2(fseed + 5.0)))
 		+ vec3(1.0, 0.86, 0.6) * sflit * 1.6;
+
+	// Neon signage: a vivid emissive sign band over the storefront on a hashed
+	// subset of (commercial) buildings, broken into per-bay signs. The Vice City
+	// night colour identity; blooms through the environment glow at dusk/night.
+	float commercial = step(0.42, hash21(vec2(round(v_tint.b * 53.0), round(v_tint.r * 37.0))));
+	float nband = smoothstep(4.25, 4.4, v) * (1.0 - smoothstep(4.9, 5.05, v)) * wall;
+	float nbay = fract(u / 4.2);
+	float nseg = smoothstep(0.12, 0.17, nbay) * (1.0 - smoothstep(0.83, 0.88, nbay));
+	float nhue = hash21(vec2(round(v_tint.r * 61.0), round(v_tint.g * 43.0)));
+	vec3 neon = nhue < 0.25
+		? vec3(1.0, 0.13, 0.6)  // hot pink
+		: (
+			nhue < 0.45
+			? vec3(0.1, 0.95, 1.0)  // cyan
+			: (
+				nhue < 0.62
+				? vec3(0.72, 0.2, 1.0)  // electric violet
+				: (nhue < 0.8 ? vec3(1.0, 0.5, 0.1) : vec3(0.3, 1.0, 0.45))  // amber / lime
+			)
+		);
+	emis += neon * (nband * nseg * commercial) * 3.2;
 	EMISSION = emis * night;
 }
