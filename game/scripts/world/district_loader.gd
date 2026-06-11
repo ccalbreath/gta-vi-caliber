@@ -16,7 +16,7 @@ signal district_built(building_count: int, road_count: int)
 ## Build collision for buildings. Off speeds up pure-visual previews.
 @export var build_collision: bool = true
 
-var _building_mat: StandardMaterial3D
+var _building_mat: Material
 var _roof_mat: StandardMaterial3D
 var _road_mat: StandardMaterial3D
 
@@ -33,6 +33,7 @@ func _ready() -> void:
 
 	var built_buildings := _build_buildings(data.get("buildings", []), proj)
 	_build_roads(data.get("roads", []), proj)
+	_build_streetlights(data.get("roads", []), proj)
 	_place_actors_on_street(data.get("roads", []), proj)
 
 	var nb: int = (data.get("buildings", []) as Array).size()
@@ -44,6 +45,54 @@ func _ready() -> void:
 		)
 	)
 	district_built.emit(nb, nr)
+
+
+## Drop emissive lamp posts along the major roads (kerb side, ~42 m apart). They
+## glow day and night and turn the dark city into a field of streetlights. Shared
+## meshes/materials and a hard cap keep it cheap; the posts are visual only.
+func _build_streetlights(roads: Array, proj: GeoProjection) -> void:
+	var pole_mat := StandardMaterial3D.new()
+	pole_mat.albedo_color = Color(0.1, 0.1, 0.12)
+	pole_mat.metallic = 0.6
+	pole_mat.roughness = 0.5
+	var lamp_mat := StandardMaterial3D.new()
+	lamp_mat.albedo_color = Color(1.0, 0.92, 0.72)
+	lamp_mat.emission_enabled = true
+	lamp_mat.emission = Color(1.0, 0.85, 0.55)
+	lamp_mat.emission_energy_multiplier = 2.5
+	var pole_mesh := BoxMesh.new()
+	pole_mesh.size = Vector3(0.14, 5.0, 0.14)
+	var head_mesh := BoxMesh.new()
+	head_mesh.size = Vector3(0.5, 0.22, 0.32)
+
+	var container := Node3D.new()
+	container.name = "StreetLights"
+	add_child(container)
+
+	var placed := 0
+	for r in roads:
+		if placed >= 180:
+			break
+		if float(r.get("width_m", 0.0)) < 8.0:
+			continue
+		var path := _project_ring(r["path"], proj)
+		for p in StreetLight.sample_along(path, 42.0, float(r["width_m"]) * 0.5 + 1.2):
+			if placed >= 180:
+				break
+			var lamp := Node3D.new()
+			lamp.position = Vector3(p.x, 0.0, p.y)
+			var pole := MeshInstance3D.new()
+			pole.mesh = pole_mesh
+			pole.material_override = pole_mat
+			pole.position = Vector3(0.0, 2.5, 0.0)
+			lamp.add_child(pole)
+			var head := MeshInstance3D.new()
+			head.mesh = head_mesh
+			head.material_override = lamp_mat
+			head.position = Vector3(0.0, 5.0, 0.0)
+			lamp.add_child(head)
+			container.add_child(lamp)
+			placed += 1
 
 
 func _load_district(path: String) -> Dictionary:
@@ -148,12 +197,21 @@ func _place_actors_on_street(roads: Array, proj: GeoProjection) -> void:
 
 
 func _make_materials() -> void:
-	_building_mat = StandardMaterial3D.new()
-	_building_mat.albedo_color = Color(0.62, 0.63, 0.66)
-	_building_mat.roughness = 0.85
-	_building_mat.metallic = 0.0
-	# Double-sided keeps interiors lit if a footprint winds oddly.
-	_building_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Procedural facade: a window grid that lights up at night, driven by the
+	# global `world_night_amount` SkyController sets from SkyModel. Falls back to a
+	# plain wall material if the shader is missing so the district still builds.
+	var facade := load("res://assets/shaders/building.gdshader") as Shader
+	if facade != null:
+		var shaded := ShaderMaterial.new()
+		shaded.shader = facade
+		_building_mat = shaded
+	else:
+		var std := StandardMaterial3D.new()
+		std.albedo_color = Color(0.62, 0.63, 0.66)
+		std.roughness = 0.85
+		std.metallic = 0.0
+		std.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_building_mat = std
 
 	_roof_mat = StandardMaterial3D.new()
 	_roof_mat.albedo_color = Color(0.4, 0.41, 0.45)
