@@ -54,6 +54,18 @@ func clear() -> void:
 	_refresh()
 
 
+## Snapshot for SaveManager.
+func serialize() -> Dictionary:
+	return {"heat": _wanted.heat}
+
+
+func restore(data: Variant) -> void:
+	if typeof(data) != TYPE_DICTIONARY or not (data as Dictionary).has("heat"):
+		return
+	_wanted.heat = maxf(float((data as Dictionary)["heat"]), 0.0)
+	_refresh()
+
+
 func _refresh() -> void:
 	var current := _wanted.stars()
 	if current != _stars:

@@ -37,7 +37,9 @@ func _process(delta: float) -> void:
 
 
 ## Duck-typed damage entry point for any attacker.
-func take_damage(amount: float, _point: Vector3 = Vector3.ZERO, _normal: Vector3 = Vector3.ZERO) -> void:
+func take_damage(
+	amount: float, _point: Vector3 = Vector3.ZERO, _normal: Vector3 = Vector3.ZERO
+) -> void:
 	if _dead:
 		return
 	if _model.apply(amount):
@@ -52,6 +54,19 @@ func fraction() -> float:
 
 func is_dead() -> bool:
 	return _dead
+
+
+## Snapshot for SaveManager.
+func serialize() -> Dictionary:
+	return {"health": _model.health}
+
+
+func restore(data: Variant) -> void:
+	if typeof(data) != TYPE_DICTIONARY or not (data as Dictionary).has("health"):
+		return
+	_model.health = clampf(float((data as Dictionary)["health"]), 0.0, _model.max_health)
+	_dead = _model.is_dead()
+	changed.emit(_model.fraction())
 
 
 func _die() -> void:
