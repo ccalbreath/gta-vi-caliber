@@ -203,6 +203,7 @@ func _build_materials() -> void:
 	_skin.rim_tint = 0.4
 	_skin.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_apply_detail_normal(_skin, HumanoidTextures.skin_normal(), 0.45, 7.0)
+	_skin.albedo_texture = HumanoidTextures.skin_albedo()
 
 	_shirt = _fabric(shirt_color, 0.82, 0.12)
 	_pants = _fabric(pants_color, 0.9, 0.06)
@@ -482,6 +483,7 @@ func _fabric(color: Color, roughness: float, rim: float) -> StandardMaterial3D:
 	mat.rim = rim
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_apply_detail_normal(mat, HumanoidTextures.fabric_normal(), 0.6, 11.0)
+	mat.albedo_texture = HumanoidTextures.fabric_albedo()
 	return mat
 
 

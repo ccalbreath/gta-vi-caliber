@@ -59,3 +59,22 @@ func test_fabric_has_directional_structure() -> bool:
 			lo = minf(lo, g)
 			hi = maxf(hi, g)
 	return hi - lo > 0.02
+
+
+func test_skin_albedo_is_bright_and_varied() -> bool:
+	# An albedo multiplier: near-white (preserves skin_color) but not dead-flat.
+	var img := HumanoidTextures.skin_albedo().get_image()
+	var lo := 1.0
+	var hi := 0.0
+	for y in range(0, HumanoidTextures.SIZE, 4):
+		for x in range(0, HumanoidTextures.SIZE, 4):
+			var g := img.get_pixel(x, y).g
+			lo = minf(lo, g)
+			hi = maxf(hi, g)
+	return lo > 0.8 and hi <= 1.0 and hi - lo > 0.02
+
+
+func test_albedo_maps_are_cached() -> bool:
+	var first := HumanoidTextures.fabric_albedo()
+	var second := HumanoidTextures.fabric_albedo()
+	return first == second

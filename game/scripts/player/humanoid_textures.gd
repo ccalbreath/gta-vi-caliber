@@ -13,6 +13,8 @@ const SIZE: int = 64
 
 static var _skin: ImageTexture
 static var _fabric: ImageTexture
+static var _skin_alb: ImageTexture
+static var _fabric_alb: ImageTexture
 
 
 ## Fine isotropic pore detail for skin.
@@ -20,6 +22,35 @@ static func skin_normal() -> Texture2D:
 	if _skin == null:
 		_skin = _to_normal(_skin_height(), 0.7)
 	return _skin
+
+
+## Subtle skin albedo variation (mottling + faint redness) — multiplied onto the
+## flat skin_color so flesh isn't a dead-uniform plastic tone.
+static func skin_albedo() -> Texture2D:
+	if _skin_alb == null:
+		var img := Image.create(SIZE, SIZE, false, Image.FORMAT_RGB8)
+		for y in SIZE:
+			for x in SIZE:
+				var v: float = 0.9 + 0.1 * _vnoise(x * 0.6, y * 0.6)
+				var red: float = 0.05 * _vnoise(x * 0.3 + 9.0, y * 0.3 - 4.0)
+				img.set_pixel(
+					x, y, Color(clampf(v + red, 0.0, 1.0), v, clampf(v - red * 0.5, 0.0, 1.0))
+				)
+		_skin_alb = ImageTexture.create_from_image(img)
+	return _skin_alb
+
+
+## Subtle fabric albedo: threads catch a touch more light than the weave gaps.
+static func fabric_albedo() -> Texture2D:
+	if _fabric_alb == null:
+		var img := Image.create(SIZE, SIZE, false, Image.FORMAT_RGB8)
+		var f: float = TAU * 8.0 / float(SIZE)
+		for y in SIZE:
+			for x in SIZE:
+				var w: float = 0.86 + 0.14 * (0.5 + 0.5 * maxf(sin(x * f), sin(y * f)))
+				img.set_pixel(x, y, Color(w, w, w))
+		_fabric_alb = ImageTexture.create_from_image(img)
+	return _fabric_alb
 
 
 ## A woven warp/weft ridge pattern for clothing.
