@@ -61,6 +61,7 @@ func _ready() -> void:
 	if build_streetlights:
 		_build_streetlights(data.get("roads", []), proj)
 	_build_palms(data.get("roads", []), proj)
+	_build_parked_cars(data.get("roads", []), proj)
 	_build_trees(data.get("roads", []), proj)
 	_build_street_furniture(data.get("roads", []), proj)
 	if place_player:
@@ -270,7 +271,7 @@ func _build_street_furniture(roads: Array, proj: GeoProjection) -> void:
 				break
 			var prop := Node3D.new()
 			prop.position = Vector3(p.x, 0.0, p.y)
-			if rng.randf() < 0.5:
+			if rng.randf() < 0.85:
 				_add_mesh(prop, bin_mesh, Vector3(0.0, 0.33, 0.0), bin_mat)
 			else:
 				_add_mesh(prop, hydrant_mesh, Vector3(0.0, 0.21, 0.0), hydrant_mat)
@@ -398,6 +399,76 @@ func _add_palm_layer(
 	mmi.name = node_name
 	mmi.multimesh = mm
 	mmi.material_override = mat
+	add_child(mmi)
+
+
+## Parked cars line the kerbs — the cheapest high-impact street life: static
+## CarMesh bodies batched as ONE MultiMesh with per-instance paint colour, no AI
+## or physics. Complements (doesn't collide with) the engine's moving-traffic and
+## crowd work, which populates the streets separately.
+func _build_parked_cars(roads: Array, proj: GeoProjection) -> void:
+	var mesh := CarMesh.to_mesh(CarMesh.body(4.4, 1.9))
+	if mesh == null:
+		return
+	var mat := StandardMaterial3D.new()
+	mat.metallic = 0.45
+	mat.roughness = 0.35
+	mat.vertex_color_use_as_albedo = true  # MultiMesh per-instance colour
+	mesh.surface_set_material(0, mat)
+	var palette: Array[Color] = [
+		Color(0.88, 0.88, 0.9),
+		Color(0.07, 0.07, 0.08),
+		Color(0.55, 0.57, 0.6),
+		Color(0.72, 0.13, 0.12),
+		Color(0.12, 0.22, 0.5),
+		Color(0.2, 0.46, 0.32),
+		Color(0.85, 0.8, 0.32),
+		Color(0.3, 0.32, 0.36),
+	]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2207
+	var tfs: Array[Transform3D] = []
+	var cols := PackedColorArray()
+	for r in roads:
+		if tfs.size() >= 2200:
+			break
+		var width := float(r.get("width_m", 0.0))
+		if width < 7.0:
+			continue
+		var path := _project_ring(r["path"], proj)
+		var off := width * 0.5 - 1.1  # just inside the kerb (parallel parking)
+		for i in path.size() - 1:
+			if tfs.size() >= 2200:
+				break
+			var a: Vector2 = path[i]
+			var seg: Vector2 = path[i + 1] - a
+			var seg_len := seg.length()
+			if seg_len < 7.0:
+				continue
+			var dir := seg / seg_len
+			var nrm := Vector2(-dir.y, dir.x)
+			var yaw := atan2(dir.x, dir.y)  # align the car's length with the road
+			var t := 5.0
+			while t < seg_len - 4.0 and tfs.size() < 2200:
+				if rng.randf() < 0.85:  # leave gaps so it's not bumper-to-bumper
+					var p := a + dir * t + nrm * off
+					var basis := Basis.from_euler(Vector3(0.0, yaw, 0.0))
+					tfs.append(Transform3D(basis, Vector3(p.x, -0.22, p.y)))
+					cols.append(palette[rng.randi() % palette.size()])
+				t += 6.0
+	if tfs.is_empty():
+		return
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = mesh
+	mm.instance_count = tfs.size()
+	for i in tfs.size():
+		mm.set_instance_transform(i, tfs[i])
+		mm.set_instance_color(i, cols[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.name = "ParkedCars"
+	mmi.multimesh = mm
 	add_child(mmi)
 
 
