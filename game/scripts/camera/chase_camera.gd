@@ -17,17 +17,24 @@ extends Node3D
 @export var shake_decay: float = 1.6
 @export_range(1.0, 4.0) var shake_exponent: float = 2.0
 @export var shake_frequency: float = 20.0
+## Speed pull-back: extra SpringArm distance (m) eased in at full speed blend for
+## a sense of velocity. The base distance is the scene-authored arm length.
+@export var distance_kick: float = 2.2
+@export var distance_smoothing: float = 5.0
 
 var _trauma: float = 0.0
 var _shake_time: float = 0.0
 var _shake_noise: FastNoiseLite = null
+var _base_distance: float = 0.0
 
+@onready var _arm: SpringArm3D = $SpringArm
 @onready var _camera: Camera3D = $SpringArm/Camera
 
 
 func _ready() -> void:
 	_camera.fov = base_fov
 	_shake_noise = FastNoiseLite.new()
+	_base_distance = _arm.spring_length
 
 
 ## Add crash-shake trauma in [0, 1]; the car scales this to the collision force.
@@ -43,6 +50,9 @@ func _physics_process(delta: float) -> void:
 	var blend := CameraFeel.sprint_blend(speed, fov_low_speed, fov_high_speed)
 	var target := CameraFeel.fov_for_blend(base_fov, speed_fov_kick, blend)
 	_camera.fov = CameraFeel.exp_smoothed(_camera.fov, target, fov_smoothing, delta)
+	_arm.spring_length = CameraFeel.exp_smoothed(
+		_arm.spring_length, _base_distance + distance_kick * blend, distance_smoothing, delta
+	)
 	rotation.y = PI if Input.is_action_pressed("look_behind") else 0.0
 	_update_shake(delta)
 
