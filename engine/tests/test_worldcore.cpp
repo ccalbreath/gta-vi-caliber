@@ -10,6 +10,7 @@
 #include "../src/worldcore/impostor_core.h"
 #include "../src/worldcore/spatial_hash_core.h"
 #include "../src/worldcore/tile_streamer_core.h"
+#include "../src/worldcore/traffic_core.h"
 #include "../src/worldcore/worldcore_version.h"
 
 using worldcore_streaming::TileCoord;
@@ -294,6 +295,34 @@ static void test_avoid_pushes_off_obstacle() {
     CHECK(length(avoid_obstacles(Vec2{0.0, 0.0}, here, zero, 0.0)) < 1e-9);
 }
 
+static void test_idm_accelerates_on_clear_road() {
+    using worldcore_traffic::car_following_accel;
+    // Slow car, leader far ahead and fast: should accelerate toward desired.
+    double a = car_following_accel(5.0, 1000.0, 30.0, 30.0, 1.5, 2.0, 2.0, 1.5);
+    CHECK(a > 0.0);
+}
+
+static void test_idm_cruises_at_desired_speed() {
+    using worldcore_traffic::car_following_accel;
+    // At desired speed on a clear road: acceleration ~0.
+    double a = car_following_accel(30.0, 1000.0, 30.0, 30.0, 1.5, 2.0, 2.0, 1.5);
+    CHECK(std::fabs(a) < 0.05);
+}
+
+static void test_idm_brakes_for_close_slow_leader() {
+    using worldcore_traffic::car_following_accel;
+    // Fast car, small gap to a stopped leader: must brake hard (negative).
+    double a = car_following_accel(20.0, 5.0, 0.0, 30.0, 1.5, 2.0, 2.0, 1.5);
+    CHECK(a < 0.0);
+}
+
+static void test_idm_brakes_hard_on_overlap() {
+    using worldcore_traffic::car_following_accel;
+    // Zero gap (touching the leader): strong braking.
+    double a = car_following_accel(20.0, 0.0, 0.0, 30.0, 1.5, 2.0, 2.0, 1.5);
+    CHECK(a < 0.0);
+}
+
 int main() {
     test_version_is_consistent();
     test_sum_of_squares();
@@ -320,6 +349,10 @@ int main() {
     test_clamp_len_negative_budget_is_zero();
     test_arrive_seeks_then_slows();
     test_avoid_pushes_off_obstacle();
+    test_idm_accelerates_on_clear_road();
+    test_idm_cruises_at_desired_speed();
+    test_idm_brakes_for_close_slow_leader();
+    test_idm_brakes_hard_on_overlap();
     if (failures > 0) {
         std::fprintf(stderr, "engine tests: %d failure(s)\n", failures);
         return 1;

@@ -9,6 +9,7 @@
 #include "worldcore/impostor.h"
 #include "worldcore/spatial_hash.h"
 #include "worldcore/tile_streamer.h"
+#include "worldcore/traffic_model.h"
 #include "worldcore/worldcore.h"
 
 using namespace godot;
@@ -24,6 +25,7 @@ void initialize_worldcore_module(ModuleInitializationLevel p_level) {
     ClassDB::register_class<Impostor>();
     ClassDB::register_class<SpatialHash>();
     ClassDB::register_class<CrowdSteering>();
+    ClassDB::register_class<TrafficModel>();
 }
 
 void uninitialize_worldcore_module(ModuleInitializationLevel p_level) {
