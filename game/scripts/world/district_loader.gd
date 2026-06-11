@@ -242,6 +242,10 @@ func _build_streetlights(roads: Array, proj: GeoProjection) -> void:
 	var container := Node3D.new()
 	container.name = "StreetLights"
 	add_child(container)
+	# All lamp heads share lamp_mat, so one switch fades them all with day/night.
+	var switch := StreetlightSwitch.new()
+	switch.setup(lamp_mat, lamp_mat.emission_energy_multiplier)
+	container.add_child(switch)
 
 	var placed := 0
 	for r in roads:
