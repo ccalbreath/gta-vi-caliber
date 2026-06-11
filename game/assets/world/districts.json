@@ -6,9 +6,22 @@
   "attribution": "\u00a9 OpenStreetMap contributors, ODbL",
   "districts": [
     {
+      "name": "beverly_hills",
+      "data": "res://assets/world/beverly_hills.json",
+      "centroid": {
+        "lat": 34.0685724,
+        "lon": -118.3994585
+      },
+      "world_offset": {
+        "x": -13566.8,
+        "z": -2030.5
+      },
+      "buildings": 601,
+      "roads": 537
+    },
+    {
       "name": "downtown_la",
       "data": "res://assets/world/downtown_la.json",
-      "scene": "res://scenes/world/districts/downtown_la.tscn",
       "centroid": {
         "lat": 34.0503318,
         "lon": -118.2523673
@@ -23,7 +36,6 @@
     {
       "name": "hollywood",
       "data": "res://assets/world/hollywood.json",
-      "scene": "res://scenes/world/districts/hollywood.tscn",
       "centroid": {
         "lat": 34.1023657,
         "lon": -118.3335721
@@ -34,6 +46,48 @@
       },
       "buildings": 377,
       "roads": 531
+    },
+    {
+      "name": "koreatown",
+      "data": "res://assets/world/koreatown.json",
+      "centroid": {
+        "lat": 34.0603344,
+        "lon": -118.3012216
+      },
+      "world_offset": {
+        "x": -4506.0,
+        "z": -1113.5
+      },
+      "buildings": 268,
+      "roads": 562
+    },
+    {
+      "name": "santa_monica",
+      "data": "res://assets/world/santa_monica.json",
+      "centroid": {
+        "lat": 34.0136156,
+        "lon": -118.4931682
+      },
+      "world_offset": {
+        "x": -22210.0,
+        "z": 4087.2
+      },
+      "buildings": 231,
+      "roads": 767
+    },
+    {
+      "name": "venice_beach",
+      "data": "res://assets/world/venice_beach.json",
+      "centroid": {
+        "lat": 33.988682,
+        "lon": -118.469735
+      },
+      "world_offset": {
+        "x": -20048.6,
+        "z": 6862.9
+      },
+      "buildings": 1332,
+      "roads": 678
     }
   ]
 }
