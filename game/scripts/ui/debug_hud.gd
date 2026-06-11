@@ -13,4 +13,17 @@ const HINTS: String = (
 
 
 func _process(_delta: float) -> void:
-	_label.text = "%d FPS\n%s" % [Engine.get_frames_per_second(), HINTS]
+	var text := "%d FPS\n%s" % [Engine.get_frames_per_second(), HINTS]
+	var streamer := get_tree().get_first_node_in_group("tile_streamer") as TileStreamer
+	if streamer != null:
+		var stats := streamer.stats()
+		text += (
+			"\ntiles: %d resident · %d loading · VRAM %.0f MB · frame %.1f ms"
+			% [
+				stats["resident"],
+				stats["loading"],
+				Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
+				Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+			]
+		)
+	_label.text = text

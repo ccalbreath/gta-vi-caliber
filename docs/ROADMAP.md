@@ -52,7 +52,7 @@ Goal: walk or drive 4 km in any direction with no loading screen.
 - [ ] **`engine/`: async tile streamer GDExtension** (load/unload around camera, priority by velocity vector)
 - [ ] **`engine/`: runtime impostor baker** for distant buildings
 - [x] Floating-origin shift to dodge float precision at distance
-- [ ] Streaming debug HUD (tiles resident, VRAM, frame budget)
+- [x] Streaming debug HUD (tiles resident, VRAM, frame budget)
 - [x] Benchmark scene + captured profile checked into `docs/profiles/`
 
 ## M4 — A living district

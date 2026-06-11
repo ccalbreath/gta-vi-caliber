@@ -1,0 +1,42 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
+[ext_resource type="PackedScene" path="res://scenes/ui/debug_hud.tscn" id="2_hud"]
+[ext_resource type="PackedScene" path="res://scenes/vehicles/car.tscn" id="3_car"]
+[ext_resource type="Script" path="res://scripts/world/tile_streamer.gd" id="4_streamer"]
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
+sky_horizon_color = Color(0.66, 0.67, 0.69, 1)
+ground_horizon_color = Color(0.66, 0.67, 0.69, 1)
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+tonemap_mode = 2
+
+[node name="StreamingWorld" type="Node3D" groups=["world"]]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, 0.383022, -0.321394, 0, 0.642788, 0.766044, 0.5, -0.663414, 0.55667, 0, 20, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="SpawnPoint" type="Marker3D" parent="." groups=["spawn_points"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 64, 1, 64)
+
+[node name="Player" parent="." instance=ExtResource("1_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 64, 1, 64)
+
+[node name="Car" parent="." instance=ExtResource("3_car")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 72, 0.6, 64)
+
+[node name="TileStreamer" type="Node3D" parent="."]
+script = ExtResource("4_streamer")
+
+[node name="DebugHud" parent="." instance=ExtResource("2_hud")]
