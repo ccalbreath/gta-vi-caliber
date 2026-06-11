@@ -22,6 +22,11 @@ const PLACES: PackedStringArray = [
 ## Real seconds for one in-game day (1440 = a 24-minute day).
 @export var day_length_sec: float = 1440.0
 
+## Optional walkability map shared with the crowd. Assign in code (same NavGrid a
+## CrowdDirector uses, with building/water footprints stamped) and citizens route
+## around obstacles instead of walking through walls. Null = straight-line travel.
+var nav: NavGrid = null
+
 # Exists before _ready so citizens reading hour() during their own _ready are safe.
 var _clock := DayClock.new()
 
@@ -64,6 +69,14 @@ func position_for(place: String, from: Vector3) -> Vector3:
 			best_d = d
 			best = marker.global_position
 	return best
+
+
+## World waypoints from `from` to `to` around blocked cells, or an empty array
+## when no nav grid is set (the caller then walks straight there).
+func path_to(from: Vector3, to: Vector3) -> PackedVector3Array:
+	if nav == null:
+		return PackedVector3Array()
+	return nav.find_path(from, to)
 
 
 ## True if at least one POI of any known kind is registered — lets a Citizen fall

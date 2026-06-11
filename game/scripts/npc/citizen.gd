@@ -48,6 +48,9 @@ var _last_plan_hour: float = 8.0
 var _react_left: float = 0.0
 var _bubble_left: float = 0.0
 var _bubble: Label3D = null
+# Nav path to the current destination (world points). Empty = walk straight there.
+var _path: Array = []
+var _wp: int = 0
 
 
 func _ready() -> void:
@@ -135,7 +138,12 @@ func _pick_new_target() -> void:
 	_state = NpcBrain.State.WANDER
 	var dest := director.position_for(place, global_position)
 	dest += Vector3(_rng.randf_range(-1.6, 1.6), 0.0, _rng.randf_range(-1.6, 1.6))
-	_target = dest
+	# Route around obstacles when the city has a nav grid; otherwise go straight.
+	_path = []
+	_wp = 0
+	for p in director.path_to(global_position, dest):
+		_path.append(p)
+	_target = _path[0] if not _path.is_empty() else dest
 	_say(NpcDialogue.bark_for_activity(_voice, _activity, _next_seed()))
 
 
@@ -143,6 +151,12 @@ func _pick_new_target() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# Walk the nav path: aim at the current waypoint, advancing as each is reached.
+	# The final waypoint stays the destination, so Pedestrian's own arrive→idle
+	# logic still fires there. Skipped while fleeing (the parent steers away then).
+	if not _path.is_empty() and _state != NpcBrain.State.FLEE:
+		_wp = NpcSteering.advance_waypoint(global_position, _path, _wp, 1.5)
+		_target = _path[_wp]
 	super._physics_process(delta)
 	_fade_bubble(delta)
 	_react_left -= delta
