@@ -10,8 +10,14 @@ extends Control
 @export var thickness: float = 2.0
 @export var show_dot: bool = true
 
+@export var kill_color: Color = Color(1.0, 0.25, 0.2)
+
 ## Distance (px) from centre to the start of each tick; driven by spread.
 var gap: float = 6.0
+## Hit-marker: WeaponHud sets to 1.0 on a confirmed hit and fades it; drawn as
+## a diagonal X (red on a kill).
+var hit_flash: float = 0.0
+var hit_kill: bool = false
 
 
 func _draw() -> void:
@@ -24,3 +30,8 @@ func _draw() -> void:
 	draw_rect(Rect2(c + Vector2(-half, -gap - tick_length), Vector2(thickness, tick_length)), color)
 	if show_dot:
 		draw_circle(c, 1.3, color)
+	if hit_flash > 0.0:
+		var marker := (kill_color if hit_kill else Color(1, 1, 1))
+		marker.a = clampf(hit_flash, 0.0, 1.0)
+		for d in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
+			draw_line(c + d * 4.0, c + d * 11.0, marker, thickness)

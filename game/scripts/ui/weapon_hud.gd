@@ -11,6 +11,8 @@ extends CanvasLayer
 @export var base_gap: float = 5.0
 ## Converts the weapon's spread half-angle (rad) into extra crosshair gap (px).
 @export var spread_to_px: float = 1500.0
+## How fast the hit-marker fades after a confirmed hit (1/s).
+@export var hit_marker_decay: float = 3.0
 
 var _controller: Node = null
 
@@ -29,11 +31,19 @@ func _bind() -> void:
 	var found := get_tree().get_nodes_in_group("weapon_controller")
 	if not found.is_empty():
 		_controller = found[0]
+		_controller.hit_confirmed.connect(_on_hit_confirmed)
 
 
-func _process(_delta: float) -> void:
+func _on_hit_confirmed(killed: bool) -> void:
+	_crosshair.hit_flash = 1.0
+	_crosshair.hit_kill = killed
+
+
+func _process(delta: float) -> void:
 	if _controller == null:
 		return
+	if _crosshair.hit_flash > 0.0:
+		_crosshair.hit_flash = maxf(_crosshair.hit_flash - hit_marker_decay * delta, 0.0)
 	var state: Dictionary = _controller.hud_state()
 	var armed: bool = state.get("armed", false)
 	_crosshair.visible = armed

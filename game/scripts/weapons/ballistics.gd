@@ -38,6 +38,13 @@ static func damage_at_range(
 	return base_damage * lerpf(1.0, min_fraction, t)
 
 
+## Damage multiplier for where a shot landed on a target: a hit at or above
+## head_height (measured from the target's origin) gets head_mult, otherwise 1.
+## Kept pure so the head/body split is unit-tested without a scene.
+static func zone_multiplier(local_height: float, head_height: float, head_mult: float) -> float:
+	return head_mult if local_height >= head_height else 1.0
+
+
 ## A point uniformly distributed in the unit disk from two independent [0, 1)
 ## samples (rejection-free, area-correct). Use to feed spread_direction without
 ## clumping shots toward the centre. Caller supplies the randoms so tests stay

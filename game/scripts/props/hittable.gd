@@ -16,6 +16,9 @@ signal revived
 @export var flash_color: Color = Color(1.0, 1.0, 1.0)
 ## How fast the white hit-flash fades (1/s).
 @export var flash_decay: float = 6.0
+## Hits at or above this height (m, from the target origin) are headshots.
+@export var head_height: float = 1.5
+@export var headshot_multiplier: float = 2.0
 
 var _hp: Damageable
 var _mesh: MeshInstance3D
@@ -44,13 +47,20 @@ func _process(delta: float) -> void:
 	_material.emission = flash_color * _flash
 
 
-## Duck-typed entry point called by WeaponController on a hit.
-func take_damage(amount: float, _point: Vector3, _normal: Vector3) -> void:
+## Duck-typed entry point called by WeaponController on a hit. The hit point's
+## height above the origin decides the head/body damage zone.
+func take_damage(amount: float, point: Vector3, _normal: Vector3) -> void:
 	if _dead:
 		return
-	_flash = 1.0
-	if _hp.apply(amount):
+	var local_height := point.y - global_position.y
+	var zone := Ballistics.zone_multiplier(local_height, head_height, headshot_multiplier)
+	_flash = 1.0 if zone <= 1.0 else 1.6  # brighter pop on a headshot
+	if _hp.apply(amount * zone):
 		_die()
+
+
+func is_dead() -> bool:
+	return _dead
 
 
 func _die() -> void:

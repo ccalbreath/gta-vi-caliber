@@ -10,6 +10,9 @@ extends Node3D
 
 signal ammo_changed(ammo: int, reserve: int, armed: bool)
 signal weapon_changed(display_name: String, armed: bool)
+## Emitted the moment a shot damages something; killed is true if that hit
+## dropped the target. The HUD turns this into a hit-marker.
+signal hit_confirmed(killed: bool)
 
 ## Tighter cone while aiming down sights (fraction of the hipfire spread).
 const AIM_SPREAD_SCALE: float = 0.4
@@ -172,6 +175,8 @@ func _apply_damage(weapon: Weapon, origin: Vector3, hit: Dictionary) -> void:
 		weapon.stats.min_damage_fraction
 	)
 	collider.take_damage(damage, hit.position, hit.normal)
+	var killed: bool = collider.has_method("is_dead") and collider.is_dead()
+	hit_confirmed.emit(killed)
 
 
 func _cycle_weapon() -> void:
