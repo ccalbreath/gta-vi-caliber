@@ -6,7 +6,9 @@ extends Node
 ## wanted) by group, serialises it via SaveData (pure, tested), and writes it to
 ## user://savegame.json. Uses raw key input so it adds no input actions, and
 ## finds everything by group so it needs no edits to the player scene. Player
-## position, health, and wanted level persist.
+## position, health, wanted level, and every vehicle's transform + health
+## persist. Vehicles are found through the "vehicles" group and matched by node
+## name (unique within a scene), so this stays streaming-ready.
 
 signal saved
 signal loaded
@@ -54,7 +56,21 @@ func _gather() -> Dictionary:
 	var wanted := _first("wanted")
 	if wanted != null and wanted.has_method("serialize"):
 		snapshot["wanted"] = wanted.serialize()
+	snapshot["vehicles"] = _gather_vehicles()
 	return snapshot
+
+
+func _gather_vehicles() -> Dictionary:
+	var vehicles: Dictionary = {}
+	for node in get_tree().get_nodes_in_group("vehicles"):
+		var car := node as Car
+		if car == null:
+			continue
+		vehicles[String(car.name)] = {
+			"transform": SaveData.transform_to_dict(car.global_transform),
+			"health": car.health,
+		}
+	return vehicles
 
 
 func _apply(snapshot: Dictionary) -> void:
@@ -73,6 +89,24 @@ func _apply(snapshot: Dictionary) -> void:
 	var wanted := _first("wanted")
 	if wanted != null and wanted.has_method("restore"):
 		wanted.restore(snapshot.get("wanted", {}))
+	if snapshot.get("vehicles") is Dictionary:
+		_apply_vehicles(snapshot["vehicles"])
+
+
+func _apply_vehicles(data: Dictionary) -> void:
+	for node in get_tree().get_nodes_in_group("vehicles"):
+		var car := node as Car
+		if car == null or not data.get(String(car.name)) is Dictionary:
+			continue
+		var saved: Dictionary = data[String(car.name)]
+		car.global_transform = SaveData.dict_to_transform(
+			saved.get("transform"), car.global_transform
+		)
+		car.linear_velocity = Vector3.ZERO
+		car.angular_velocity = Vector3.ZERO
+		car.health = clampf(
+			SaveData.number_or(saved.get("health"), car.max_health), 0.0, car.max_health
+		)
 
 
 func _player() -> Node3D:
