@@ -28,6 +28,14 @@ extends Node3D
 ## Max peds instantiated per tick, so populating a scene is spread over a few
 ## ticks instead of one hitching frame.
 @export var spawn_budget: int = 3
+## Per-person stature: each ped is uniformly scaled within this range so the
+## crowd has a believable spread of heights instead of identical clones.
+@export var stature_min: float = 0.92
+@export var stature_max: float = 1.08
+## Per-person gait: walk/run speeds are scaled within this range (independent of
+## stature) so some people stride and others amble.
+@export var gait_min: float = 0.85
+@export var gait_max: float = 1.15
 
 var _peds: Array[Node3D] = []
 var _rng := RandomNumberGenerator.new()
@@ -77,9 +85,24 @@ func _spawn(center: Vector3) -> void:
 		var ped := pedestrian_scene.instantiate() as Node3D
 		if ped == null:
 			return
+		_apply_variety(ped)
 		add_child(ped)
 		ped.global_position = center + offset
 		_peds.append(ped)
+
+
+## Give a fresh ped its own stature and gait before it enters the tree, so two
+## pedestrians from the same scene never look or move identically. Uniform scale
+## keeps the capsule collider valid; gait is set on the exported speeds the
+## pedestrian reads each frame, so it takes effect immediately.
+func _apply_variety(ped: Node3D) -> void:
+	var stature := _rng.randf_range(stature_min, stature_max)
+	ped.scale = Vector3(stature, stature, stature)
+	var gait := _rng.randf_range(gait_min, gait_max)
+	if "walk_speed" in ped:
+		ped.walk_speed = ped.walk_speed * gait
+	if "run_speed" in ped:
+		ped.run_speed = ped.run_speed * gait
 
 
 ## Current live crowd size — handy for a streaming-debug HUD and for tests that
