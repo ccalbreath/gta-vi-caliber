@@ -1,89 +1,91 @@
+class_name WeatherController
 extends Node3D
-## Applies the tested Weather model to the live scene: drives environment fog and
-## a rain particle system that follows the player, and (optionally) cycles
-## conditions over time. The pure rules live in Weather (tested); this node is the
-## visual integration — sky/particles/wetness.
+## Runs a rolling weather front over a scene: advances a WeatherState (pure,
+## tested) and turns it into fog, rain, and shiny wet streets — roadmap M4's
+## "Weather fronts: clear → overcast → rain, wet-surface materials".
+##
+## Owns weather only; it never touches the DirectionalLight, so it layers
+## cleanly over DayNightCycle (sun) — overcast reads as thickening grey fog, not
+## a dimmed sun. Drives: a WorldEnvironment's fog, a GPUParticles3D rain emitter
+## (which it parks over the player), and every MeshInstance3D in the
+## "wet_surfaces" group (roughness drops as wetness rises, so streets gleam).
 
-@export var auto_cycle: bool = true
-@export var seconds_per_condition: float = 45.0
-@export var start_condition: Weather.Condition = Weather.Condition.CLEAR
-@export var rain_height: float = 35.0
+## Real seconds for one full front (clear → rain → clear). 120 = a 2-minute front.
+@export var front_length_sec: float = 120.0
+## Where in the front the scene starts (0 clear, ~0.6 mid-rain).
+@export_range(0.0, 1.0) var start_cycle: float = 0.0
+@export var environment_path: NodePath
+@export var rain_path: NodePath
 
-var _weather: Weather
-var _env: WorldEnvironment
-var _rain: GPUParticles3D
-var _timer: float = 0.0
+var _state := WeatherState.new()
+var _cycle: float = 0.0
+var _env: WorldEnvironment = null
+var _rain: GPUParticles3D = null
+var _wet_base_roughness: Dictionary = {}
 
 
 func _ready() -> void:
-	_weather = Weather.new()
-	_weather.set_condition(start_condition)
-	_env = _find_environment()
-	_rain = _make_rain()
-	add_child(_rain)
+	add_to_group("weather")  # citizens find it here to comment on the sky
+	_cycle = start_cycle
+	_env = get_node_or_null(environment_path) as WorldEnvironment
+	_rain = get_node_or_null(rain_path) as GPUParticles3D
 	_apply()
 
 
 func _process(delta: float) -> void:
-	_weather.update(delta)
-	if auto_cycle:
-		_timer += delta
-		if _timer >= seconds_per_condition:
-			_timer = 0.0
-			_weather.set_condition((_weather.condition + 1) % Weather.Condition.size())
-	_follow_player()
+	if front_length_sec > 0.0:
+		_cycle = fposmod(_cycle + delta / front_length_sec, 1.0)
+	var targets := WeatherState.front_targets(_cycle)
+	_state.step(delta, targets["cloud"], targets["rain"])
 	_apply()
 
 
+## Current human-readable condition, e.g. for a debug HUD or weather-anchor barks.
+func condition() -> String:
+	return _state.label()
+
+
 func _apply() -> void:
-	if _env != null and _env.environment != null:
-		_env.environment.fog_density = _weather.fog_density()
-	_rain.emitting = _weather.is_raining()
-	_rain.amount_ratio = clampf(_weather.rain_intensity(), 0.05, 1.0)
+	_apply_fog()
+	_apply_rain()
+	_apply_wetness()
 
 
-func _follow_player() -> void:
-	for p in get_tree().get_nodes_in_group("player"):
-		if p is Node3D:
-			var pos := (p as Node3D).global_position
-			_rain.global_position = Vector3(pos.x, pos.y + rain_height, pos.z)
-			return
+func _apply_fog() -> void:
+	if _env == null or _env.environment == null:
+		return
+	var env := _env.environment
+	env.fog_enabled = true
+	# Thicker, greyer air as clouds and rain build.
+	env.fog_density = lerpf(0.0006, 0.03, _state.cloudiness) + _state.rain * 0.02
+	var clear_air := Color(0.7, 0.74, 0.8)
+	var storm_air := Color(0.5, 0.52, 0.56)
+	env.fog_light_color = clear_air.lerp(storm_air, _state.cloudiness)
 
 
-func _make_rain() -> GPUParticles3D:
-	var p := GPUParticles3D.new()
-	p.amount = 1400
-	p.lifetime = 1.4
-	p.emitting = false
-	p.local_coords = false
-	p.visibility_aabb = AABB(Vector3(-50, -60, -50), Vector3(100, 80, 100))
-
-	var mat := ParticleProcessMaterial.new()
-	mat.direction = Vector3(0, -1, 0)
-	mat.spread = 2.0
-	mat.gravity = Vector3(0, -35, 0)
-	mat.initial_velocity_min = 12.0
-	mat.initial_velocity_max = 16.0
-	mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
-	mat.emission_box_extents = Vector3(45, 1, 45)
-	p.process_material = mat
-
-	var drop := BoxMesh.new()
-	drop.size = Vector3(0.02, 0.45, 0.02)
-	var drop_mat := StandardMaterial3D.new()
-	drop_mat.albedo_color = Color(0.6, 0.7, 0.85, 0.6)
-	drop_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	drop_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	drop.material = drop_mat
-	p.draw_pass_1 = drop
-	return p
+func _apply_rain() -> void:
+	if _rain == null:
+		return
+	var falling := _state.rain > 0.05
+	_rain.emitting = falling
+	_rain.visible = falling
+	# Park the rain volume over the player so it's always where the camera is.
+	var players := get_tree().get_nodes_in_group("player")
+	if not players.is_empty():
+		var p := players[0] as Node3D
+		if p != null:
+			_rain.global_position = p.global_position + Vector3(0.0, 9.0, 0.0)
 
 
-func _find_environment() -> WorldEnvironment:
-	var parent := get_parent()
-	if parent == null:
-		return null
-	for child in parent.get_children():
-		if child is WorldEnvironment:
-			return child
-	return null
+func _apply_wetness() -> void:
+	for node in get_tree().get_nodes_in_group("wet_surfaces"):
+		var mi := node as MeshInstance3D
+		if mi == null:
+			continue
+		var mat := mi.material_override as StandardMaterial3D
+		if mat == null:
+			continue
+		if not _wet_base_roughness.has(mi):
+			_wet_base_roughness[mi] = mat.roughness
+		# Wet asphalt is darker and far glossier than dry.
+		mat.roughness = lerpf(float(_wet_base_roughness[mi]), 0.12, _state.wetness)

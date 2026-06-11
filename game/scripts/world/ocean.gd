@@ -60,6 +60,12 @@ func wave_height_at(world_pos: Vector3) -> float:
 	return global_position.y + OceanMath.wave_height_at(xz, _time, amplitude_scale)
 
 
+## Buoyancy convenience matching the floater/boat API (world x/z -> surface y).
+## Lets Floater bodies bob on this GPU ocean the same way they do on the CPU sea.
+func surface_height(world_x: float, world_z: float) -> float:
+	return wave_height_at(Vector3(world_x, 0.0, world_z))
+
+
 func _push_look_params() -> void:
 	_material.set_shader_parameter("u_time", _time)
 	_material.set_shader_parameter("u_amplitude_scale", amplitude_scale)
