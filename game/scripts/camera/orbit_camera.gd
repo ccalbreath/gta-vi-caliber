@@ -39,6 +39,12 @@ const PITCH_MAX: float = 0.5
 @export var shake_decay: float = 1.4
 @export_range(1.0, 4.0) var shake_exponent: float = 2.0
 @export var shake_frequency: float = 18.0
+## Cinematic depth of field: geometry past dof_far_distance (easing over
+## dof_far_transition) blurs gently so the eye reads depth and the distant city
+## hazes off while the foreground stays sharp. Set dof_blur_amount to 0 to off.
+@export var dof_blur_amount: float = 0.06
+@export var dof_far_distance: float = 55.0
+@export var dof_far_transition: float = 45.0
 
 var _pitch: float = 0.0
 var _recoil: float = 0.0
@@ -56,6 +62,20 @@ func _ready() -> void:
 	_camera.fov = base_fov
 	_pitch = _arm.rotation.x
 	_shake_noise = FastNoiseLite.new()
+	_apply_camera_attributes()
+
+
+## Attach far-field depth of field to the camera for a cinematic depth cue.
+## Code-driven (not the scene) so the camera rig stays self-contained.
+func _apply_camera_attributes() -> void:
+	if dof_blur_amount <= 0.0:
+		return
+	var attrs := CameraAttributesPractical.new()
+	attrs.dof_blur_far_enabled = true
+	attrs.dof_blur_far_distance = dof_far_distance
+	attrs.dof_blur_far_transition = dof_far_transition
+	attrs.dof_blur_amount = dof_blur_amount
+	_camera.attributes = attrs
 
 
 ## Hold the camera in the tighter aim FOV. WeaponController sets this each frame
