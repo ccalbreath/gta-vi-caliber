@@ -21,6 +21,19 @@ const DRIVEABLE := {
 	"unclassified": true,
 }
 
+## Highway classes a pedestrian may walk on (sidewalks, paths, plus quiet roads).
+const WALKABLE := {
+	"footway": true,
+	"path": true,
+	"pedestrian": true,
+	"steps": true,
+	"living_street": true,
+	"residential": true,
+	"service": true,
+	"tertiary": true,
+	"cycleway": true,
+}
+
 var nodes := PackedVector3Array()
 var seg_a := PackedInt32Array()
 var seg_b := PackedInt32Array()
@@ -36,10 +49,12 @@ func _init(snap: float = 2.0) -> void:
 
 
 ## Build a network from a district's `roads` array (each {kind, path:[[lat,lon]]}).
-static func from_district(roads: Array, proj: GeoProjection, snap: float = 2.0) -> RoadNetwork:
+static func from_district(
+	roads: Array, proj: GeoProjection, snap: float = 2.0, classes: Dictionary = DRIVEABLE
+) -> RoadNetwork:
 	var net := RoadNetwork.new(snap)
 	for r in roads:
-		if not DRIVEABLE.has(r.get("kind", "")):
+		if not classes.has(r.get("kind", "")):
 			continue
 		var pts := PackedVector3Array()
 		for pair in r.get("path", []):
