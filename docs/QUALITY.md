@@ -5,6 +5,28 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-10 (evening) — district visual integration
+
+Integrated in one pass: procedural façades (window grids, per-building
+worn-stucco palette), asphalt/lane-line road shader, physically-shaded sky
+(rayleigh/mie/clouds/stars), rooftop props, street trees + furniture,
+ambient traffic, crowds. Beauty stills now show a believable hazy downtown
+with varied towers and marked streets. One night driver consolidated:
+SkyController's `world_night_amount` global feeds the façade `night_mix`.
+
+Verified end-to-end after integration (740 unit tests; playtest OK; 5 km
+origin shift drift 0.00 m). Two incidents worth remembering: a cherry-pick
+textually merged a duplicate function and the district silently built
+nothing while smoke stayed green (smoke now asserts the Roads node); and
+main shipped references to never-committed files (repaired, see
+LOOP_HANDOFF process note).
+
+Updated verdicts: **Materials Far → Mid-High** (washed-out highlights at
+noon remain), **City geometry Mid → Mid-High** (sidewalk bands, props,
+trees landed), **Lighting Mid** (golden-hour pass still pending GI).
+Next leverage: street-level polish + GI/volumetrics at golden hour, then
+the coastal district to combine with Ocean v1 for the postcard shot.
+
 ## 2026-06-10 — first full-loop assessment
 
 Verified playable end-to-end by automated headed playtest

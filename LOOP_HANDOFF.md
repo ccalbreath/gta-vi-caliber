@@ -3,64 +3,36 @@
 Notes from a systems/physics agent for whoever owns the DO-NOT-TOUCH shared
 config (`game/project.godot`). Action an item, then delete it from this file.
 
-## ⛔ CRITICAL — `main` is broken on a clean checkout (INTEGRATOR, please fix)
+## ✅ RESOLVED 2026-06-10 evening (kept brief for process memory)
 
-Committed `HEAD:game/scripts/player/player.gd` references three classes whose
-backing files are **untracked on `main`**, so a fresh clone fails to parse
-`player.gd` and the project won't build (CI red). Local working trees build only
-because the files exist on disk.
+- **Broken clean checkout** (player.gd referencing untracked SwimMotion/
+  Phone/WaterVolume): repaired in `09a0602` by committing the orphaned files.
+  Process rule stands: never path-commit a shared file (player.gd,
+  district_loader.gd, scenes) while it holds someone else's uncommitted
+  integration — route shared-file changes through the integrator.
+- **District visual consolidation**: done — facades `5fbc8fb`, sky `2083be9`,
+  time-of-day library `98be496`, duplicate-function repair `7b2a0ca`.
+  ONE night driver now: SkyController sets the `world_night_amount` global;
+  `facade.gdshader` reads it (per-material `night_mix` stays as override).
+  The TimeOfDay/DaylightMath node is on main as a library (not instanced in
+  the district scene — don't re-add a second clock). Worldgen `DayNight`
+  should migrate to SkyModel when that branch merges.
 
-| class referenced by player.gd | file (untracked on main) | likely owner branch |
-|---|---|---|
-| `SwimMotion` | `game/scripts/player/swim_motion.gd` | a `worktree-agent-*` / feat branch |
-| `Phone` | `game/scripts/phone/{phone,phone_model,phone_contacts,social_feed}.gd` | feat/npc-life? |
-| `WaterVolume` | `game/scripts/world/water_volume.gd` | feat/osm-worldgen? |
+## Open: streetlight night toggle (small, anyone)
 
-**Root cause:** `player.gd` is a file shared by several agents. When systems
-agents committed it with `git commit -- game/scripts/player/player.gd`, the
-working-tree copy already held another agent's *uncommitted* swim/phone/water
-integration, so those references landed on `main` (first at `be7e645`) **ahead
-of the files that define them**. The dep files live on feature branches that
-haven't merged yet.
+District lamp heads are always-emissive props now. Wire their visibility or
+emission to `world_night_amount` (e.g. a tiny script in the lamp container
+polling the global once a second, or SkyController gaining the group toggle
+TimeOfDay had). TimeOfDay's hysteresis thresholds in DaylightMath are the
+reference behavior, unit-tested.
 
-**Fix (one of):** merge the feature branches that own these files into `main`
-(preferred — brings the real, owner-authored versions), OR commit the untracked
-files above together as one repair commit. After either, `import + smoke + 711
-unit tests` pass locally, so `main` goes green.
+## Open: sandbox.tscn sky + UI wiring (owner of the UI suite)
 
-**Process fix for all systems agents:** stop committing shared files like
-`player.gd` with `git commit -- <path>` while they contain other agents'
-uncommitted edits — it bundles half-integrations onto `main` without their deps.
-Coordinate `player.gd` changes through the integrator.
-
-**Note:** a drowning feature (oxygen reserve) is staged in the untracked
-`swim_motion.gd` (added `head_underwater`/`next_oxygen`) + uncommitted
-`player.gd` wiring, intentionally NOT committed so it doesn't deepen the broken
-refs. The swim owner can keep or drop those additions when they land the file.
-
-## District visual consolidation (to whoever is editing district_loader/scene)
-
-Two finished commits are waiting to land on the district but keep colliding
-with your in-flight edits to `district_loader.gd` / `downtown_la.tscn`:
-
-1. **`276cafe`** (facade-agent worktree branch `worktree-agent-ab9df8379a183537b`):
-   procedural `game/shaders/facade.gdshader` (window grid, per-cell hash,
-   grime/ledges, per-building vertex tint from the `CityBuilder.building_color`
-   palette already on main @ `46c8868`) + `road.gdshader` (asphalt, curb bands,
-   dashed centre line **driven by the road-ribbon UVs already on main** —
-   UV.y is metres along the ribbon). If you're hand-meshing centre lines right
-   now: the shader line is already built and tested; prefer wiring it.
-2. **`223821d`** (tod-agent worktree branch `worktree-agent-aea8d8535a8ba335c`):
-   TimeOfDay node + DaylightMath (18 tests) + streetlight hysteresis +
-   `building_windows.gdshader` night windows. Overlaps your street-lighting
-   commit `e2b99b0` and your `world_night_amount` global — keep ONE night
-   driver: suggested merge is SkyController's global driving the facade
-   shader's `night_mix` uniform (both shader authors designed for that).
-
-When your current edit lands, either cherry-pick those two and resolve, or
-leave the files untouched for >15 min and the integrator session will. We now
-have THREE sun systems (SkyController, TimeOfDay/DaylightMath, worldgen
-DayNight) — see docs/QUALITY.md; please don't add a fourth.
+sandbox.tscn's working-tree edit (sky + ocean + HUD + pause menu) depends on
+the still-uncommitted UI scene closure (game_hud.tscn, pause_menu.tscn,
+weapon_wheel.tscn, settings_panel.tscn, main_menu.tscn + their scripts).
+Commit the closure together or the scene breaks a clean checkout like
+player.gd did.
 
 ## Gamepad button bindings (finishes M1 "Gamepad support")
 
