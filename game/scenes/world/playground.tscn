@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://scenes/vehicles/car.tscn" id="3_car"]
 [ext_resource type="PackedScene" path="res://scenes/ui/weapon_hud.tscn" id="4_whud"]
 [ext_resource type="PackedScene" path="res://scenes/props/target_dummy.tscn" id="5_target"]
+[ext_resource type="PackedScene" path="res://scenes/npc/pedestrian.tscn" id="6_ped"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_horizon_color = Color(0.66, 0.67, 0.69, 1)
@@ -347,3 +348,20 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -19)
 
 [node name="Target6" parent="Targets" instance=ExtResource("5_target")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11, 0, -16)
+
+[node name="Pedestrians" type="Node3D" parent="."]
+
+[node name="Ped1" parent="Pedestrians" instance=ExtResource("6_ped")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.5, 6)
+
+[node name="Ped2" parent="Pedestrians" instance=ExtResource("6_ped")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.5, 14)
+
+[node name="Ped3" parent="Pedestrians" instance=ExtResource("6_ped")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.5, 10)
+
+[node name="Ped4" parent="Pedestrians" instance=ExtResource("6_ped")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0.5, -6)
+
+[node name="Ped5" parent="Pedestrians" instance=ExtResource("6_ped")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.5, 18)
