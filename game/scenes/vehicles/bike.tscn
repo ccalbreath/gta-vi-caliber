@@ -1,7 +1,8 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/vehicles/bike.gd" id="1_bike"]
 [ext_resource type="Script" path="res://scripts/camera/chase_camera.gd" id="2_chase"]
+[ext_resource type="Script" path="res://scripts/vehicles/bike_body.gd" id="3_body"]
 
 [sub_resource type="StandardMaterial3D" id="body_mat"]
 albedo_color = Color(0.15, 0.3, 0.7, 1)
@@ -35,6 +36,9 @@ max_brake = 30.0
 top_speed = 42.0
 max_steer = 0.7
 steer_falloff_speed = 10.0
+
+[node name="Body" type="Node3D" parent="."]
+script = ExtResource("3_body")
 
 [node name="Frame" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
