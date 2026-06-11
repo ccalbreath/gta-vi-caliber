@@ -20,14 +20,23 @@ func _draw() -> void:
 		var col := lit_color if lit else dim_color
 		if lit and flash > 0.0:
 			col = col.lerp(Color(1, 1, 1), clampf(flash, 0.0, 1.0))
+		# Lit stars get a soft glow halo so the wanted level pulses with menace.
+		if lit:
+			draw_colored_polygon(
+				WantedStars.star_points(center, star_radius + 3.0),
+				Color(lit_color.r, lit_color.g, lit_color.b, 0.22)
+			)
+		# Drop shadow under every star for contrast over bright scenery.
+		draw_colored_polygon(
+			WantedStars.star_points(center + Vector2(1.5, 1.5), star_radius), Color(0, 0, 0, 0.55)
+		)
 		draw_colored_polygon(WantedStars.star_points(center, star_radius), col)
+		var outline := WantedStars.star_points(center, star_radius)
 		draw_polyline(
-			(
-				WantedStars.star_points(center, star_radius)
-				+ PackedVector2Array([WantedStars.star_points(center, star_radius)[0]])
-			),
-			Color(0, 0, 0, 0.5),
-			1.0
+			outline + PackedVector2Array([outline[0]]),
+			Color(0, 0, 0, 0.6) if lit else Color(0, 0, 0, 0.3),
+			1.0,
+			true
 		)
 
 
