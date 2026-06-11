@@ -66,3 +66,23 @@ func test_every_voice_can_speak_every_reaction() -> bool:
 			if NpcDialogue.bark(c["voice"], ctx, 1) == "":
 				return false
 	return true
+
+
+func test_weather_bark_speaks_every_condition() -> bool:
+	for cond in ["clear", "cloudy", "overcast", "rain"]:
+		if NpcDialogue.weather_bark("conspiracy", cond, 1) == "":
+			return false
+	return true
+
+
+func test_weather_anchor_gets_its_own_forecast() -> bool:
+	# The "weather" voice should pull a distinct line from everyone else's grumble.
+	var anchor := NpcDialogue.weather_bark("weather", "rain", 0)
+	var civilian := NpcDialogue.weather_bark("conspiracy", "rain", 0)
+	return anchor != "" and anchor != civilian
+
+
+func test_weather_bark_is_deterministic() -> bool:
+	var a := NpcDialogue.weather_bark("yogi", "overcast", 5)
+	var b := NpcDialogue.weather_bark("yogi", "overcast", 5)
+	return a == b and a != ""

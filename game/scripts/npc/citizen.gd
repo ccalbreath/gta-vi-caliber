@@ -175,6 +175,7 @@ func _physics_process(delta: float) -> void:
 		_react_left = react_interval
 		_maybe_react()
 		_maybe_catch_panic()
+		_maybe_weather_bark()
 		_maybe_socialize()
 
 
@@ -250,6 +251,24 @@ func _maybe_catch_panic() -> void:
 		if NpcReaction.catches_panic(global_position.distance_to(other.global_position), _bravery):
 			_start_panic(other.panic_origin())
 			return
+
+
+## Occasionally grumble about the weather when it's notable — ties the sky to the
+## street. The Self-Appointed Weather Anchor delivers an actual forecast.
+func _maybe_weather_bark() -> void:
+	if is_dead() or is_panicking() or velocity.length() > 1.0:
+		return
+	if _bubble != null and _bubble.modulate.a > 0.25:
+		return
+	if (_voice_seed + _bark_n) % 4 != 0:
+		return
+	var weather := get_tree().get_nodes_in_group("weather")
+	if weather.is_empty():
+		return
+	var condition := String(weather[0].condition())
+	if condition == "clear" and _voice != "weather":
+		return  # only the anchor narrates nice weather; everyone else stays quiet
+	_say(NpcDialogue.weather_bark(_voice, condition, _next_seed()))
 
 
 ## Strike up a (one-sided) conversation with a neighbour while loitering. Only

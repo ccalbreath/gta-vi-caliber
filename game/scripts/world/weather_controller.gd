@@ -25,6 +25,7 @@ var _wet_base_roughness: Dictionary = {}
 
 
 func _ready() -> void:
+	add_to_group("weather")  # citizens find it here to comment on the sky
 	_cycle = start_cycle
 	_env = get_node_or_null(environment_path) as WorldEnvironment
 	_rain = get_node_or_null(rain_path) as GPUParticles3D

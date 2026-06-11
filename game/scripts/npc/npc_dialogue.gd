@@ -212,6 +212,40 @@ const GENERIC: Dictionary = {
 	],
 }
 
+## Weather commentary by sky condition (clear/cloudy/overcast/rain). The
+## Self-Appointed Weather Anchor gets the unhinged-forecaster lines.
+const WEATHER: Dictionary = {
+	"clear": ["Gorgeous out. Suspiciously gorgeous. What does it WANT.", "Not a cloud. Bliss."],
+	"cloudy": ["Bit grey. Like {place}, but as a sky.", "Clouds. Nature's passive aggression."],
+	"overcast":
+	[
+		"This sky owes me a refund.",
+		"Real 'the universe forgot to pay its lighting bill' energy.",
+	],
+	"rain":
+	[
+		"Rain again. {animal} predicted this. I should've listened.",
+		"It's not raining ON me, it's raining AT me. There's a difference.",
+		"Great. Now I'm just {noun}, but damp.",
+	],
+}
+const WEATHER_ANCHOR: Dictionary = {
+	"clear": ["FORECAST: clear skies, high confidence, low followers."],
+	"cloudy": ["Partly cloudy with a 40% chance of me being right for once."],
+	"overcast": ["Doppler confirms: the sky is doing a Mood today, folks."],
+	"rain": ["LIVE: precipitation event in progress, I am IN it, send a towel."],
+}
+
+
+## A weather one-liner in `voice` for the current `condition`. The weather anchor
+## delivers a forecast; everyone else just grumbles. Never empty.
+static func weather_bark(voice: String, condition: String, seed_value: int) -> String:
+	var bank: Dictionary = WEATHER_ANCHOR if voice == "weather" else WEATHER
+	var lines: Array = bank.get(condition, WEATHER.get(condition, ["Weather, huh."]))
+	if lines.is_empty():
+		return "Weather, huh."
+	return _fill(String(lines[posmod(seed_value, lines.size())]), seed_value)
+
 
 ## Resolve {slots} in a line deterministically from `seed_value`.
 static func _fill(line: String, seed_value: int) -> String:
