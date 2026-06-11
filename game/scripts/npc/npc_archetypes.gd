@@ -2,7 +2,7 @@ class_name NpcArchetypes
 extends RefCounted
 ## The census of who lives in this city — a catalog of absurd citizens, each a
 ## bundle of {daily routine, personality, dialogue voice, visual tint, quirk}.
-## This is the data the rest of the NPC stack animates: NpcBrain reads the
+## This is the data the rest of the NPC stack animates: NpcMind reads the
 ## schedule + personality, NpcDialogue reads the voice, the spawner reads the
 ## tint. Humour and absurdity are load-bearing here — a city of "Pedestrian 01"
 ## clones is dead; a city where the crossing guard is a method actor preparing

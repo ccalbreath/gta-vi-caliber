@@ -4,7 +4,7 @@ extends RefCounted
 ##
 ## Five drives, each a satisfaction level in [0, 1] (1 = fully sated, 0 =
 ## desperate). They decay over time at per-NPC rates; activities top them back
-## up. The NpcBrain reads these to decide when a citizen should abandon its
+## up. The NpcMind reads these to decide when a citizen should abandon its
 ## scripted routine and go eat / sleep / find a toilet / chase fun. Pure state +
 ## math, scene-free, so it unit-tests headless (tests/unit/test_npc_needs.gd).
 

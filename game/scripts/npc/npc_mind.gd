@@ -1,8 +1,11 @@
-class_name NpcBrain
+class_name NpcMind
 extends RefCounted
-## The decision layer that makes a citizen feel alive: it fuses the scripted
-## daily routine (NpcSchedule) with live drives (NpcNeeds) and personality, and
-## emits a single concrete intent — "go here and do this, because...".
+## The deliberative decision layer that makes a citizen feel alive: it fuses the
+## scripted daily routine (NpcSchedule) with live drives (NpcNeeds) and
+## personality, and emits a single concrete intent — "go here and do this,
+## because...". This sits *above* the reflexive NpcBrain wander/flee FSM: NpcMind
+## decides where in its day a citizen belongs; NpcBrain handles the moment-to-
+## moment locomotion and panic once it gets there.
 ##
 ## The routine is the baseline. But a drive that gets desperate enough crosses
 ## the NPC's personal interrupt threshold and hijacks the plan: the diligent
@@ -11,7 +14,7 @@ extends RefCounted
 ## and need is what reads, from the sidewalk, as a person with an inner life.
 ##
 ## Pure decision math (state in, intent out), scene-free, unit-tested headless
-## (tests/unit/test_npc_brain.gd).
+## (tests/unit/test_npc_mind.gd).
 
 ## Default urgency at which a drive overrides the schedule. Personality shifts it.
 const OVERRIDE_THRESHOLD: float = 0.7

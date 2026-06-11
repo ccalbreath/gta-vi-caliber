@@ -12,7 +12,7 @@ extends RefCounted
 ## Lines may contain {slots} filled from absurd word banks, seeded so the fill
 ## is stable too.
 
-## Map an NpcBrain activity to a dialogue context (several activities share one).
+## Map an NpcMind activity to a dialogue context (several activities share one).
 const ACTIVITY_CONTEXT: Dictionary = {
 	"work": "work",
 	"eat": "eat",
