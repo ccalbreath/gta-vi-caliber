@@ -21,6 +21,12 @@ extends Node3D
 ## How far ahead (m) to pick each car's next destination when routing.
 @export var trip_radius: float = 60.0
 @export var walkable_attempts: int = 8
+## Car-following: a car slows for the nearest vehicle ahead within flow_range and
+## flow_lane_half_width, stopping by flow_stop_gap and resuming by flow_safe_gap.
+@export var flow_range: float = 28.0
+@export var flow_lane_half_width: float = 2.4
+@export var flow_stop_gap: float = 5.0
+@export var flow_safe_gap: float = 16.0
 ## Auto-build the routing grid from the physics world on the first tick (same
 ## scheme as CrowdDirector): raycast a coarse grid from above the rooflines and
 ## block cells that hit a building/wall or no ground. Off → assign `nav` yourself
@@ -69,6 +75,24 @@ func _physics_process(delta: float) -> void:
 	_cull(center)
 	_repath(center)
 	_spawn(center)
+	_apply_flow()
+
+
+## Cap each car's speed for the vehicle ahead in its lane, so the fleet queues
+## and brakes instead of driving through itself. One pass over the live cars per
+## tick; each car's own position is naturally ignored (zero forward distance).
+func _apply_flow() -> void:
+	var positions := PackedVector3Array()
+	for car in _cars:
+		if is_instance_valid(car):
+			positions.append(car.global_position)
+	for car in _cars:
+		if not is_instance_valid(car):
+			continue
+		var gap := TrafficFlow.gap_ahead(
+			car.global_position, car.heading(), positions, flow_range, flow_lane_half_width
+		)
+		car.speed_limit = TrafficFlow.follow_speed(car.speed, gap, flow_stop_gap, flow_safe_gap)
 
 
 ## Raycast a coarse grid of the area into a NavGrid, blocking cells whose ground

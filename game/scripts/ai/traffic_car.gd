@@ -18,6 +18,11 @@ extends Node3D
 ## off and repaths on completion instead.
 @export var loop: bool = false
 
+## Per-tick speed cap set by the director's car-following (TrafficFlow); negative
+## means uncapped. Lets a car slow or stop for the vehicle ahead without changing
+## its own cruising `speed`.
+var speed_limit: float = -1.0
+
 var _waypoints: PackedVector3Array = PackedVector3Array()
 var _index: int = 0
 var _heading: Vector3 = Vector3(0, 0, 1)
@@ -54,7 +59,10 @@ func _physics_process(delta: float) -> void:
 		else:
 			return
 	var target := _waypoints[_index]
-	var r := TrafficMotion.step(global_position, _heading, target, speed, max_turn_rate, delta)
+	var drive_speed := speed if speed_limit < 0.0 else minf(speed, speed_limit)
+	var r := TrafficMotion.step(
+		global_position, _heading, target, drive_speed, max_turn_rate, delta
+	)
 	global_position = r["position"]
 	_heading = r["heading"]
 	# Face travel direction (heading is planar unit, so look along it on the flat).
