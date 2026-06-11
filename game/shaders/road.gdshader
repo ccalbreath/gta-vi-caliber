@@ -9,6 +9,9 @@ uniform vec3 sidewalk_color : source_color = vec3(0.60, 0.57, 0.51);
 uniform vec3 paint_color : source_color = vec3(0.80, 0.75, 0.60);
 // Fraction of each ribbon edge that reads as sidewalk-toned concrete.
 uniform float sidewalk_frac : hint_range(0.0, 0.4) = 0.14;
+// Photoreal tileable asphalt albedo (Codex-generated) — modulates the procedural
+// base so long straights gain real aggregate/oil grain. White default = neutral.
+uniform sampler2D detail_tex : source_color, hint_default_white, filter_linear_mipmap, repeat_enable;
 
 varying vec2 v_uv;
 
@@ -42,6 +45,13 @@ void fragment() {
 
 	vec3 col = asphalt_color + vec3(n);
 	col = mix(col, sidewalk_color + vec3(n), side);
+
+	// Asphalt grain from the Codex tileable albedo (luminance modulation), kept
+	// off the lane paint + sidewalk bands so markings/kerbs stay crisp.
+	float grain = dot(texture(detail_tex, vec2(x * 2.5, along * 0.30)).rgb, vec3(0.3333));
+	float asphalt_area = (1.0 - side) * (1.0 - paint);
+	col *= mix(1.0, clamp(0.74 + grain * 1.2, 0.74, 1.28), asphalt_area);
+
 	col = mix(col, paint_color, paint * 0.7);
 	col *= 1.0 - 0.30 * curb;
 

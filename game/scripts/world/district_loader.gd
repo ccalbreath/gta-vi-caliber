@@ -658,10 +658,19 @@ func _make_materials() -> void:
 	_building_mat = _shader_or_fallback("res://shaders/facade.gdshader", Color(0.62, 0.63, 0.66))
 	_road_mat = _shader_or_fallback("res://shaders/road.gdshader", Color(0.33, 0.32, 0.31))
 	_sidewalk_mat = _shader_or_fallback("res://shaders/sidewalk.gdshader", Color(0.62, 0.60, 0.56))
+	# Photoreal asphalt grain from the Codex-generated tileable albedo.
+	_set_detail_texture(_road_mat, "res://assets/textures/asphalt_albedo.png")
 
 	_roof_mat = StandardMaterial3D.new()
 	_roof_mat.albedo_color = Color(0.4, 0.41, 0.45)
 	_roof_mat.roughness = 0.95
+
+
+## Assign a tileable detail albedo onto a shader material's `detail_tex` uniform,
+## if the shader uses one and the texture exists (no-op on the greybox fallback).
+static func _set_detail_texture(mat: Material, tex_path: String) -> void:
+	if mat is ShaderMaterial and ResourceLoader.exists(tex_path):
+		(mat as ShaderMaterial).set_shader_parameter("detail_tex", load(tex_path))
 
 
 static func _shader_or_fallback(path: String, fallback: Color) -> Material:

@@ -31,6 +31,19 @@ float hash21(vec2 p) {
 	return fract(p.x * p.y);
 }
 
+// Smooth value noise (bilinear-interpolated hash with a smoothstep fade) — C1
+// enough that screen-space derivatives stay clean for bump mapping.
+float vnoise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	float a = hash21(i);
+	float b = hash21(i + vec2(1.0, 0.0));
+	float c = hash21(i + vec2(0.0, 1.0));
+	float d = hash21(i + vec2(1.0, 1.0));
+	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
 void vertex() {
 	v_pos = VERTEX;
 	v_nrm = NORMAL;
@@ -142,6 +155,30 @@ void fragment() {
 	ROUGHNESS = mix(0.95, wall_rough, wall);
 	METALLIC = wall_metal * wall;
 	SPECULAR = mix(0.3, wall_spec, wall);
+
+	// ----------------------------------------------------------------------
+	//  Stucco micro-surface: fine troweled-plaster grain on masonry walls. A
+	//  smooth value-noise height drives a TANGENT-FREE normal perturbation
+	//  (Mikkelsen screen-space surface gradient — the city meshes carry no
+	//  tangents) plus roughness/albedo break-up, so the flat pastel fills read
+	//  as painted stucco instead of plastic. Glass curtain-wall skips it.
+	// Grain is only legible up close; fade it out with view distance so far
+	// walls don't shimmer/alias (the screen-space derivative gets noisy there).
+	float grain_fade = 1.0 - smoothstep(10.0, 45.0, length(VERTEX));
+	float stucco = wall * (1.0 - is_glass) * grain_fade;
+	if (stucco > 0.001) {
+		vec2 st = vec2(u, v) * 13.0;
+		float h = vnoise(st) * 0.6 + vnoise(st * 2.6) * 0.3;
+		vec3 sx = dFdx(VERTEX);
+		vec3 sy = dFdy(VERTEX);
+		vec3 r1 = cross(sy, NORMAL);
+		vec3 r2 = cross(NORMAL, sx);
+		float det = dot(sx, r1);
+		vec3 grad = sign(det) * (dFdx(h) * r1 + dFdy(h) * r2);
+		NORMAL = normalize(abs(det) * NORMAL - (0.03 * stucco) * grad);
+		ROUGHNESS = clamp(ROUGHNESS + (h - 0.45) * 0.10 * stucco, 0.18, 1.0);
+		ALBEDO *= 1.0 + (h - 0.45) * 0.05 * stucco;
+	}
 
 	// ======================================================================
 	//  Night life: a hashed subset of windows lights up. Punched windows on

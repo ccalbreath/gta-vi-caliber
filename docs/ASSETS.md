@@ -36,6 +36,28 @@ the prompt did not target a specific artist/game/franchise, and the ledger
 row marks it `AI (<tool>)`. Maintainers may reject anything that looks too
 close to existing commercial work regardless of provenance.
 
+### PBR material sets (the texture → game-ready pipeline)
+
+A generated *image* is not yet a material. The drop-in convention that turns an
+AI texture set into a correctly-wired `StandardMaterial3D` is:
+
+```
+game/assets/materials/<name>/
+  albedo.png      # base color (sRGB)
+  normal.png      # tangent-space normal map (optional)
+  roughness.png   # grayscale, red channel (optional)
+  metallic.png    # grayscale, red channel (optional)
+  ao.png          # grayscale ambient occlusion (optional)
+  emission.png    # emissive mask (optional)
+```
+
+Build it in code with `PbrMaterial.from_set("res://assets/materials/<name>")`
+(`scripts/world/pbr_material.gd`) — missing maps are skipped, and `triplanar`
+is available for large surfaces (ground/terrain). This is what a contributor or
+agent should call after a GPT-image → texture-set step, so generated assets
+render consistently instead of each one being hand-configured. Every map still
+needs a ledger row and must be original (not an imitation of a specific work).
+
 ## Provenance ledger
 
 | Path | Description | Author | Source | License |
@@ -45,6 +67,7 @@ close to existing commercial work regardless of provenance.
 | `game/assets/textures/denim.png` | Tileable indigo denim fabric albedo (character trousers) | AI (OpenAI Codex image gen) | original — generic prompt | CC BY 4.0 |
 | `game/assets/textures/cotton.png` | Tileable heather-grey cotton-jersey albedo (character shirts; tinted per character) | AI (OpenAI Codex image gen) | original — generic prompt | CC BY 4.0 |
 | `game/assets/textures/leather.png` | Tileable worn leather-hide albedo (jackets) | AI (OpenAI Codex image gen) | original — generic prompt | CC BY 4.0 |
+| `game/assets/textures/asphalt_albedo.png` | Tileable weathered dark-asphalt road albedo (aggregate + faint cracks/oil; no markings) — modulates the procedural road shader | AI (OpenAI Codex imagegen) | original — generic prompt | CC BY 4.0 |
 | `game/assets/characters/char_hunyuan.glb` | **EVALUATION ONLY — license review pending.** 3D character mesh image-to-3D'd from the Codex/GPT character reference via the Hunyuan3D-2 HF space. Untextured/unrigged proof-of-concept for the GPT-image→3D pipeline. Do NOT ship until re-generated under a permissive model (e.g. TRELLIS, MIT) or relicensed. | AI (Hunyuan3D-2, from OpenAI Codex image) | tencent/Hunyuan3D-2 (Hugging Face) | ⚠️ Tencent Hunyuan license — NOT yet CC-BY-4.0-cleared |
 | `game/assets/characters/char_textured.glb` | **EVALUATION ONLY — license review pending.** The Hunyuan3D mesh with the Codex/GPT photoreal character reference projected on as albedo (Blender front-projection + rembg edge-extend). Drives the preview scene `scenes/world/char3d_preview.tscn`. Unrigged. | AI (Hunyuan3D-2 mesh + OpenAI Codex image texture) | tencent/Hunyuan3D-2 + OpenAI Codex | ⚠️ Hunyuan license — NOT yet CC-BY-4.0-cleared |
 | `game/assets/map/florida_full_map.png` | 3840x2160 full-screen Florida state map render, including the Florida Keys, generated from official state boundary geometry without non-uniform stretch | project contributors, derived from U.S. Census Bureau data | https://www2.census.gov/geo/tiger/GENZ2024/shp/cb_2024_us_state_500k.zip | CC0-compatible public domain (U.S. Census Bureau) |

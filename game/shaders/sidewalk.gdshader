@@ -25,6 +25,12 @@ float hash21(vec2 p) {
 	return fract(p.x * p.y);
 }
 
+// Without this, v_uv stayed (0,0) and the whole joint/curb/patch pattern below
+// collapsed to a flat slab — the mesh carries UVs (CityBuilder.sidewalk_ribbon).
+void vertex() {
+	v_uv = UV;
+}
+
 void fragment() {
 	float u = v_uv.x;
 	float along = v_uv.y;
