@@ -44,6 +44,10 @@ const GRAVITY: float = 9.81
 ## crash — normal driving, braking, and landings stay below this.
 @export var impact_threshold: float = 6.0
 @export var impact_damage_scale: float = 4.0
+## Crash camera shake: velocity jump (m/s) mapped to a full jolt, and its peak
+## trauma. Below impact_threshold (the damage floor) there's no shake either.
+@export var crash_shake_full_dv: float = 25.0
+@export_range(0.0, 1.0) var crash_shake_max_trauma: float = 0.9
 ## Engine output fraction left when barely alive (limp-home floor).
 @export var limp_floor: float = 0.25
 ## Drag area Cd·A (m²): the squared-speed drag that actually caps top speed once
@@ -72,6 +76,7 @@ var _long_accel: float = 0.0
 var _prev_forward_speed: float = 0.0
 
 @onready var _camera: Camera3D = $CameraPivot/SpringArm/Camera
+@onready var _chase: ChaseCamera = $CameraPivot
 @onready var _exit_point: Marker3D = $ExitPoint
 
 
@@ -196,3 +201,8 @@ func _track_impacts() -> void:
 	)
 	if damage > 0.0:
 		health = VehicleDamage.health_after(health, damage)
+		_chase.add_shake(
+			CameraShake.trauma_from_impact(
+				velocity_change, impact_threshold, crash_shake_full_dv, crash_shake_max_trauma
+			)
+		)
