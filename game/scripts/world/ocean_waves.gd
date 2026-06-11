@@ -84,6 +84,17 @@ static func max_height(waves: Array) -> float:
 	return m
 
 
+## Foam factor 0..1 at (x, z): whitecaps gather on the crests, so foam rises as
+## the surface nears its peak height. `crest_start` is the normalised height
+## (0 trough .. 1 max crest) where foam begins. Flat water has no foam.
+static func foam(x: float, z: float, t: float, waves: Array, crest_start: float = 0.55) -> float:
+	var mh := max_height(waves)
+	if mh <= 0.0:
+		return 0.0
+	var norm := surface_height(x, z, t, waves) / mh * 0.5 + 0.5
+	return smoothstep(crest_start, 1.0, clampf(norm, 0.0, 1.0))
+
+
 ## Surface normal at (x, z), by central difference of the height field. Unit
 ## length; exactly Vector3.UP on flat water.
 static func normal(x: float, z: float, t: float, waves: Array, eps: float = 0.1) -> Vector3:

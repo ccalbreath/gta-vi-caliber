@@ -57,3 +57,25 @@ func test_surface_actually_moves_over_time() -> bool:
 	var a := OceanWaves.surface_height(5.0, 5.0, 0.0, waves)
 	var b := OceanWaves.surface_height(5.0, 5.0, 0.7, waves)
 	return absf(a - b) > 0.0001
+
+
+func test_no_foam_on_flat_water() -> bool:
+	return OceanWaves.foam(3.0, 4.0, 1.0, []) == 0.0
+
+
+func test_foam_gathers_on_crests_not_troughs() -> bool:
+	# Single wave (λ=10, speed 2): crest at x=2.5, trough at x=7.5 at t=0.
+	var crest := OceanWaves.foam(2.5, 0.0, 0.0, _one)
+	var trough := OceanWaves.foam(7.5, 0.0, 0.0, _one)
+	return crest > 0.5 and trough < 0.01
+
+
+func test_foam_is_bounded_0_1() -> bool:
+	var waves := OceanWaves.default_waves()
+	var x := -20.0
+	while x < 20.0:
+		var f := OceanWaves.foam(x, x * 0.3, 1.0, waves)
+		if f < 0.0 or f > 1.0:
+			return false
+		x += 1.1
+	return true

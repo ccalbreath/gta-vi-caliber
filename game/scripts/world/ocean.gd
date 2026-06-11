@@ -26,6 +26,7 @@ func _ready() -> void:
 	_material.roughness = 0.08
 	_material.metallic = 0.25
 	_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_material.vertex_color_use_as_albedo = true  # bake foam into per-vertex colour
 	_rebuild()
 
 
@@ -48,7 +49,9 @@ func _rebuild() -> void:
 	var half := plane_size * 0.5
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()
+	var colors := PackedColorArray()
 	var idx := PackedInt32Array()
+	var foam_white := Color(0.85, 0.9, 0.95, 1.0)
 
 	for r in n + 1:
 		for c in n + 1:
@@ -57,6 +60,7 @@ func _rebuild() -> void:
 			var d := OceanWaves.displacement(x, z, _t, _waves)
 			verts.append(Vector3(x + d.x, d.y, z + d.z))
 			norms.append(OceanWaves.normal(x, z, _t, _waves))
+			colors.append(water_color.lerp(foam_white, OceanWaves.foam(x, z, _t, _waves)))
 
 	var w := n + 1
 	for r in n:
@@ -68,6 +72,7 @@ func _rebuild() -> void:
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
 	arrays[Mesh.ARRAY_NORMAL] = norms
+	arrays[Mesh.ARRAY_COLOR] = colors
 	arrays[Mesh.ARRAY_INDEX] = idx
 
 	var am := ArrayMesh.new()
