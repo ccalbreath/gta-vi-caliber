@@ -45,6 +45,15 @@ extends Node3D
 ## Physics layers the ground/world lives on (the ray ignores anything else, so
 ## it doesn't catch other pedestrians).
 @export_flags_3d_physics var ground_mask: int = 1
+## Candidate spawn offsets to try per ped when a nav grid is set, before giving
+## up for this tick — keeps peds out of buildings/water without busy-looping.
+@export var walkable_attempts: int = 8
+
+## Optional walkability map. When assigned (in code; stamp building/water
+## footprints with NavGrid.block_world_rect), spawns are rejected on blocked
+## cells so pedestrians appear on streets and sidewalks, never inside a wall.
+## Null = spawn anywhere (flat-sandbox behaviour).
+var nav: NavGrid = null
 
 var _peds: Array[Node3D] = []
 var _rng := RandomNumberGenerator.new()
@@ -88,9 +97,9 @@ func _spawn(center: Vector3) -> void:
 		return
 	var n := CrowdDistribution.spawn_count(_peds.size(), target_count, spawn_budget)
 	for _i in n:
-		var offset := CrowdDistribution.spawn_offset(
-			spawn_min_radius, spawn_max_radius, _rng.randf(), _rng.randf()
-		)
+		var offset := _walkable_offset(center)
+		if offset == Vector3.INF:
+			continue  # nowhere walkable this tick; try again next tick
 		var ped := pedestrian_scene.instantiate() as Node3D
 		if ped == null:
 			return
@@ -100,6 +109,24 @@ func _spawn(center: Vector3) -> void:
 		pos.y = _ground_y(pos, center.y)
 		ped.global_position = pos
 		_peds.append(ped)
+
+
+## Sample an annulus offset that lands on a walkable cell. Without a nav grid,
+## the first sample is taken as-is. With one, up to walkable_attempts samples are
+## tried and the first on an open cell wins; Vector3.INF signals "no luck this
+## tick" so the caller skips rather than dropping a ped into a building.
+func _walkable_offset(center: Vector3) -> Vector3:
+	var attempts: int = walkable_attempts if nav != null else 1
+	for _a in attempts:
+		var offset := CrowdDistribution.spawn_offset(
+			spawn_min_radius, spawn_max_radius, _rng.randf(), _rng.randf()
+		)
+		if nav == null:
+			return offset
+		var cell := nav.world_to_cell(center + offset)
+		if not nav.is_blocked(cell.x, cell.y):
+			return offset
+	return Vector3.INF
 
 
 ## Give a fresh ped its own stature and gait before it enters the tree, so two
