@@ -204,14 +204,22 @@ func _apply_aero() -> void:
 ## so it levels out and lands wheels-down instead of tumbling off a jump. Pure
 ## torque math is in VehicleMotion.air_righting_torque.
 func _apply_air_righting() -> void:
-	for wheel in _wheels:
-		if (wheel as VehicleWheel3D).is_in_contact():
-			return
+	if not _is_airborne():
+		return
 	apply_torque(
 		VehicleMotion.air_righting_torque(
 			global_transform.basis.y, angular_velocity, air_right_stiffness, air_right_damping
 		)
 	)
+
+
+## True when no wheel is touching the ground. Protected so subclasses (Bike) can
+## suspend their ground-only stabilization while jumping.
+func _is_airborne() -> bool:
+	for wheel in _wheels:
+		if (wheel as VehicleWheel3D).is_in_contact():
+			return false
+	return true
 
 
 func _track_impacts() -> void:

@@ -17,6 +17,10 @@ func _physics_process(delta: float) -> void:
 
 
 func _stabilize() -> void:
+	# Off the ground, Car's air-righting owns attitude — running the steering-
+	# based ground lean here too would fight it mid-jump.
+	if _is_airborne():
+		return
 	# Tilt is the right axis' vertical component: 0 upright, +1 flat on the
 	# left side. The lean target follows steering so turns feel committed.
 	var back := global_transform.basis.z
