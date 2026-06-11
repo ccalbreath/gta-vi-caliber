@@ -149,6 +149,7 @@ func _physics_process(delta: float) -> void:
 	if _react_left <= 0.0:
 		_react_left = react_interval
 		_maybe_react()
+		_maybe_socialize()
 
 
 ## React to a nearby player: bolt if frightened, rubberneck if merely intrigued.
@@ -175,6 +176,46 @@ func _maybe_react() -> void:
 		"gawk":
 			if _bubble.modulate.a <= 0.0:
 				_say(NpcDialogue.bark(_voice, "gawk", _next_seed()))
+
+
+## Strike up a (one-sided) conversation with a neighbour while loitering. Only
+## near-stationary, un-spooked citizens chat; a seeded gate keeps the street from
+## becoming a wall of noise. The other party replies on its own tick — out of
+## sync and off-topic, which is exactly the bit.
+func _maybe_socialize() -> void:
+	if is_dead() or _state == NpcBrain.State.FLEE:
+		return
+	if velocity.length() > 1.0:
+		return  # walking with purpose; no time to talk
+	if _bubble != null and _bubble.modulate.a > 0.25:
+		return  # already mid-sentence
+	if (_voice_seed + _bark_n) % 3 != 0:
+		return  # most ticks, keep it to yourself
+	var other := _nearest_citizen(3.2)
+	if other == null:
+		return
+	_say(
+		(
+			NpcConversation.greeting(_voice, _next_seed())
+			if _bark_n < 2
+			else NpcDialogue.bark(_voice, "chat", _next_seed())
+		)
+	)
+
+
+## Nearest other living Citizen within `radius`, or null.
+func _nearest_citizen(radius: float) -> Citizen:
+	var best: Citizen = null
+	var best_d := radius
+	for node in get_tree().get_nodes_in_group("citizens"):
+		var c := node as Citizen
+		if c == null or c == self or c.is_dead():
+			continue
+		var d := global_position.distance_to(c.global_position)
+		if d < best_d:
+			best_d = d
+			best = c
+	return best
 
 
 ## Bark a fright line when shot, on top of Pedestrian's flee response.

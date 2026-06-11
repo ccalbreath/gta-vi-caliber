@@ -99,6 +99,7 @@ const BANKS: Dictionary = {
 		],
 		"work": ["That'll be six bucks. Cash. The card readers LISTEN."],
 		"see_player": ["You're either with me or you're {noun} in a trench coat."],
+		"chat": ["Don't look now, but that lamppost has been TAKING NOTES. Anyway, how are you?"],
 	},
 	"yogi":
 	{
@@ -109,6 +110,7 @@ const BANKS: Dictionary = {
 		],
 		"work": ["Inhale calm. Exhale {noun}. Namaste, aggressively."],
 		"see_player": ["I can sense your tension from here. It owes me money."],
+		"chat": ["Mm. I hear your words, but your CHAKRAS are mumbling. Speak up, chakras."],
 	},
 	"stunt_double":
 	{
@@ -124,6 +126,7 @@ const BANKS: Dictionary = {
 	{
 		"idle": ["...", "(gestures at an invisible wall, deeply moved)", "(silent, but judging)"],
 		"see_player": ["(points at you, then at an invisible rope, urgently)"],
+		"chat": ["(nods vigorously, mimes a tiny violin, points at the sky, weeps)"],
 	},
 	"intern":
 	{
@@ -143,6 +146,7 @@ const BANKS: Dictionary = {
 			"We are all just {animal}, briefly convinced we have a schedule.",
 		],
 		"see_player": ["You there — do you exist, or are you also avoiding emails?"],
+		"chat": ["But IS a hot dog a sandwich, or is the sandwich us? ...Steve. STEVE. Heel."],
 	},
 	"food_critic":
 	{
@@ -153,6 +157,8 @@ const BANKS: Dictionary = {
 		],
 		"eat": ["I'll allow it. Three stars. The pickle showed real courage."],
 		"see_player": ["Your vibe? Unseasoned. But promising. I'll allow it."],
+		"chat":
+		["This conversation: a bold three stars. Slightly overcooked, but the texture? Fun."],
 	},
 	"life_coach":
 	{
@@ -189,6 +195,21 @@ const GENERIC: Dictionary = {
 	"gawk":
 	["Are you SEEING this?!", "Somebody's having a day.", "I'm not staring, you're staring."],
 	"bump": ["Hey! Walkin' here!", "Personal space is a {place}, my friend.", "Oof. Rude."],
+	"greet":
+	[
+		"Oh — hi! We're both just. Out here. Existing.",
+		"Hey, you! Big fan of {noun}, by the way.",
+		"Morning! Or — is it? Time is {place} to me now.",
+	],
+	"chat":
+	[
+		"So I told them, I said, '{noun} is not a personality.' They disagreed.",
+		"Anyway, long story short, I no longer trust {animal}.",
+		"You ever just think about {place}? No? ...Just me, then.",
+		"Totally. Totally. ...Wait, what are we agreeing about?",
+		"And THAT'S why I don't do Tuesdays anymore.",
+		"Mm-hm. Mm-hm. Big if true. What were you saying?",
+	],
 }
 
 
