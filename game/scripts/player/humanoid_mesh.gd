@@ -188,7 +188,7 @@ static func pelvis(height: float = 0.22, width: float = 0.21, depth: float = 0.1
 static func head(height: float = 0.28, width: float = 0.13, depth: float = 0.13) -> Dictionary:
 	var h: float = height * 0.5
 	var rings: Array = []
-	var count: int = 12
+	var count: int = 20  # higher ring count → smoother, rounder head
 	for i in count + 1:
 		var s: float = float(i) / float(count)
 		var t: float = h - s * height
@@ -196,7 +196,7 @@ static func head(height: float = 0.28, width: float = 0.13, depth: float = 0.13)
 		var prof: float = sin(s * PI)
 		var jaw: float = lerpf(1.04, 0.82, s)
 		rings.append(Vector3(t, width * prof * jaw, depth * prof * jaw))
-	return lofted(rings, 18)
+	return lofted(rings, 28)  # more radial segments for a smooth, un-faceted face
 
 
 ## Neck: a short skin column that bridges the shoulders and the head so the

@@ -194,9 +194,16 @@ func _build_materials() -> void:
 	_skin.albedo_color = skin_color
 	_skin.roughness = 0.45
 	_skin.metallic = 0.0
-	# Subsurface scattering gives skin its soft, light-permeable falloff.
+	# Skin-mode subsurface scattering + reddish transmittance: light scatters
+	# through and reddens in thin areas (ears, nose), the way real flesh does —
+	# the single biggest lever for skin looking like skin rather than plastic.
 	_skin.subsurf_scatter_enabled = true
-	_skin.subsurf_scatter_strength = 0.30
+	_skin.subsurf_scatter_skin_mode = true
+	_skin.subsurf_scatter_strength = 0.5
+	_skin.subsurf_scatter_transmittance_enabled = true
+	_skin.subsurf_scatter_transmittance_color = Color(0.9, 0.38, 0.3)
+	_skin.subsurf_scatter_transmittance_depth = 0.35
+	_skin.subsurf_scatter_transmittance_boost = 0.2
 	# A faint rim picks out the silhouette against the sky, as flesh does.
 	_skin.rim_enabled = true
 	_skin.rim = 0.35
@@ -241,8 +248,16 @@ func _build_materials() -> void:
 
 	_iris = StandardMaterial3D.new()
 	_iris.albedo_color = eye_color
-	_iris.roughness = 0.18
+	_iris.roughness = 0.1
 	_iris.metallic = 0.0
+	# A clearcoat layer fakes the wet, glossy cornea over the iris — the catchlight
+	# it produces is one of the strongest "this is alive" cues on a face.
+	_iris.clearcoat_enabled = true
+	_iris.clearcoat = 1.0
+	_iris.clearcoat_roughness = 0.03
+	_sclera.clearcoat_enabled = true
+	_sclera.clearcoat = 0.8
+	_sclera.clearcoat_roughness = 0.05
 
 	_mouth = StandardMaterial3D.new()
 	_mouth.albedo_color = Color(0.5, 0.28, 0.26)
@@ -278,6 +293,11 @@ func _add_head_details(rig: Node) -> void:
 		var iris := _sphere(0.0125, _iris)
 		iris.position = Vector3(0.047 * side, -0.016, -0.108)
 		head.add_child(iris)
+		# A tiny bright catchlight sphere at the upper edge of the eye — the spark
+		# of a reflected light source that reads instantly as a living eye.
+		var catchlight := _sphere(0.0035, _catchlight_material())
+		catchlight.position = Vector3(0.05 * side, -0.008, -0.118)
+		head.add_child(catchlight)
 		var brow := _sphere(0.022, _hair)
 		brow.position = Vector3(0.046 * side, 0.012, -0.098)
 		brow.scale = Vector3(1.1, 0.28, 0.5)
@@ -374,6 +394,16 @@ func _add_mara_head_details(rig: Node) -> void:
 	scar.position = Vector3(-0.05, 0.02, -0.121)
 	scar.rotation.z = -0.45
 	head.add_child(scar)
+
+
+func _catchlight_material() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 1.0, 1.0)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 1.0, 1.0)
+	mat.emission_energy_multiplier = 2.0
+	return mat
 
 
 func _sphere(radius: float, mat: Material) -> MeshInstance3D:
