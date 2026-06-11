@@ -46,3 +46,37 @@ func test_version_of_garbage_is_zero() -> bool:
 
 func test_empty_snapshot_round_trips() -> bool:
 	return SaveData.decode(SaveData.encode({})).is_empty()
+
+
+func test_vec3_round_trip() -> bool:
+	var v := Vector3(1.5, -2.0, 3.25)
+	return SaveData.array_to_vec3(SaveData.vec3_to_array(v), Vector3.ZERO).is_equal_approx(v)
+
+
+func test_array_to_vec3_rejects_malformed() -> bool:
+	var fb := Vector3(9, 9, 9)
+	return (
+		SaveData.array_to_vec3("nope", fb) == fb
+		and SaveData.array_to_vec3([1.0, 2.0], fb) == fb
+		and SaveData.array_to_vec3([1.0, 2.0, "x"], fb) == fb
+	)
+
+
+func test_transform_round_trip() -> bool:
+	var t := Transform3D(Basis.from_euler(Vector3(0.3, 0.7, -0.2)), Vector3(4, 5, 6))
+	var back := SaveData.dict_to_transform(SaveData.transform_to_dict(t), Transform3D.IDENTITY)
+	return back.origin.is_equal_approx(t.origin) and back.basis.is_equal_approx(t.basis)
+
+
+func test_dict_to_transform_rejects_malformed() -> bool:
+	var fb := Transform3D(Basis.IDENTITY, Vector3(7, 7, 7))
+	return SaveData.dict_to_transform("garbage", fb) == fb
+
+
+func test_number_or_falls_back() -> bool:
+	return (
+		is_equal_approx(SaveData.number_or(42.0, 0.0), 42.0)
+		and is_equal_approx(SaveData.number_or(3, 0.0), 3.0)
+		and is_equal_approx(SaveData.number_or("x", -1.0), -1.0)
+		and is_equal_approx(SaveData.number_or(null, -1.0), -1.0)
+	)
