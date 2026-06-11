@@ -22,8 +22,11 @@ func _ready() -> void:
 
 	var chassis: MeshInstance3D = car.get_node_or_null("Chassis") as MeshInstance3D
 	if chassis != null:
-		chassis.mesh = CarMesh.to_mesh(CarMesh.body())
-		chassis.material_override = _paint()
+		var mesh := CarMesh.to_mesh_glazed(CarMesh.body())
+		chassis.mesh = mesh
+		chassis.set_surface_override_material(0, _paint())
+		if mesh != null and mesh.get_surface_count() > 1:
+			chassis.set_surface_override_material(1, _glass())
 		chassis.position = Vector3.ZERO  # body is authored in car space already
 
 	var cabin: MeshInstance3D = car.get_node_or_null("Cabin") as MeshInstance3D
@@ -55,6 +58,15 @@ func _paint() -> StandardMaterial3D:
 	# Clearcoat-ish sheen for an automotive paint read.
 	mat.rim_enabled = true
 	mat.rim = 0.25
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return mat
+
+
+func _glass() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.04, 0.05, 0.07)
+	mat.metallic = 0.4
+	mat.roughness = 0.05
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return mat
 

@@ -26,6 +26,14 @@ const ROOFLINE: Array[Vector2] = [
 	Vector2(0.76, 1.04),
 	Vector2(1.0, 0.86),
 ]
+# The greenhouse window band: faces whose centroid sits at cabin height and
+# within the cabin length become the glass surface; everything else is paint —
+# carving a windshield/side/rear-window belt with no extra geometry (painted
+# roof above it, body below).
+const GLASS_Y_LOW: float = 0.80
+const GLASS_Y_HIGH: float = 1.26
+const GLASS_Z_FRONT: float = -1.05
+const GLASS_Z_REAR: float = 0.95
 
 
 ## Build the car body. length/width are the overall hull bounds (metres); the
@@ -70,10 +78,12 @@ static func _se(angle: float, half_w: float, half_h: float) -> Vector2:
 
 
 ## Loft a list of [z, half_w, centre_y, half_h] slices (ascending z) into a closed
-## hull. Side winding is outward; ends are fan-capped; normals are smoothed.
+## hull, split into paint (`indices`) and glass (`glass_indices`) surfaces. Side
+## winding is outward; ends are fan-capped; normals are smoothed over both.
 static func _loft(prof: Array, segments: int) -> Dictionary:
 	var verts := PackedVector3Array()
-	var indices := PackedInt32Array()
+	var paint := PackedInt32Array()
+	var glass := PackedInt32Array()
 	var ring_start := PackedInt32Array()
 
 	for slice in prof:
@@ -91,18 +101,50 @@ static func _loft(prof: Array, segments: int) -> Dictionary:
 		var s1: int = ring_start[i + 1]
 		for k in segments:
 			var k2: int = (k + 1) % segments
-			indices.append_array([s0 + k, s0 + k2, s1 + k, s0 + k2, s1 + k2, s1 + k])
+			_tri(verts, paint, glass, s0 + k, s0 + k2, s1 + k)
+			_tri(verts, paint, glass, s0 + k2, s1 + k2, s1 + k)
 
-	_cap(verts, indices, ring_start[0], segments, prof[0], true)
+	_cap(verts, paint, glass, ring_start[0], segments, prof[0], true)
 	var last: int = prof.size() - 1
-	_cap(verts, indices, ring_start[last], segments, prof[last], false)
+	_cap(verts, paint, glass, ring_start[last], segments, prof[last], false)
 
-	return {"vertices": verts, "normals": _smooth_normals(verts, indices), "indices": indices}
+	var combined := PackedInt32Array()
+	combined.append_array(paint)
+	combined.append_array(glass)
+	return {
+		"vertices": verts,
+		"normals": _smooth_normals(verts, combined),
+		"indices": paint,
+		"glass_indices": glass,
+	}
+
+
+## Route a triangle to the paint or glass index list by its centroid.
+static func _tri(
+	verts: PackedVector3Array,
+	paint: PackedInt32Array,
+	glass: PackedInt32Array,
+	a: int,
+	b: int,
+	c: int
+) -> void:
+	var centroid := (verts[a] + verts[b] + verts[c]) / 3.0
+	var is_glass: bool = (
+		centroid.y > GLASS_Y_LOW
+		and centroid.y < GLASS_Y_HIGH
+		and centroid.z > GLASS_Z_FRONT
+		and centroid.z < GLASS_Z_REAR
+	)
+	if is_glass:
+		glass.append_array([a, b, c])
+	else:
+		paint.append_array([a, b, c])
 
 
 static func _cap(
 	verts: PackedVector3Array,
-	indices: PackedInt32Array,
+	paint: PackedInt32Array,
+	glass: PackedInt32Array,
 	ring_start: int,
 	segments: int,
 	slice: Array,
@@ -114,9 +156,9 @@ static func _cap(
 	for k in segments:
 		var k2: int = (k + 1) % segments
 		if min_end:
-			indices.append_array([c, ring_start + k, ring_start + k2])
+			_tri(verts, paint, glass, c, ring_start + k, ring_start + k2)
 		else:
-			indices.append_array([c, ring_start + k2, ring_start + k])
+			_tri(verts, paint, glass, c, ring_start + k2, ring_start + k)
 
 
 static func _smooth_normals(
@@ -140,15 +182,37 @@ static func _smooth_normals(
 	return normals
 
 
-## Pack a geometry dict into an ArrayMesh surface. Empty → null.
+## Pack a geometry dict into a single ArrayMesh surface (paint faces). Empty → null.
 static func to_mesh(geo: Dictionary) -> ArrayMesh:
 	if geo.is_empty() or (geo["vertices"] as PackedVector3Array).is_empty():
 		return null
+	var mesh := ArrayMesh.new()
+	_add_surface(mesh, geo["vertices"], geo["normals"], geo["indices"])
+	return mesh
+
+
+## Two-surface mesh: surface 0 = painted body, surface 1 = glass greenhouse.
+## The builder assigns a paint and a glass material respectively.
+static func to_mesh_glazed(geo: Dictionary) -> ArrayMesh:
+	if geo.is_empty() or (geo["vertices"] as PackedVector3Array).is_empty():
+		return null
+	var mesh := ArrayMesh.new()
+	_add_surface(mesh, geo["vertices"], geo["normals"], geo["indices"])
+	var glass: PackedInt32Array = geo.get("glass_indices", PackedInt32Array())
+	if not glass.is_empty():
+		_add_surface(mesh, geo["vertices"], geo["normals"], glass)
+	return mesh
+
+
+static func _add_surface(
+	mesh: ArrayMesh,
+	verts: PackedVector3Array,
+	normals: PackedVector3Array,
+	indices: PackedInt32Array
+) -> void:
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = geo["vertices"]
-	arrays[Mesh.ARRAY_NORMAL] = geo["normals"]
-	arrays[Mesh.ARRAY_INDEX] = geo["indices"]
-	var mesh := ArrayMesh.new()
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_INDEX] = indices
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	return mesh
