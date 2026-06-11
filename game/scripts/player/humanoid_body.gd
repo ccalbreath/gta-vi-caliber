@@ -210,7 +210,17 @@ func _build_materials() -> void:
 	_skin.rim_tint = 0.4
 	_skin.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_apply_detail_normal(_skin, HumanoidTextures.skin_normal(), 0.45, 7.0)
-	_skin.albedo_texture = HumanoidTextures.skin_albedo()
+	# Photoreal AI-generated skin albedo (Codex image gen; see docs/ASSETS.md) —
+	# real pores and tone variation, tinted by each character's skin_color so the
+	# hero, Mara and palette-varied crowds all keep their own complexion.
+	var skin_tex := load("res://assets/textures/skin_albedo.png") as Texture2D
+	if skin_tex != null:
+		_skin.albedo_texture = skin_tex
+		# Tint lightly toward white so the warm photoreal texture isn't double-warmed
+		# into orange, while keeping a hint of each character's complexion.
+		_skin.albedo_color = skin_color.lerp(Color.WHITE, 0.7)
+	else:
+		_skin.albedo_texture = HumanoidTextures.skin_albedo()
 
 	_shirt = _fabric(shirt_color, 0.82, 0.12)
 	_pants = _fabric(pants_color, 0.9, 0.06)

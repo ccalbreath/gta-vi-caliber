@@ -41,6 +41,7 @@ close to existing commercial work regardless of provenance.
 | Path | Description | Author | Source | License |
 | --- | --- | --- | --- | --- |
 | `game/icon.svg` | Project icon (sun over road) | project contributors | original | CC BY 4.0 |
+| `game/assets/textures/skin_albedo.png` | Tileable photoreal human-skin albedo for the character skin material (close-up pores/tone; no face, no franchise) | AI (OpenAI Codex image gen) | original — generic prompt | CC BY 4.0 |
 | `game/assets/world/downtown_la.json` | Building footprints/heights + road centerlines for the downtown district, extracted via `tools/osm/fetch_district.py` | © OpenStreetMap contributors | https://www.openstreetmap.org/copyright | ODbL 1.0 (data only; attribution embedded in file and credits) |
 | `game/assets/world/*.json` (18 districts + `districts.json` index) | Building footprints/heights + road centerlines for the LA-region districts (venice_beach, santa_monica, hollywood, …), same extractor | © OpenStreetMap contributors | https://www.openstreetmap.org/copyright | ODbL 1.0 (data only; attribution embedded in each file and credits) |
 
