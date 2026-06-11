@@ -34,6 +34,10 @@ uniform float u_absorption = 0.3;
 // Water thinner than this fades out — soft shoreline edge.
 uniform float u_edge_fade = 0.6;
 uniform float u_roughness = 0.08;
+// Surf foam: water-column depth (m) where the shore band fully saturates,
+// and the foam tint (warm white reads better at golden hour than pure).
+uniform float u_foam_depth = 1.1;
+uniform vec4 u_foam_color : source_color = vec4(0.96, 0.97, 0.94, 1.0);
 
 uniform sampler2D u_depth_texture : hint_depth_texture, filter_nearest;
 
@@ -74,6 +78,18 @@ vec3 gerstner_normal(vec2 p, float t, float amp_scale) {
 		n.y -= WAVE_STEEPNESS[i] * k * amp * sin(phase);
 	}
 	return normalize(n);
+}
+
+// Cheap animated value noise for foam break-up (no textures in the repo).
+float foam_noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	float a = fract(sin(dot(i, vec2(127.1, 311.7))) * 43758.5453);
+	float b = fract(sin(dot(i + vec2(1.0, 0.0), vec2(127.1, 311.7))) * 43758.5453);
+	float c = fract(sin(dot(i + vec2(0.0, 1.0), vec2(127.1, 311.7))) * 43758.5453);
+	float d = fract(sin(dot(i + vec2(1.0, 1.0), vec2(127.1, 311.7))) * 43758.5453);
+	return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
 void vertex() {
@@ -118,9 +134,23 @@ void fragment() {
 	// Peaks at mid shallows (transmit 0.5), vanishes at the shore and at depth.
 	EMISSION = u_shallow_color.rgb * (transmit * (1.0 - transmit) * 4.0) * 0.28;
 
+	// Surf foam (Ocean v2): a noisy white band where the water column thins
+	// at the sand, pulsing with the longest wave so the surf line breathes,
+	// plus whitecap foam on the steepest crests. Noise breaks the band into
+	// streaks so it reads as wash, not a painted stripe.
+	float foam_band = 1.0 - smoothstep(0.0, u_foam_depth, thickness);
+	float surf_pulse = 0.7 + 0.3 * sin(u_time * 0.9 + v_param.x * 0.05);
+	float streaks = foam_noise(v_param * 0.35 + vec2(u_time * 0.25, 0.0));
+	streaks = streaks * 0.6 + 0.4 * foam_noise(v_param * 1.4 - vec2(0.0, u_time * 0.4));
+	float foam = clamp(foam_band * surf_pulse * smoothstep(0.35, 0.85, streaks) * 1.6, 0.0, 1.0);
+	foam += crest * smoothstep(0.5, 0.9, streaks) * 0.8;
+	foam = clamp(foam, 0.0, 1.0);
+	albedo = mix(albedo, u_foam_color.rgb, foam);
+	alpha = mix(alpha, 1.0, foam * 0.85);
+	ROUGHNESS = mix(u_roughness, 0.7, foam);
+
 	ALBEDO = albedo;
 	ALPHA = alpha;
 	METALLIC = 0.0;
-	ROUGHNESS = u_roughness;
 	SPECULAR = 0.5;
 }
