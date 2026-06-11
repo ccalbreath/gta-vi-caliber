@@ -16,9 +16,9 @@ signal district_built(building_count: int, road_count: int)
 ## Build collision for buildings. Off speeds up pure-visual previews.
 @export var build_collision: bool = true
 
-var _building_mat: StandardMaterial3D
+var _building_mat: Material
 var _roof_mat: StandardMaterial3D
-var _road_mat: StandardMaterial3D
+var _road_mat: Material
 
 
 func _ready() -> void:
@@ -78,6 +78,7 @@ func _build_buildings(buildings: Array, proj: GeoProjection) -> int:
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()
 	var idx := PackedInt32Array()
+	var colors := PackedColorArray()
 	var meshed := 0
 
 	for b in buildings:
@@ -86,12 +87,18 @@ func _build_buildings(buildings: Array, proj: GeoProjection) -> int:
 		if geo.is_empty():
 			continue
 		_append_geo(verts, norms, idx, geo)
+		# Per-building wall tint, read by the facade shader as vertex COLOR.
+		var tint := CityBuilder.building_color(int(b.get("id", meshed)))
+		for _i in (geo["vertices"] as PackedVector3Array).size():
+			colors.append(tint)
 		meshed += 1
 
 	if verts.is_empty():
 		return 0
 
-	var mesh := CityBuilder.arrays_to_mesh({"vertices": verts, "normals": norms, "indices": idx})
+	var mesh := CityBuilder.arrays_to_mesh(
+		{"vertices": verts, "normals": norms, "indices": idx, "colors": colors}
+	)
 	mesh.surface_set_material(0, _building_mat)
 	var mi := MeshInstance3D.new()
 	mi.name = "Buildings"
@@ -106,15 +113,21 @@ func _build_roads(roads: Array, proj: GeoProjection) -> void:
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()
 	var idx := PackedInt32Array()
+	var uvs := PackedVector2Array()
 
 	for r in roads:
 		var path := _project_ring(r["path"], proj)
 		var geo := CityBuilder.road_ribbon(path, float(r["width_m"]), 0.05)
+		if geo.is_empty():
+			continue
 		_append_geo(verts, norms, idx, geo)
+		uvs.append_array(geo["uvs"])
 
 	if verts.is_empty():
 		return
-	var mesh := CityBuilder.arrays_to_mesh({"vertices": verts, "normals": norms, "indices": idx})
+	var mesh := CityBuilder.arrays_to_mesh(
+		{"vertices": verts, "normals": norms, "indices": idx, "uvs": uvs}
+	)
 	mesh.surface_set_material(0, _road_mat)
 	var mi := MeshInstance3D.new()
 	mi.name = "Roads"
@@ -148,17 +161,25 @@ func _place_actors_on_street(roads: Array, proj: GeoProjection) -> void:
 
 
 func _make_materials() -> void:
-	_building_mat = StandardMaterial3D.new()
-	_building_mat.albedo_color = Color(0.62, 0.63, 0.66)
-	_building_mat.roughness = 0.85
-	_building_mat.metallic = 0.0
-	# Double-sided keeps interiors lit if a footprint winds oddly.
-	_building_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Procedural facade/asphalt shaders — no texture assets. Fall back to plain
+	# greybox materials so the district still builds if a shader goes missing.
+	_building_mat = _shader_or_fallback("res://shaders/facade.gdshader", Color(0.62, 0.63, 0.66))
+	_road_mat = _shader_or_fallback("res://shaders/road.gdshader", Color(0.33, 0.32, 0.31))
 
 	_roof_mat = StandardMaterial3D.new()
 	_roof_mat.albedo_color = Color(0.4, 0.41, 0.45)
 	_roof_mat.roughness = 0.95
 
-	_road_mat = StandardMaterial3D.new()
-	_road_mat.albedo_color = Color(0.16, 0.16, 0.19)
-	_road_mat.roughness = 1.0
+
+static func _shader_or_fallback(path: String, fallback: Color) -> Material:
+	var shader := load(path) as Shader
+	if shader != null:
+		var mat := ShaderMaterial.new()
+		mat.shader = shader
+		return mat
+	var std := StandardMaterial3D.new()
+	std.albedo_color = fallback
+	std.roughness = 0.9
+	# Double-sided keeps interiors lit if a footprint winds oddly.
+	std.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return std
