@@ -87,3 +87,20 @@ func test_air_righting_grows_with_tilt() -> bool:
 		Vector3(0.8, 0.6, 0.0).normalized(), Vector3.ZERO, 5.0, 0.5
 	)
 	return big.length() > small.length()
+
+
+func test_wheelie_none_below_threshold() -> bool:
+	return VehicleMotion.wheelie_torque(5.0, 6.0, 8.0, 90.0) == 0.0
+
+
+func test_wheelie_none_when_braking() -> bool:
+	return VehicleMotion.wheelie_torque(-10.0, 6.0, 8.0, 90.0) == 0.0
+
+
+func test_wheelie_ramps_past_threshold() -> bool:
+	# (8 - 6) * 8 = 16.
+	return absf(VehicleMotion.wheelie_torque(8.0, 6.0, 8.0, 90.0) - 16.0) < 0.0001
+
+
+func test_wheelie_caps_at_max() -> bool:
+	return VehicleMotion.wheelie_torque(100.0, 6.0, 8.0, 90.0) == 90.0

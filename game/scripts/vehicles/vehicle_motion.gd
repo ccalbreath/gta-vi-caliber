@@ -41,6 +41,18 @@ static func upright_torque(
 	return -stiffness * tilt_error - damping * roll_rate
 
 
+## Wheelie pitch torque for a bike: only once forward acceleration clears
+## `threshold` (m/s²), ramping at `scale` and capped at `max_torque`, so a hard
+## launch lifts the front while gentle throttle keeps both wheels down. Negative
+## accel (braking) never lifts.
+static func wheelie_torque(
+	long_accel: float, threshold: float, scale: float, max_torque: float
+) -> float:
+	if long_accel <= threshold:
+		return 0.0
+	return clampf((long_accel - threshold) * scale, 0.0, max_torque)
+
+
 ## Torque that rights an airborne car: spring its local up toward world up (the
 ## cross product is the rotation axis, magnitude ~sin of the tilt) and damp the
 ## spin so it settles level instead of tumbling. Apply only while off the ground.
