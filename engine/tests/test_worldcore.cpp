@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "../src/native_bench/bench_kernels.h"
+#include "../src/worldcore/crowd_steering_core.h"
 #include "../src/worldcore/impostor_core.h"
 #include "../src/worldcore/spatial_hash_core.h"
 #include "../src/worldcore/tile_streamer_core.h"
@@ -214,6 +215,50 @@ static void test_spatial_hash_reinsert_is_upsert() {
     CHECK(count1 == 1); // present exactly once, not duplicated
 }
 
+static void test_separation_pushes_away() {
+    using namespace worldcore_crowd;
+    std::vector<Vec2> neighbors = {{1.0, 0.0}}; // neighbour to the +x
+    Vec2 f = separation(Vec2{0.0, 0.0}, neighbors, 4.0);
+    CHECK(f.x < 0.0); // pushed in -x, away from the neighbour
+    CHECK(std::fabs(f.z) < 1e-9);
+}
+
+static void test_separation_ignores_outside_radius() {
+    using namespace worldcore_crowd;
+    std::vector<Vec2> neighbors = {{100.0, 0.0}}; // far outside radius 4
+    Vec2 f = separation(Vec2{0.0, 0.0}, neighbors, 4.0);
+    CHECK(length(f) < 1e-9);
+}
+
+static void test_cohesion_pulls_toward_centroid() {
+    using namespace worldcore_crowd;
+    std::vector<Vec2> neighbors = {{10.0, 0.0}, {10.0, 0.0}};
+    Vec2 f = cohesion(Vec2{0.0, 0.0}, neighbors);
+    CHECK(f.x > 0.0); // toward the +x cluster
+}
+
+static void test_alignment_is_average_heading() {
+    using namespace worldcore_crowd;
+    std::vector<Vec2> vels = {{2.0, 0.0}, {0.0, 2.0}};
+    Vec2 f = alignment(vels);
+    CHECK(std::fabs(f.x - 1.0) < 1e-9 && std::fabs(f.z - 1.0) < 1e-9);
+}
+
+static void test_combine_clamps_to_max_force() {
+    using namespace worldcore_crowd;
+    Vec2 big{100.0, 0.0};
+    Vec2 f = combine(big, big, big, 1.0, 1.0, 1.0, 8.0);
+    CHECK(length(f) <= 8.0 + 1e-9);
+}
+
+static void test_empty_neighbors_zero_force() {
+    using namespace worldcore_crowd;
+    std::vector<Vec2> none;
+    CHECK(length(separation(Vec2{0.0, 0.0}, none, 4.0)) < 1e-9);
+    CHECK(length(cohesion(Vec2{0.0, 0.0}, none)) < 1e-9);
+    CHECK(length(alignment(none)) < 1e-9);
+}
+
 int main() {
     test_version_is_consistent();
     test_sum_of_squares();
@@ -231,6 +276,12 @@ int main() {
     test_spatial_hash_excludes_corner_square();
     test_spatial_hash_negative_coords();
     test_spatial_hash_reinsert_is_upsert();
+    test_separation_pushes_away();
+    test_separation_ignores_outside_radius();
+    test_cohesion_pulls_toward_centroid();
+    test_alignment_is_average_heading();
+    test_combine_clamps_to_max_force();
+    test_empty_neighbors_zero_force();
     if (failures > 0) {
         std::fprintf(stderr, "engine tests: %d failure(s)\n", failures);
         return 1;
