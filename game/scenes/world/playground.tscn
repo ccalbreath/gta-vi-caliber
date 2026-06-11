@@ -16,6 +16,7 @@
 [ext_resource type="PackedScene" path="res://scenes/props/armor.tscn" id="14_armor"]
 [ext_resource type="Script" path="res://scripts/weapons/grenade_thrower.gd" id="15_grenade"]
 [ext_resource type="Script" path="res://scripts/ui/combat_text.gd" id="16_text"]
+[ext_resource type="Script" path="res://scripts/npc/bark_director.gd" id="17_bark"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_horizon_color = Color(0.66, 0.67, 0.69, 1)
@@ -396,6 +397,9 @@ script = ExtResource("15_grenade")
 
 [node name="CombatText" type="Node3D" parent="."]
 script = ExtResource("16_text")
+
+[node name="BarkDirector" type="Node" parent="."]
+script = ExtResource("17_bark")
 
 [node name="Medkits" type="Node3D" parent="."]
 
