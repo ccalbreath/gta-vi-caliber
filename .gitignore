@@ -8,6 +8,8 @@ game/bin/*.so
 game/bin/*.dylib
 game/bin/*.dll
 game/bin/*.framework/
+game/bin/*.gdextension
+game/bin/*.gdextension.uid
 
 # Engine build artifacts
 engine/**/*.o

@@ -27,9 +27,15 @@ if ClassDB.class_exists("NativeBench"):
     print(NativeBench.new().ping())   # "pong from C++"
 ```
 
-> **Note:** the godot-cpp submodule isn't vendored yet (roadmap: engine
-> track). Until it is, add it yourself to experiment:
-> `git submodule add -b 4.6 https://github.com/godotengine/godot-cpp engine/godot-cpp`
+> **Note:** the godot-cpp submodule is pinned to the `4.5` branch — upstream
+> has not cut a `4.6` branch yet, and extensions built against the 4.5 API
+> load fine in the 4.6 runtime (GDExtension is forward-compatible). Bump the
+> pin when upstream publishes `4.6`.
+
+CI builds the extension on Linux, macOS, and Windows on every PR, and runs
+`game/tests/native_smoke_test.gd` against the Linux build. The regular game
+jobs still run **without** native modules, so graceful degradation stays
+enforced by construction (docs/ARCHITECTURE.md).
 
 ## Module checklist (PRs are reviewed against this)
 
