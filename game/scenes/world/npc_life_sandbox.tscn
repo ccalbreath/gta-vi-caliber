@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3]
+[gd_scene load_steps=25 format=3]
 
 ; Playable living-city demo: walk among a crowd of citizens running their daily
 ; routines (commute, work, lunch, gym, bar, home) and bantering in speech
@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://scripts/npc/city_director.gd" id="4_dir"]
 [ext_resource type="Script" path="res://scripts/world/day_night_cycle.gd" id="5_daynight"]
 [ext_resource type="Script" path="res://scripts/world/weather_controller.gd" id="6_weather"]
+[ext_resource type="Script" path="res://scripts/ui/minimap.gd" id="7_minimap"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_horizon_color = Color(0.66, 0.67, 0.69, 1)
@@ -326,3 +327,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -2)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -2)
 
 [node name="DebugHud" parent="." instance=ExtResource("2_hud")]
+
+[node name="MinimapLayer" type="CanvasLayer" parent="."]
+
+[node name="Minimap" type="Control" parent="MinimapLayer"]
+offset_left = 24.0
+offset_top = 392.0
+offset_right = 224.0
+offset_bottom = 592.0
+script = ExtResource("7_minimap")
