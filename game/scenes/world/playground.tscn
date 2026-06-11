@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://scripts/combat/melee_controller.gd" id="12_melee"]
 [ext_resource type="PackedScene" path="res://scenes/props/medkit.tscn" id="13_medkit"]
 [ext_resource type="PackedScene" path="res://scenes/props/armor.tscn" id="14_armor"]
+[ext_resource type="Script" path="res://scripts/weapons/grenade_thrower.gd" id="15_grenade"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_horizon_color = Color(0.66, 0.67, 0.69, 1)
@@ -388,6 +389,9 @@ script = ExtResource("11_save")
 
 [node name="MeleeController" type="Node" parent="."]
 script = ExtResource("12_melee")
+
+[node name="GrenadeThrower" type="Node" parent="."]
+script = ExtResource("15_grenade")
 
 [node name="Medkits" type="Node3D" parent="."]
 
