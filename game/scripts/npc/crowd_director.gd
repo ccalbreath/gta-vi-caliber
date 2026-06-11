@@ -36,6 +36,15 @@ extends Node3D
 ## stature) so some people stride and others amble.
 @export var gait_min: float = 0.85
 @export var gait_max: float = 1.15
+## Snap each spawn down onto the ground with a raycast, so peds stand on hills
+## and steps instead of floating or sinking. The ray starts this far above the
+## player's height and probes this far below it.
+@export var snap_to_ground: bool = true
+@export var ground_probe_up: float = 8.0
+@export var ground_probe_down: float = 40.0
+## Physics layers the ground/world lives on (the ray ignores anything else, so
+## it doesn't catch other pedestrians).
+@export_flags_3d_physics var ground_mask: int = 1
 
 var _peds: Array[Node3D] = []
 var _rng := RandomNumberGenerator.new()
@@ -87,7 +96,9 @@ func _spawn(center: Vector3) -> void:
 			return
 		_apply_variety(ped)
 		add_child(ped)
-		ped.global_position = center + offset
+		var pos := center + offset
+		pos.y = _ground_y(pos, center.y)
+		ped.global_position = pos
 		_peds.append(ped)
 
 
@@ -103,6 +114,23 @@ func _apply_variety(ped: Node3D) -> void:
 		ped.walk_speed = ped.walk_speed * gait
 	if "run_speed" in ped:
 		ped.run_speed = ped.run_speed * gait
+
+
+## Raycast straight down through (x, z) to find the ground height, so a ped
+## stands on whatever surface is under its spawn point. Falls back to the
+## player's height when snapping is off or the probe misses everything (e.g. a
+## spawn point hanging over a gap), which keeps gravity to do the rest.
+func _ground_y(at: Vector3, fallback_y: float) -> float:
+	if not snap_to_ground:
+		return fallback_y
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return fallback_y
+	var from := Vector3(at.x, fallback_y + ground_probe_up, at.z)
+	var to := Vector3(at.x, fallback_y - ground_probe_down, at.z)
+	var query := PhysicsRayQueryParameters3D.create(from, to, ground_mask)
+	var hit := space.intersect_ray(query)
+	return hit.position.y if hit.has("position") else fallback_y
 
 
 ## Current live crowd size — handy for a streaming-debug HUD and for tests that
