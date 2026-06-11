@@ -60,3 +60,30 @@ func test_upright_torque_scales_with_stiffness() -> bool:
 	var soft := VehicleMotion.upright_torque(0.5, 0.0, 45.0, 12.0)
 	var stiff := VehicleMotion.upright_torque(0.5, 0.0, 90.0, 12.0)
 	return absf(stiff - 2.0 * soft) < 0.0001
+
+
+func test_air_righting_zero_when_level_and_still() -> bool:
+	return VehicleMotion.air_righting_torque(Vector3.UP, Vector3.ZERO, 5.0, 0.5) == Vector3.ZERO
+
+
+func test_air_righting_opposes_roll_tilt() -> bool:
+	# Up tilted toward +X (rolled): righting axis is +Z, no X component.
+	var torque := VehicleMotion.air_righting_torque(
+		Vector3(0.707, 0.707, 0.0), Vector3.ZERO, 5.0, 0.5
+	)
+	return torque.z > 0.0 and absf(torque.x) < 0.0001
+
+
+func test_air_righting_damps_spin_when_level() -> bool:
+	var torque := VehicleMotion.air_righting_torque(Vector3.UP, Vector3(0.0, 2.0, 0.0), 5.0, 0.5)
+	return torque.is_equal_approx(Vector3(0.0, -1.0, 0.0))
+
+
+func test_air_righting_grows_with_tilt() -> bool:
+	var small := VehicleMotion.air_righting_torque(
+		Vector3(0.2, 0.98, 0.0).normalized(), Vector3.ZERO, 5.0, 0.5
+	)
+	var big := VehicleMotion.air_righting_torque(
+		Vector3(0.8, 0.6, 0.0).normalized(), Vector3.ZERO, 5.0, 0.5
+	)
+	return big.length() > small.length()

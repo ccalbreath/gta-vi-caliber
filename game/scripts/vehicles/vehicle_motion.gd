@@ -39,3 +39,12 @@ static func upright_torque(
 	tilt_error: float, roll_rate: float, stiffness: float, damping: float
 ) -> float:
 	return -stiffness * tilt_error - damping * roll_rate
+
+
+## Torque that rights an airborne car: spring its local up toward world up (the
+## cross product is the rotation axis, magnitude ~sin of the tilt) and damp the
+## spin so it settles level instead of tumbling. Apply only while off the ground.
+static func air_righting_torque(
+	vehicle_up: Vector3, angular_velocity: Vector3, stiffness: float, damping: float
+) -> Vector3:
+	return vehicle_up.cross(Vector3.UP) * stiffness - angular_velocity * damping

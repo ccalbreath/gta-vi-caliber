@@ -48,6 +48,10 @@ const GRAVITY: float = 9.81
 ## trauma. Below impact_threshold (the damage floor) there's no shake either.
 @export var crash_shake_full_dv: float = 25.0
 @export_range(0.0, 1.0) var crash_shake_max_trauma: float = 0.9
+## Air control: while all wheels are off the ground, a righting torque levels the
+## car (stiffness) and damps its tumble (damping) so jumps land wheels-down.
+@export var air_right_stiffness: float = 4.0
+@export var air_right_damping: float = 0.8
 ## Engine output fraction left when barely alive (limp-home floor).
 @export var limp_floor: float = 0.25
 ## Drag area Cd·A (m²): the squared-speed drag that actually caps top speed once
@@ -74,6 +78,7 @@ var _driver: Node3D = null
 var _prev_velocity: Vector3 = Vector3.ZERO
 var _long_accel: float = 0.0
 var _prev_forward_speed: float = 0.0
+var _wheels: Array[Node] = []
 
 @onready var _camera: Camera3D = $CameraPivot/SpringArm/Camera
 @onready var _chase: ChaseCamera = $CameraPivot
@@ -101,11 +106,13 @@ func exit() -> Vector3:
 func _ready() -> void:
 	health = max_health
 	rpm = idle_rpm
+	_wheels = find_children("*", "VehicleWheel3D", true, false)
 
 
 func _physics_process(delta: float) -> void:
 	_track_impacts()
 	_apply_aero()
+	_apply_air_righting()
 	_update_long_accel(delta)
 	if _driver == null:
 		engine_force = 0.0
@@ -191,6 +198,20 @@ func _apply_aero() -> void:
 		var drag := Aerodynamics.drag_force(speed, drag_area)
 		apply_central_force(-linear_velocity / speed * drag)
 	apply_central_force(Vector3.DOWN * Aerodynamics.downforce(speed, downforce_area))
+
+
+## While the car is fully airborne (no wheel touching), apply a righting torque
+## so it levels out and lands wheels-down instead of tumbling off a jump. Pure
+## torque math is in VehicleMotion.air_righting_torque.
+func _apply_air_righting() -> void:
+	for wheel in _wheels:
+		if (wheel as VehicleWheel3D).is_in_contact():
+			return
+	apply_torque(
+		VehicleMotion.air_righting_torque(
+			global_transform.basis.y, angular_velocity, air_right_stiffness, air_right_damping
+		)
+	)
 
 
 func _track_impacts() -> void:
