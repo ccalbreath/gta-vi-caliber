@@ -47,6 +47,10 @@ const PANTS_COLORS: Array[Color] = [
 	Color(0.10, 0.10, 0.11),  # black
 	Color(0.36, 0.40, 0.50),  # faded denim
 ]
+## Peak knee/elbow flexion (radians) at full stride. The driver scales these by
+## the live hip/shoulder swing, so a slow walk bends gently and a sprint deeply.
+const KNEE_AMPLITUDE: float = 0.95
+const ELBOW_AMPLITUDE: float = 0.5
 
 ## Skin tone; tweak per-NPC later for crowd variety.
 @export var skin_color: Color = Color(0.86, 0.66, 0.54)
@@ -69,6 +73,11 @@ var _sclera: StandardMaterial3D
 var _iris: StandardMaterial3D
 var _mouth: StandardMaterial3D
 
+# Articulated limb chains, filled by _ready, driven each frame in _process.
+# Each leg: {hip, knee, amp}; each arm: {shoulder, elbow, amp}.
+var _legs: Array = []
+var _arms: Array = []
+
 
 func _ready() -> void:
 	if randomize_palette:
@@ -81,15 +90,29 @@ func _ready() -> void:
 	_apply(rig, "Hips/Pelvis", HumanoidMesh.pelvis(), _pants)
 	_apply(rig, "Hips/Neck", HumanoidMesh.neck(), _skin)
 	_apply(rig, "Hips/Head", HumanoidMesh.head(), _skin)
-	_apply(rig, "Hips/ShoulderL/ArmL", HumanoidMesh.arm(), _shirt)
-	_apply(rig, "Hips/ShoulderR/ArmR", HumanoidMesh.arm(), _shirt)
-	_apply(rig, "Hips/ShoulderL/HandL", HumanoidMesh.hand(), _skin)
-	_apply(rig, "Hips/ShoulderR/HandR", HumanoidMesh.hand(), _skin)
-	_apply(rig, "Hips/HipL/LegL", HumanoidMesh.leg(), _pants)
-	_apply(rig, "Hips/HipR/LegR", HumanoidMesh.leg(), _pants)
-	_apply(rig, "Hips/HipL/FootL", HumanoidMesh.foot(), _shoe)
-	_apply(rig, "Hips/HipR/FootR", HumanoidMesh.foot(), _shoe)
+	# Two-bone limbs: the animator still swings the hip/shoulder; the knee/elbow
+	# bend is added on top from that same swing (see _process). Read the rig's
+	# swing amplitudes so normalisation tracks the animator's tuning.
+	var leg_amp: float = _rig_float(rig, "leg_amplitude", 0.7)
+	var arm_amp: float = _rig_float(rig, "arm_amplitude", 0.5)
+	_articulate_leg(rig, "Hips/HipL", "LegL", "FootL", leg_amp)
+	_articulate_leg(rig, "Hips/HipR", "LegR", "FootR", leg_amp)
+	_articulate_arm(rig, "Hips/ShoulderL", "ArmL", "HandL", arm_amp)
+	_articulate_arm(rig, "Hips/ShoulderR", "ArmR", "HandR", arm_amp)
 	_add_head_details(rig)
+
+
+func _process(_delta: float) -> void:
+	# Knee/elbow flex derives from the live hip/shoulder swing, so it stays in
+	# perfect lockstep with the animator without sharing a phase clock.
+	for leg in _legs:
+		var hip: Node3D = leg["hip"]
+		var swing := clampf(hip.rotation.x / maxf(leg["amp"], 0.01), -1.0, 1.0)
+		leg["knee"].rotation.x = -Locomotion.knee_flex_from_swing(swing, KNEE_AMPLITUDE)
+	for arm in _arms:
+		var shoulder: Node3D = arm["shoulder"]
+		var swing := clampf(shoulder.rotation.x / maxf(arm["amp"], 0.01), -1.0, 1.0)
+		arm["elbow"].rotation.x = Locomotion.elbow_flex_from_swing(swing, ELBOW_AMPLITUDE)
 
 
 func _apply(rig: Node, path: String, geo: Dictionary, mat: Material) -> void:
@@ -213,6 +236,77 @@ func _sphere(radius: float, mat: Material) -> MeshInstance3D:
 	mi.mesh = sm
 	mi.material_override = mat
 	return mi
+
+
+## Replace a single-segment leg with thigh + knee joint + shin + foot. The hip
+## node (swung by the animator) keeps the thigh; a runtime Knee node carries the
+## shin and foot and is bent each frame. The old one-piece meshes are only
+## hidden, so anything reading their transform (e.g. footstep position) still
+## works. Pivots match the original rig: knee at y=-0.41, ankle at y=-0.82.
+func _articulate_leg(
+	rig: Node, hip_path: String, leg_child: String, foot_child: String, amp: float
+) -> void:
+	var hip: Node3D = rig.get_node_or_null(hip_path) as Node3D
+	if hip == null:
+		return
+	_hide(rig, hip_path + "/" + leg_child)
+	_hide(rig, hip_path + "/" + foot_child)
+	hip.add_child(
+		_seg(HumanoidMesh.limb(0.44, 0.092, 0.09, 0.062, 14, 16), _pants, Vector3(0, -0.205, 0))
+	)
+	var knee := Node3D.new()
+	knee.name = "Knee"
+	knee.position = Vector3(0, -0.41, 0)
+	hip.add_child(knee)
+	knee.add_child(
+		_seg(HumanoidMesh.limb(0.42, 0.058, 0.056, 0.045, 14, 16), _pants, Vector3(0, -0.205, 0))
+	)
+	knee.add_child(_seg(HumanoidMesh.foot(), _shoe, Vector3(0, -0.41, 0.06)))
+	_legs.append({"hip": hip, "knee": knee, "amp": amp})
+
+
+## Replace a single-segment arm with upper arm + elbow joint + forearm + hand.
+## Forearm/hand are skin (rolled sleeves) so the elbow break reads clearly.
+## Pivots match the rig: elbow at y=-0.33, wrist at y=-0.66.
+func _articulate_arm(
+	rig: Node, sh_path: String, arm_child: String, hand_child: String, amp: float
+) -> void:
+	var shoulder: Node3D = rig.get_node_or_null(sh_path) as Node3D
+	if shoulder == null:
+		return
+	_hide(rig, sh_path + "/" + arm_child)
+	_hide(rig, sh_path + "/" + hand_child)
+	shoulder.add_child(
+		_seg(HumanoidMesh.limb(0.36, 0.062, 0.062, 0.05, 12, 14), _shirt, Vector3(0, -0.165, 0))
+	)
+	var elbow := Node3D.new()
+	elbow.name = "Elbow"
+	elbow.position = Vector3(0, -0.33, 0)
+	shoulder.add_child(elbow)
+	elbow.add_child(
+		_seg(HumanoidMesh.limb(0.34, 0.05, 0.048, 0.04, 12, 14), _skin, Vector3(0, -0.155, 0))
+	)
+	elbow.add_child(_seg(HumanoidMesh.hand(), _skin, Vector3(0, -0.33, 0)))
+	_arms.append({"shoulder": shoulder, "elbow": elbow, "amp": amp})
+
+
+func _seg(geo: Dictionary, mat: Material, pos: Vector3) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = HumanoidMesh.to_mesh(geo)
+	mi.material_override = mat
+	mi.position = pos
+	return mi
+
+
+func _hide(rig: Node, path: String) -> void:
+	var node: MeshInstance3D = rig.get_node_or_null(path) as MeshInstance3D
+	if node != null:
+		node.visible = false
+
+
+func _rig_float(rig: Node, prop: String, fallback: float) -> float:
+	var v: Variant = rig.get(prop)
+	return float(v) if v != null else fallback
 
 
 func _fabric(color: Color, roughness: float, rim: float) -> StandardMaterial3D:
