@@ -94,6 +94,14 @@ func step(delta: float) -> void:
 	for i in agent_count:
 		_hash.call("insert", i, positions[i])
 
+	# Double-buffer: every agent steers from THIS frame's positions/velocities and
+	# writes into new_*, so per-agent update order can't bias the flock with
+	# mixed-frame neighbour state (Codex review).
+	var new_pos := PackedVector2Array()
+	var new_vel := PackedVector2Array()
+	new_pos.resize(agent_count)
+	new_vel.resize(agent_count)
+
 	for i in agent_count:
 		var ids: PackedInt32Array = _hash.call("query_radius", positions[i], neighbor_radius)
 		var npos := PackedVector2Array()
@@ -108,21 +116,22 @@ func step(delta: float) -> void:
 		var v: Vector2 = velocities[i] + force * delta
 		if v.length() > max_speed:
 			v = v.normalized() * max_speed
-		velocities[i] = v
-		positions[i] = _wrap(positions[i] + v * delta)
+		new_vel[i] = v
+		new_pos[i] = _wrap(positions[i] + v * delta)
+
+	positions = new_pos
+	velocities = new_vel
 
 
+## Toroidal wrap into [-half_extent, half_extent] on both axes. fposmod handles
+## any displacement magnitude (not just one span) so a large delta can't leave an
+## agent out of bounds (Codex review).
 func _wrap(p: Vector2) -> Vector2:
 	var span := half_extent * 2.0
-	if p.x > half_extent:
-		p.x -= span
-	elif p.x < -half_extent:
-		p.x += span
-	if p.y > half_extent:
-		p.y -= span
-	elif p.y < -half_extent:
-		p.y += span
-	return p
+	return Vector2(
+		fposmod(p.x + half_extent, span) - half_extent,
+		fposmod(p.y + half_extent, span) - half_extent
+	)
 
 
 func _sync_multimesh() -> void:

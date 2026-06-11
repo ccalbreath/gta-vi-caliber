@@ -26,11 +26,13 @@ func _run() -> bool:
 	var demo: CrowdNativeDemo = packed.instantiate()
 	demo.agent_count = 150
 	demo.half_extent = 50.0
-	root.add_child(demo)  # triggers _ready -> spawns agents + wires native
+	demo._ready()  # explicit + deterministic (don't depend on tree _ready timing)
 
+	# The top guard proved the classes exist, so the demo MUST activate them now.
+	# A skip here would mask a real native-wiring failure (Codex review).
 	if not demo.native_active():
-		print("  native inactive after setup — skipping (OK)")
-		return true
+		print("  FAIL: native classes exist but the demo did not activate them")
+		return false
 
 	for _f in 180:  # ~3 s at 60 Hz
 		demo.step(1.0 / 60.0)
