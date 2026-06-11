@@ -5,6 +5,17 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-11 (later) — postcard v1 achieved
+
+Palm row + boardwalk props landed (PalmMesh: parabolic-spine trunks,
+drooping frond crowns, 10 tests; 965 total green, 8 smoke scenes). The
+shoreline still now genuinely reads sun-bleached coastal postcard: bent
+palms over pale sand, turquoise tidal channels, lamp posts, golden haze.
+Honest gaps to the trailer frame: city reads as a fog sliver (needs either
+taller shoreline blocks or per-shot fog), and the shore is a tidal-flat
+lagoon rather than a breaking surf line (Ocean v2 foam/wave-break work).
+Verdicts: Water High, Coast Mid-High (was n/a), Materials Mid-High.
+
 ## 2026-06-11 (cont.) — golden-hour ocean lands; postcard limits identified
 
 Scene clock moved to 17.4 (rust dusk washed everything monochrome at 18.6+).
