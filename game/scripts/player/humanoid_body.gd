@@ -292,6 +292,13 @@ func _add_head_details(rig: Node) -> void:
 	mouth.scale = Vector3(1.9, 0.5, 0.55)
 	head.add_child(mouth)
 
+	# Ears: flattened skin ovals on each side of the head, set slightly back.
+	for ear_side: float in [-1.0, 1.0]:
+		var ear := _sphere(0.034, _skin)
+		ear.position = Vector3(0.118 * ear_side, -0.01, 0.016)
+		ear.scale = Vector3(0.42, 1.05, 0.72)
+		head.add_child(ear)
+
 
 func _add_mara_details(rig: Node) -> void:
 	var hips: Node3D = rig.get_node_or_null("Hips") as Node3D
