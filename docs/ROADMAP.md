@@ -95,8 +95,8 @@ Goal: the acceptance test — a 90-second in-engine trailer from a release build
 Lives in `engine/`; rules in [ARCHITECTURE.md](ARCHITECTURE.md). Anything
 generically useful is offered upstream to Godot.
 
-- [ ] godot-cpp vendored as submodule + first compiled module on all 3 platforms
-- [ ] CI job building `engine/` and running its C++ tests
+- [x] godot-cpp vendored as submodule + first compiled module on all 3 platforms
+- [x] CI job building `engine/` and running its C++ tests
 - [ ] Streaming module (M3)
 - [ ] Impostor baker (M3)
 - [ ] Crowd/traffic simulation core (M4+, only with profile evidence)

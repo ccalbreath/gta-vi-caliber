@@ -49,18 +49,25 @@ The game runs fully without them — native modules are accelerators, and the
 sandbox currently uses none. You only need this if you're working in
 `engine/`.
 
-Prerequisites: a C++17 compiler, Python 3, SCons (`pipx install scons`).
+Prerequisites: a C++17 compiler, Python 3, SCons
+(`pipx install scons` or `pip install scons`).
 
 ```bash
+git submodule update --init --recursive   # pulls godot-cpp (pinned; see engine/README.md)
 cd engine
-git submodule update --init --recursive   # pulls godot-cpp
 scons platform=macos target=template_debug    # or platform=linux / windows
+scons tests && ./bin/test_worldcore           # plain C++ unit tests (optional)
 ```
 
-Output lands in `game/bin/` and the matching `.gdextension` manifest makes
-Godot pick it up on next editor start. Details and module-authoring guidance:
-[../engine/README.md](../engine/README.md) and
-[ARCHITECTURE.md](ARCHITECTURE.md).
+The build puts `libworldcore.*` and the `worldcore.gdextension` manifest in
+`game/bin/` (both gitignored); Godot picks them up on next start. Verify from
+GDScript: `ClassDB.class_exists("WorldCore")`. Known quirk: the *first*
+headless import after a native build crashes at exit in the editor's doc
+generator — run it once more; see
+[../engine/README.md](../engine/README.md) for details, module-authoring
+guidance, and the godot-cpp version pin. Layering rules:
+[ARCHITECTURE.md](ARCHITECTURE.md). CI builds and tests `engine/` on all
+three platforms via `.github/workflows/engine.yml`.
 
 ## Release builds
 
