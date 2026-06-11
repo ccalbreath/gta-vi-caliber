@@ -1,0 +1,113 @@
+name: Engine
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "engine/**"
+      - ".gitmodules"
+      - ".github/workflows/engine.yml"
+  pull_request:
+    paths:
+      - "engine/**"
+      - ".gitmodules"
+      - ".github/workflows/engine.yml"
+
+env:
+  GODOT_VERSION: "4.6.3"
+  SCONS_CACHE: ${{ github.workspace }}/.scons-cache
+
+jobs:
+  build:
+    name: Build & test (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            godot-zip: linux.x86_64
+            godot-bin: Godot_v4.6.3-stable_linux.x86_64
+          - os: windows-latest
+            platform: windows
+            godot-zip: win64.exe
+            godot-bin: Godot_v4.6.3-stable_win64.exe
+          - os: macos-latest
+            platform: macos
+            godot-zip: macos.universal
+            godot-bin: Godot.app/Contents/MacOS/Godot
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SCons
+        run: pip install scons
+
+      # godot-cpp's SConstruct enables CacheDir() when SCONS_CACHE is set,
+      # so the ~10 min bindings compile only happens on a cold cache.
+      - name: Cache SCons build
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCONS_CACHE }}
+          key: scons-${{ matrix.platform }}-${{ hashFiles('.gitmodules', 'engine/SConstruct') }}-${{ hashFiles('engine/src/**') }}
+          restore-keys: |
+            scons-${{ matrix.platform }}-${{ hashFiles('.gitmodules', 'engine/SConstruct') }}-
+            scons-${{ matrix.platform }}-
+
+      - name: Build GDExtension (template_debug)
+        run: scons -C engine platform=${{ matrix.platform }} target=template_debug
+
+      - name: Build & run C++ unit tests
+        run: |
+          scons -C engine tests
+          if [ -x engine/bin/test_worldcore ]; then
+            ./engine/bin/test_worldcore
+          else
+            ./engine/bin/test_worldcore.exe
+          fi
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}-${{ matrix.platform }}
+
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-bin
+          curl -sSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_${{ matrix.godot-zip }}.zip"
+          unzip -q /tmp/godot.zip -d ~/godot-bin
+
+      - name: Headless import with native module
+        run: |
+          GODOT=~/godot-bin/"${{ matrix.godot-bin }}"
+          chmod +x "$GODOT" || true
+          # First import after a native build can crash *at exit* while the
+          # editor generates extension docs (import completes; upstream bug,
+          # see engine/README.md). Tolerate it once, then require clean runs.
+          "$GODOT" --headless --path game --import || echo "first import exited $? (known doc-gen crash, retrying)"
+          "$GODOT" --headless --path game --import
+
+      - name: Smoke test with native module
+        run: ~/godot-bin/"${{ matrix.godot-bin }}" --headless --path game --script res://tests/smoke_test.gd
+
+      - name: Unit tests with native module (asserts WorldCore loads)
+        run: |
+          GODOT=~/godot-bin/"${{ matrix.godot-bin }}"
+          out=$("$GODOT" --headless --path game --script res://tests/run_tests.gd)
+          echo "$out"
+          # The native lib was just built, so the WorldCore test must NOT skip.
+          echo "$out" | grep -q "WorldCore .* loaded from native module"
