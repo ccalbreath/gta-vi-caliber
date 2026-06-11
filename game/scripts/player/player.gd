@@ -44,6 +44,11 @@ var _step_is_left: bool = false
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	# Footstep audio is created in code (not the scene) so it stays self-
+	# contained and doesn't collide with parallel edits to player.tscn.
+	var footstep_audio := FootstepAudio.new()
+	add_child(footstep_audio)
+	footstep.connect(footstep_audio.on_footstep)
 
 
 func _unhandled_input(event: InputEvent) -> void:
