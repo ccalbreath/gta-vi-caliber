@@ -22,6 +22,11 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+# Shared world anchor for the entire LA map: downtown LA. Every district
+# projects against this so they line up at correct real-world offsets, ready for
+# a streaming system to page districts in and out of one continuous world.
+WORLD_ORIGIN = (34.0503318, -118.2523673)
+
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 USER_AGENT = "GTA6-OSS-worldgen/0.1 (https://github.com/; open-source game world importer)"
 
@@ -115,7 +120,7 @@ def fetch(query: str) -> dict:
         return json.load(resp)
 
 
-def normalize(raw: dict) -> dict:
+def normalize(raw: dict, world_origin: dict | None = None) -> dict:
     elements = raw.get("elements", [])
     buildings: list[dict] = []
     roads: list[dict] = []
@@ -158,14 +163,19 @@ def normalize(raw: dict) -> dict:
     if not lats:
         raise SystemExit("error: OSM returned no geometry for this bbox")
 
-    # District origin = centre of all geometry; the engine projects relative to it.
-    origin = {
+    # Centroid of this district's geometry, kept for reference / map UI.
+    centroid = {
         "lat": round(sum(lats) / len(lats), 7),
         "lon": round(sum(lons) / len(lons), 7),
     }
+    # The engine projects every district against ONE shared world origin so all
+    # districts sit at correct real-world offsets in a single seamless LA map
+    # (a streamer can then page them in/out). Defaults to the downtown anchor.
+    origin = world_origin if world_origin else centroid
     return {
         "attribution": "© OpenStreetMap contributors, ODbL (https://www.openstreetmap.org/copyright)",
         "origin": origin,
+        "centroid": centroid,
         "bounds": {
             "min_lat": round(min(lats), 7),
             "min_lon": round(min(lons), 7),
@@ -189,12 +199,21 @@ def main() -> int:
         help="south west north east, decimal degrees",
     )
     ap.add_argument("--out-dir", default="game/assets/world")
+    ap.add_argument(
+        "--world-origin",
+        nargs=2,
+        type=float,
+        default=list(WORLD_ORIGIN),
+        metavar=("LAT", "LON"),
+        help="shared projection origin for the whole LA map (default: downtown anchor)",
+    )
     args = ap.parse_args()
 
     s, w, n, e = args.bbox
     print(f"querying Overpass for {args.name} bbox=({s},{w},{n},{e}) ...", file=sys.stderr)
     raw = fetch(build_query(s, w, n, e))
-    district = normalize(raw)
+    origin = {"lat": args.world_origin[0], "lon": args.world_origin[1]}
+    district = normalize(raw, world_origin=origin)
     district["name"] = args.name
 
     out_dir = Path(args.out_dir)

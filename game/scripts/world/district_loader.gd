@@ -24,6 +24,15 @@ const STREETLIGHT_RADIUS_M: float = 250.0
 @export var build_collision: bool = true
 ## Spawn streetlight poles along roads (toggled at night by TimeOfDay).
 @export var build_streetlights: bool = true
+## Spawn a ground tile sized to this district's bounds (so a district drops into
+## a multi-district world without a hand-placed plane under it).
+@export var spawn_ground: bool = true
+## Move the player + spawn marker onto this district's nearest street. In a
+## multi-district scene only ONE loader should own the player (the streamer
+## sets this false on the districts it pages in).
+@export var place_player: bool = true
+## Extra ground beyond the district footprint, in metres.
+@export var ground_margin: float = 90.0
 
 var _building_mat: Material
 var _roof_mat: StandardMaterial3D
@@ -42,6 +51,8 @@ func _ready() -> void:
 	var origin: Dictionary = data["origin"]
 	var proj := GeoProjection.new(origin["lat"], origin["lon"])
 
+	if spawn_ground:
+		_build_ground(data, proj)
 	var built_buildings := _build_buildings(data.get("buildings", []), proj)
 	_build_rooftops(data.get("buildings", []), proj)
 	_build_roads(data.get("roads", []), proj)
@@ -49,7 +60,10 @@ func _ready() -> void:
 		_build_streetlights(data.get("roads", []), proj)
 	_build_trees(data.get("roads", []), proj)
 	_build_street_furniture(data.get("roads", []), proj)
-	_place_actors_on_street(data.get("roads", []), proj)
+	if place_player:
+		var centre_geo: Dictionary = data.get("centroid", origin)
+		var centre := proj.to_local(centre_geo["lat"], centre_geo["lon"])
+		_place_actors_on_street(data.get("roads", []), proj, centre)
 
 	var nb: int = (data.get("buildings", []) as Array).size()
 	var nr: int = (data.get("roads", []) as Array).size()
@@ -362,6 +376,52 @@ func _build_roads(roads: Array, proj: GeoProjection) -> void:
 	add_child(mi)
 
 
+## Spawn a flat ground tile covering the district's projected footprint so the
+## player and vehicles have something to stand on, wherever the district sits in
+## the shared world.
+func _build_ground(data: Dictionary, proj: GeoProjection) -> void:
+	var min_x := INF
+	var max_x := -INF
+	var min_z := INF
+	var max_z := -INF
+	for collection in [data.get("buildings", []), data.get("roads", [])]:
+		for item in collection:
+			var pts: Array = item.get("footprint", item.get("path", []))
+			for pair in pts:
+				var p := proj.to_local(pair[0], pair[1])
+				min_x = minf(min_x, p.x)
+				max_x = maxf(max_x, p.x)
+				min_z = minf(min_z, p.z)
+				max_z = maxf(max_z, p.z)
+	if min_x == INF:
+		return
+
+	var size_x := (max_x - min_x) + ground_margin * 2.0
+	var size_z := (max_z - min_z) + ground_margin * 2.0
+	var centre := Vector3((min_x + max_x) * 0.5, 0.0, (min_z + max_z) * 0.5)
+
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.27, 0.28, 0.3)
+	mat.roughness = 1.0
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(size_x, size_z)
+	plane.material = mat
+
+	var body := StaticBody3D.new()
+	body.name = "Ground"
+	body.position = centre
+	var mi := MeshInstance3D.new()
+	mi.mesh = plane
+	body.add_child(mi)
+	var col := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(size_x, 1.0, size_z)
+	col.shape = box
+	col.position = Vector3(0, -0.5, 0)
+	body.add_child(col)
+	add_child(body)
+
+
 ## TimeOfDay (group "night_emissive") fades building windows in/out, 0..1.
 func set_night_amount(amount: float) -> void:
 	var shaded := _building_mat as ShaderMaterial
@@ -369,15 +429,15 @@ func set_night_amount(amount: float) -> void:
 		shaded.set_shader_parameter("night_mix", amount)
 
 
-## Move the player + spawn marker onto the road vertex nearest the origin so the
-## player never starts trapped inside a building footprint.
-func _place_actors_on_street(roads: Array, proj: GeoProjection) -> void:
-	var best := Vector3.ZERO
+## Move the player + spawn marker onto the road vertex nearest this district's
+## centre so the player never starts trapped inside a building footprint.
+func _place_actors_on_street(roads: Array, proj: GeoProjection, centre: Vector3) -> void:
+	var best := centre
 	var best_dist := INF
 	for r in roads:
 		for pair in r["path"]:
 			var p := proj.to_local(pair[0], pair[1])
-			var d := p.length()
+			var d := p.distance_to(centre)
 			if d < best_dist:
 				best_dist = d
 				best = p

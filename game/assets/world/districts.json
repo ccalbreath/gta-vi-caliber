@@ -1,0 +1,261 @@
+{
+  "world_origin": {
+    "lat": 34.0503318,
+    "lon": -118.2523673
+  },
+  "attribution": "\u00a9 OpenStreetMap contributors, ODbL",
+  "districts": [
+    {
+      "name": "atwater_village",
+      "data": "res://assets/world/atwater_village.json",
+      "centroid": {
+        "lat": 34.1149531,
+        "lon": -118.2583933
+      },
+      "world_offset": {
+        "x": -555.8,
+        "z": -7193.6
+      },
+      "buildings": 3182,
+      "roads": 274
+    },
+    {
+      "name": "beverly_hills",
+      "data": "res://assets/world/beverly_hills.json",
+      "centroid": {
+        "lat": 34.0685724,
+        "lon": -118.3994585
+      },
+      "world_offset": {
+        "x": -13566.8,
+        "z": -2030.5
+      },
+      "buildings": 601,
+      "roads": 537
+    },
+    {
+      "name": "boyle_heights",
+      "data": "res://assets/world/boyle_heights.json",
+      "centroid": {
+        "lat": 34.0349238,
+        "lon": -118.2032682
+      },
+      "world_offset": {
+        "x": 4528.6,
+        "z": 1715.2
+      },
+      "buildings": 3056,
+      "roads": 218
+    },
+    {
+      "name": "chinatown",
+      "data": "res://assets/world/chinatown.json",
+      "centroid": {
+        "lat": 34.0642296,
+        "lon": -118.2378784
+      },
+      "world_offset": {
+        "x": 1336.4,
+        "z": -1547.1
+      },
+      "buildings": 371,
+      "roads": 706
+    },
+    {
+      "name": "culver_city",
+      "data": "res://assets/world/culver_city.json",
+      "centroid": {
+        "lat": 34.0225711,
+        "lon": -118.3918384
+      },
+      "world_offset": {
+        "x": -12863.9,
+        "z": 3090.3
+      },
+      "buildings": 1697,
+      "roads": 1186
+    },
+    {
+      "name": "downtown_la",
+      "data": "res://assets/world/downtown_la.json",
+      "centroid": {
+        "lat": 34.0503318,
+        "lon": -118.2523673
+      },
+      "world_offset": {
+        "x": 0.0,
+        "z": -0.0
+      },
+      "buildings": 199,
+      "roads": 901
+    },
+    {
+      "name": "echo_park",
+      "data": "res://assets/world/echo_park.json",
+      "centroid": {
+        "lat": 34.0767005,
+        "lon": -118.2614438
+      },
+      "world_offset": {
+        "x": -837.2,
+        "z": -2935.4
+      },
+      "buildings": 1983,
+      "roads": 882
+    },
+    {
+      "name": "highland_park",
+      "data": "res://assets/world/highland_park.json",
+      "centroid": {
+        "lat": 34.1135942,
+        "lon": -118.1916433
+      },
+      "world_offset": {
+        "x": 5600.8,
+        "z": -7042.4
+      },
+      "buildings": 2438,
+      "roads": 378
+    },
+    {
+      "name": "hollywood",
+      "data": "res://assets/world/hollywood.json",
+      "centroid": {
+        "lat": 34.1023657,
+        "lon": -118.3335721
+      },
+      "world_offset": {
+        "x": -7489.8,
+        "z": -5792.4
+      },
+      "buildings": 377,
+      "roads": 531
+    },
+    {
+      "name": "inglewood",
+      "data": "res://assets/world/inglewood.json",
+      "centroid": {
+        "lat": 33.959538,
+        "lon": -118.3488105
+      },
+      "world_offset": {
+        "x": -8895.3,
+        "z": 10107.2
+      },
+      "buildings": 1198,
+      "roads": 990
+    },
+    {
+      "name": "koreatown",
+      "data": "res://assets/world/koreatown.json",
+      "centroid": {
+        "lat": 34.0603344,
+        "lon": -118.3012216
+      },
+      "world_offset": {
+        "x": -4506.0,
+        "z": -1113.5
+      },
+      "buildings": 268,
+      "roads": 562
+    },
+    {
+      "name": "los_feliz",
+      "data": "res://assets/world/los_feliz.json",
+      "centroid": {
+        "lat": 34.1096215,
+        "lon": -118.2881544
+      },
+      "world_offset": {
+        "x": -3300.8,
+        "z": -6600.1
+      },
+      "buildings": 2067,
+      "roads": 688
+    },
+    {
+      "name": "mid_wilshire",
+      "data": "res://assets/world/mid_wilshire.json",
+      "centroid": {
+        "lat": 34.0645795,
+        "lon": -118.3388742
+      },
+      "world_offset": {
+        "x": -7978.9,
+        "z": -1586.1
+      },
+      "buildings": 1441,
+      "roads": 636
+    },
+    {
+      "name": "santa_monica",
+      "data": "res://assets/world/santa_monica.json",
+      "centroid": {
+        "lat": 34.0136156,
+        "lon": -118.4931682
+      },
+      "world_offset": {
+        "x": -22210.0,
+        "z": 4087.2
+      },
+      "buildings": 231,
+      "roads": 767
+    },
+    {
+      "name": "silver_lake",
+      "data": "res://assets/world/silver_lake.json",
+      "centroid": {
+        "lat": 34.0873942,
+        "lon": -118.2688083
+      },
+      "world_offset": {
+        "x": -1516.4,
+        "z": -4125.8
+      },
+      "buildings": 2479,
+      "roads": 497
+    },
+    {
+      "name": "venice_beach",
+      "data": "res://assets/world/venice_beach.json",
+      "centroid": {
+        "lat": 33.988682,
+        "lon": -118.469735
+      },
+      "world_offset": {
+        "x": -20048.6,
+        "z": 6862.9
+      },
+      "buildings": 1332,
+      "roads": 678
+    },
+    {
+      "name": "west_hollywood",
+      "data": "res://assets/world/west_hollywood.json",
+      "centroid": {
+        "lat": 34.089159,
+        "lon": -118.3786086
+      },
+      "world_offset": {
+        "x": -11643.7,
+        "z": -4322.2
+      },
+      "buildings": 1128,
+      "roads": 711
+    },
+    {
+      "name": "westwood",
+      "data": "res://assets/world/westwood.json",
+      "centroid": {
+        "lat": 34.0636913,
+        "lon": -118.4403321
+      },
+      "world_offset": {
+        "x": -17336.7,
+        "z": -1487.2
+      },
+      "buildings": 798,
+      "roads": 1075
+    }
+  ]
+}
