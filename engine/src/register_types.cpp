@@ -6,6 +6,7 @@
 
 #include "native_bench/native_bench.h"
 #include "worldcore/impostor.h"
+#include "worldcore/spatial_hash.h"
 #include "worldcore/tile_streamer.h"
 #include "worldcore/worldcore.h"
 
@@ -20,6 +21,7 @@ void initialize_worldcore_module(ModuleInitializationLevel p_level) {
     ClassDB::register_class<NativeBench>();
     ClassDB::register_class<TileStreamer>();
     ClassDB::register_class<Impostor>();
+    ClassDB::register_class<SpatialHash>();
 }
 
 void uninitialize_worldcore_module(ModuleInitializationLevel p_level) {

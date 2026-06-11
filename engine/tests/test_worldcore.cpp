@@ -7,6 +7,7 @@
 
 #include "../src/native_bench/bench_kernels.h"
 #include "../src/worldcore/impostor_core.h"
+#include "../src/worldcore/spatial_hash_core.h"
 #include "../src/worldcore/tile_streamer_core.h"
 #include "../src/worldcore/worldcore_version.h"
 
@@ -141,6 +142,48 @@ static void test_degenerate_fov_keeps_mesh() {
     CHECK(!should_impostor(10.0, 500.0, 1e-12, 1080.0, 32.0));
 }
 
+static void test_spatial_hash_radius_query() {
+    worldcore_spatial::SpatialHash2D h(8.0);
+    h.insert(1, 0.0, 0.0);
+    h.insert(2, 3.0, 0.0); // within 5 of origin
+    h.insert(3, 100.0, 100.0); // far away
+    h.insert(4, 0.0, 4.9); // within 5
+    auto near = h.query_radius(0.0, 0.0, 5.0);
+    // ids 1,2,4 present, 3 absent. (Order not guaranteed.)
+    bool has1 = false, has2 = false, has3 = false, has4 = false;
+    for (int id : near) {
+        if (id == 1) has1 = true;
+        if (id == 2) has2 = true;
+        if (id == 3) has3 = true;
+        if (id == 4) has4 = true;
+    }
+    CHECK(has1 && has2 && has4 && !has3);
+    CHECK(h.size() == 4);
+}
+
+static void test_spatial_hash_crosses_cell_boundary() {
+    // Two points in different cells (cell_size 8) but close in space: the query
+    // must find the neighbour across the cell boundary, not miss it.
+    worldcore_spatial::SpatialHash2D h(8.0);
+    h.insert(1, 7.5, 0.0); // cell (0,0)
+    h.insert(2, 8.5, 0.0); // cell (1,0), only 1.0 away
+    auto near = h.query_radius(7.5, 0.0, 2.0);
+    bool has2 = false;
+    for (int id : near) {
+        if (id == 2) has2 = true;
+    }
+    CHECK(has2);
+}
+
+static void test_spatial_hash_excludes_corner_square() {
+    // A point in the bounding-box corner but outside the circle must be excluded
+    // (true-distance refine, not just cell membership).
+    worldcore_spatial::SpatialHash2D h(8.0);
+    h.insert(1, 4.0, 4.0); // dist sqrt(32)=5.66 from origin
+    auto near = h.query_radius(0.0, 0.0, 5.0);
+    CHECK(near.empty());
+}
+
 int main() {
     test_version_is_consistent();
     test_sum_of_squares();
@@ -153,6 +196,9 @@ int main() {
     test_projected_radius_shrinks_with_distance();
     test_should_impostor_threshold();
     test_degenerate_fov_keeps_mesh();
+    test_spatial_hash_radius_query();
+    test_spatial_hash_crosses_cell_boundary();
+    test_spatial_hash_excludes_corner_square();
     if (failures > 0) {
         std::fprintf(stderr, "engine tests: %d failure(s)\n", failures);
         return 1;
