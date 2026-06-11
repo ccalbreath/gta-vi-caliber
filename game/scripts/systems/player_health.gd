@@ -56,6 +56,19 @@ func is_dead() -> bool:
 	return _dead
 
 
+## Snapshot for SaveManager.
+func serialize() -> Dictionary:
+	return {"health": _model.health}
+
+
+func restore(data: Variant) -> void:
+	if typeof(data) != TYPE_DICTIONARY or not (data as Dictionary).has("health"):
+		return
+	_model.health = clampf(float((data as Dictionary)["health"]), 0.0, _model.max_health)
+	_dead = _model.is_dead()
+	changed.emit(_model.fraction())
+
+
 func _die() -> void:
 	_dead = true
 	died.emit()

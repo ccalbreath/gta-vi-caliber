@@ -35,6 +35,11 @@ func _on_crime(killed: bool) -> void:
 	_refresh()
 
 
+## Report a crime from a non-gun source (melee, vehicular, ...).
+func report_crime(killed: bool) -> void:
+	_on_crime(killed)
+
+
 func _process(delta: float) -> void:
 	_wanted.tick(delta, false)
 	_refresh()
@@ -51,6 +56,18 @@ func is_wanted() -> bool:
 ## Wipe all heat (e.g. on death/arrest). The player escapes the law.
 func clear() -> void:
 	_wanted.heat = 0.0
+	_refresh()
+
+
+## Snapshot for SaveManager.
+func serialize() -> Dictionary:
+	return {"heat": _wanted.heat}
+
+
+func restore(data: Variant) -> void:
+	if typeof(data) != TYPE_DICTIONARY or not (data as Dictionary).has("heat"):
+		return
+	_wanted.heat = maxf(float((data as Dictionary)["heat"]), 0.0)
 	_refresh()
 
 

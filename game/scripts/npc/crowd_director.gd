@@ -53,10 +53,24 @@ extends Node3D
 ## up for this tick — keeps peds out of buildings/water without busy-looping.
 @export var walkable_attempts: int = 8
 
-## Optional walkability map. When assigned (in code; stamp building/water
-## footprints with NavGrid.block_world_rect), spawns are rejected on blocked
-## cells so pedestrians appear on streets and sidewalks, never inside a wall.
-## Null = spawn anywhere (flat-sandbox behaviour).
+## Auto-build a walkability map from the physics world the first time the crowd
+## ticks: a coarse grid is raycast straight down and any cell whose ground is
+## missing or sits above max_walkable_rise (a building, a wall, water with no
+## floor) is marked blocked. Gives peds a real navmesh of the streets with zero
+## coupling to how the world was built. Leave off for a flat sandbox.
+@export var bake_nav: bool = false
+@export var nav_cell_size: float = 2.0
+## Half-extent (m) of the baked grid around the player's start position.
+@export var nav_radius: float = 90.0
+## The bake raycast starts this far above the player so it hits a building's roof
+## first (and so marks the footprint blocked) instead of starting inside a tall
+## tower. Must clear the tallest building in range.
+@export var nav_probe_height: float = 400.0
+
+## Optional walkability map. Assigned by bake_nav, or set in code (stamp
+## building/water footprints with NavGrid.block_world_rect). When present, spawns
+## are rejected on blocked cells so pedestrians appear on streets and sidewalks,
+## never inside a wall. Null = spawn anywhere (flat-sandbox behaviour).
 var nav: NavGrid = null
 
 var _peds: Array[Node3D] = []
@@ -76,6 +90,8 @@ func _physics_process(delta: float) -> void:
 	var player := _player()
 	if player == null:
 		return
+	if bake_nav and nav == null:
+		_bake_nav(player.global_position)
 	_cull(player.global_position)
 	_spawn(player.global_position)
 
@@ -111,6 +127,28 @@ func _spawn(center: Vector3) -> void:
 		add_child(ped)
 		ped.global_position = pos
 		_peds.append(ped)
+
+
+## Raycast a coarse grid of the surrounding area into a NavGrid: every cell whose
+## ground is missing or above max_walkable_rise (relative to the player's feet)
+## becomes blocked. Runs once; the result drives nav-aware spawning and is there
+## for pedestrian routing. Cost is a one-off burst of cell raycasts at the chosen
+## resolution — keep nav_cell_size coarse on big worlds.
+func _bake_nav(center: Vector3) -> void:
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return
+	var cells := maxi(int(2.0 * nav_radius / nav_cell_size), 1)
+	var grid_origin := Vector3(center.x - nav_radius, center.y, center.z - nav_radius)
+	var grid := NavGrid.new(cells, cells, nav_cell_size, grid_origin)
+	var ceiling := center.y + max_walkable_rise
+	for r in cells:
+		for c in cells:
+			var at := grid.cell_to_world(c, r)
+			var gy := _ground_probe(at, center.y, nav_probe_height)
+			if is_nan(gy) or gy > ceiling:
+				grid.set_blocked(c, r, true)
+	nav = grid
 
 
 ## Find a walkable world spawn point in the annulus, or Vector3.INF if none of
@@ -158,11 +196,11 @@ func _apply_variety(ped: Node3D) -> void:
 ## spawn. Returns the hit Y, or NAN when nothing is hit within the probe window
 ## (a void) so the caller can reject that candidate. The space state can be null
 ## for a frame before the director is fully in the tree; treat that as a miss.
-func _ground_probe(at: Vector3, base_y: float) -> float:
+func _ground_probe(at: Vector3, base_y: float, up: float = ground_probe_up) -> float:
 	var space := get_world_3d().direct_space_state
 	if space == null:
 		return NAN
-	var from := Vector3(at.x, base_y + ground_probe_up, at.z)
+	var from := Vector3(at.x, base_y + up, at.z)
 	var to := Vector3(at.x, base_y - ground_probe_down, at.z)
 	var query := PhysicsRayQueryParameters3D.create(from, to, ground_mask)
 	var hit := space.intersect_ray(query)

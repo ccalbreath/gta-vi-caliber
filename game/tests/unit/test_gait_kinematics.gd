@@ -59,3 +59,31 @@ func test_elbow_deepens_on_forward_swing() -> bool:
 	var fwd := Locomotion.elbow_flex(HALF_PI, 0.3, 0.35)
 	var back := Locomotion.elbow_flex(THREE_HALF_PI, 0.3, 0.35)
 	return fwd > back
+
+
+func test_knee_from_swing_matches_phase_form() -> bool:
+	# Driving off live hip angle must equal the phase form: swing_norm = -sin(phase).
+	for i in 48:
+		var phase: float = float(i) / 48.0 * TAU
+		var by_phase := Locomotion.knee_flex(phase, 1.0, 0.1)
+		var by_swing := Locomotion.knee_flex_from_swing(sin(phase), 1.0, 0.1)
+		if absf(by_phase - by_swing) > 0.0001:
+			return false
+	return true
+
+
+func test_knee_from_swing_bends_when_leg_is_back() -> bool:
+	# Leg fully back (swing_norm = -1) gives the deepest bend; fully forward none.
+	var back := Locomotion.knee_flex_from_swing(-1.0, 1.0, 0.1)
+	var fwd := Locomotion.knee_flex_from_swing(1.0, 1.0, 0.1)
+	return absf(back - 1.1) < 0.001 and absf(fwd - 0.1) < 0.001
+
+
+func test_elbow_from_swing_matches_phase_form() -> bool:
+	for i in 48:
+		var phase: float = float(i) / 48.0 * TAU
+		var by_phase := Locomotion.elbow_flex(phase, 0.3, 0.35)
+		var by_swing := Locomotion.elbow_flex_from_swing(sin(phase), 0.3, 0.35)
+		if absf(by_phase - by_swing) > 0.0001:
+			return false
+	return true

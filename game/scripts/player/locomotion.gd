@@ -117,3 +117,23 @@ static func ankle_pitch(phase: float, amplitude: float) -> float:
 ## not straight planks. arm_phase is the arm's stride phase (the legs' + PI).
 static func elbow_flex(arm_phase: float, amplitude: float, base_bend: float = 0.35) -> float:
 	return base_bend + amplitude * maxf(0.0, sin(arm_phase))
+
+
+## Knee flex from the thigh's current normalised swing (hip_angle / hip_amp)
+## instead of the phase clock. Identical to knee_flex because -sin(phase) is just
+## the normalised backward swing, but it lets an articulation driver read the
+## live hip rotation and stay perfectly in lockstep with the hip — no second
+## phase to drift out of sync. swing_norm is clamped to [-1, 1] by the caller.
+static func knee_flex_from_swing(
+	swing_norm: float, amplitude: float, stance_flex: float = 0.12
+) -> float:
+	return stance_flex + amplitude * pow(maxf(0.0, -swing_norm), 1.3)
+
+
+## Elbow flex from the upper arm's current normalised swing (shoulder_angle /
+## arm_amp), the arm counterpart of knee_flex_from_swing. Forward drive
+## (swing_norm > 0) deepens the bend; never straightens past base_bend.
+static func elbow_flex_from_swing(
+	swing_norm: float, amplitude: float, base_bend: float = 0.35
+) -> float:
+	return base_bend + amplitude * maxf(0.0, swing_norm)
