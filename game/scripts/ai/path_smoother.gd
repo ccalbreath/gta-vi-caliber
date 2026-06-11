@@ -53,8 +53,11 @@ static func simplify_world(grid: NavGrid, waypoints: PackedVector3Array) -> Pack
 	for w: Vector3 in waypoints:
 		cells.append(grid.world_to_cell(w))
 	var kept := simplify_cells(grid, cells)
+	# cell_to_world uses the grid's origin y; carry the route's own height instead
+	# (routes are planar, so the first waypoint's y stands in for the leg).
+	var y := waypoints[0].y
 	var out := PackedVector3Array()
 	for c: Vector2i in kept:
 		var w := grid.cell_to_world(c.x, c.y)
-		out.append(w)
+		out.append(Vector3(w.x, y, w.z))
 	return out
