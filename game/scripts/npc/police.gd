@@ -14,6 +14,8 @@ extends CharacterBody3D
 @export var idle_time: float = 1.2
 ## Stops chasing (an "arrest" hold) once this close to the target.
 @export var catch_distance: float = 1.8
+## Damage per second dealt to the player while within catch_distance.
+@export var attack_dps: float = 22.0
 @export var acceleration: float = 16.0
 @export var max_health: float = 70.0
 @export var respawn_delay: float = 6.0
@@ -48,6 +50,8 @@ func _physics_process(delta: float) -> void:
 		if NpcBrain.planar_distance(global_position, player.global_position) > catch_distance:
 			dir = NpcBrain.pursue_dir(global_position, player.global_position)
 			speed = chase_speed
+		else:
+			_attack(delta)
 	elif NpcBrain.arrived(global_position, _target, arrive_tolerance):
 		_idle_left -= delta
 		if _idle_left <= 0.0:
@@ -75,6 +79,12 @@ func take_damage(amount: float, _point: Vector3, _normal: Vector3) -> void:
 
 func is_dead() -> bool:
 	return _dead
+
+
+func _attack(delta: float) -> void:
+	for health in get_tree().get_nodes_in_group("player_health"):
+		if health.has_method("take_damage"):
+			health.take_damage(attack_dps * delta)
 
 
 func _is_wanted() -> bool:

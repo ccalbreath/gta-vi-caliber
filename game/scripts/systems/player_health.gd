@@ -1,0 +1,87 @@
+class_name PlayerHealth
+extends Node
+## World-level player health + regeneration + death/respawn.
+##
+## Finds the player via the "player" group, so it needs no edit to the player
+## scene; joins "player_health" so damage sources (police, falls, future enemy
+## fire) hit it by duck-typed take_damage. On death it respawns the player at a
+## spawn point and clears the wanted level. The pure curve lives in
+## PlayerHealthModel (tested).
+
+signal changed(fraction: float)
+signal died
+signal respawned
+
+@export var max_health: float = 100.0
+@export var regen_rate: float = 12.0
+@export var regen_delay: float = 5.0
+@export var respawn_delay: float = 2.5
+
+var _model: PlayerHealthModel
+var _dead: bool = false
+
+
+func _ready() -> void:
+	_model = PlayerHealthModel.new(max_health, regen_rate, regen_delay)
+	add_to_group("player_health")
+	changed.emit(1.0)
+
+
+func _process(delta: float) -> void:
+	if _dead:
+		return
+	var before := _model.health
+	_model.tick(delta)
+	if not is_equal_approx(_model.health, before):
+		changed.emit(_model.fraction())
+
+
+## Duck-typed damage entry point for any attacker.
+func take_damage(amount: float, _point: Vector3 = Vector3.ZERO, _normal: Vector3 = Vector3.ZERO) -> void:
+	if _dead:
+		return
+	if _model.apply(amount):
+		_die()
+	else:
+		changed.emit(_model.fraction())
+
+
+func fraction() -> float:
+	return _model.fraction()
+
+
+func is_dead() -> bool:
+	return _dead
+
+
+func _die() -> void:
+	_dead = true
+	died.emit()
+	changed.emit(0.0)
+	get_tree().create_timer(respawn_delay).timeout.connect(_respawn)
+
+
+func _respawn() -> void:
+	_model.revive()
+	_dead = false
+	var player := _player()
+	var spawn := _spawn_point()
+	if player != null and spawn != null:
+		player.global_position = spawn.global_position
+		if player is CharacterBody3D:
+			(player as CharacterBody3D).velocity = Vector3.ZERO
+	for tracker in get_tree().get_nodes_in_group("wanted"):
+		if tracker.has_method("clear"):
+			tracker.clear()
+	respawned.emit()
+	changed.emit(1.0)
+
+
+func _player() -> Node3D:
+	var players := get_tree().get_nodes_in_group("player")
+	return players[0] as Node3D if not players.is_empty() else null
+
+
+func _spawn_point() -> Node3D:
+	var spawns := get_tree().get_nodes_in_group("spawn_points")
+	return spawns[0] as Node3D if not spawns.is_empty() else null

@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://scenes/npc/pedestrian.tscn" id="6_ped"]
 [ext_resource type="PackedScene" path="res://scenes/npc/police.tscn" id="7_police"]
 [ext_resource type="Script" path="res://scripts/systems/wanted_tracker.gd" id="8_wanted"]
+[ext_resource type="Script" path="res://scripts/systems/player_health.gd" id="9_health"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_horizon_color = Color(0.66, 0.67, 0.69, 1)
@@ -370,6 +371,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.5, 18)
 
 [node name="WantedTracker" type="Node" parent="."]
 script = ExtResource("8_wanted")
+
+[node name="PlayerHealth" type="Node" parent="."]
+script = ExtResource("9_health")
 
 [node name="Police" type="Node3D" parent="."]
 

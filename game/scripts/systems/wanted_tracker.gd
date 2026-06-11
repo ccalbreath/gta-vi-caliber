@@ -48,6 +48,12 @@ func is_wanted() -> bool:
 	return _wanted.is_wanted()
 
 
+## Wipe all heat (e.g. on death/arrest). The player escapes the law.
+func clear() -> void:
+	_wanted.heat = 0.0
+	_refresh()
+
+
 func _refresh() -> void:
 	var current := _wanted.stars()
 	if current != _stars:

@@ -15,9 +15,12 @@ extends CanvasLayer
 @export var hit_marker_decay: float = 3.0
 
 var _controller: Node = null
+var _player_health: Node = null
 
 @onready var _ammo: Label = $Ammo
 @onready var _crosshair: Crosshair = $Crosshair
+@onready var _health: Label = $Health
+@onready var _status: Label = $Status
 
 
 func _ready() -> void:
@@ -32,6 +35,9 @@ func _bind() -> void:
 	if not found.is_empty():
 		_controller = found[0]
 		_controller.hit_confirmed.connect(_on_hit_confirmed)
+	var health := get_tree().get_nodes_in_group("player_health")
+	if not health.is_empty():
+		_player_health = health[0]
 
 
 func _on_hit_confirmed(killed: bool) -> void:
@@ -40,6 +46,7 @@ func _on_hit_confirmed(killed: bool) -> void:
 
 
 func _process(delta: float) -> void:
+	_update_health()
 	if _controller == null:
 		return
 	if _crosshair.hit_flash > 0.0:
@@ -55,3 +62,11 @@ func _process(delta: float) -> void:
 	)
 	_crosshair.gap = base_gap + float(state.get("spread", 0.0)) * spread_to_px
 	_crosshair.queue_redraw()
+
+
+func _update_health() -> void:
+	if _player_health == null:
+		return
+	var dead: bool = _player_health.is_dead()
+	_status.text = "WASTED" if dead else ""
+	_health.text = "HP %d" % int(round(_player_health.fraction() * 100.0))
