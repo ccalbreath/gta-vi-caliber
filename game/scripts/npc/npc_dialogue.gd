@@ -236,6 +236,24 @@ const WEATHER_ANCHOR: Dictionary = {
 	"rain": ["LIVE: precipitation event in progress, I am IN it, send a towel."],
 }
 
+## Lines a citizen says when it recognises the player as a recent perpetrator —
+## the city's nervous gossip. Absurd by design, never accusatory enough to get
+## itself hurt.
+const WITNESS: PackedStringArray = [
+	"Wait. WAIT. You're that one. From the {place} thing. I KNEW it.",
+	"I saw what you did. I'm not saying anything. But I SAW. ({animal} also saw.)",
+	"Oh no. Oh no no. It's you. I'm just gonna— yep. Walking now.",
+	"You've got a real 'recently committed crimes' aura. Respect. From over here.",
+	"I'm a witness. A scared, well-dressed witness. Please don't subpoena me.",
+	"Aren't you on the news? You're DEFINITELY on the news. Smile!",
+]
+
+
+## A recognition one-liner — what a rattled witness blurts when it spots the
+## player it remembers. Deterministic, slot-filled, never empty.
+static func witness_bark(seed_value: int) -> String:
+	return _fill(WITNESS[posmod(seed_value, WITNESS.size())], seed_value)
+
 
 ## A weather one-liner in `voice` for the current `condition`. The weather anchor
 ## delivers a forecast; everyone else just grumbles. Never empty.

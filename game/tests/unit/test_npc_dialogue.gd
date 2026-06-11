@@ -86,3 +86,17 @@ func test_weather_bark_is_deterministic() -> bool:
 	var a := NpcDialogue.weather_bark("yogi", "overcast", 5)
 	var b := NpcDialogue.weather_bark("yogi", "overcast", 5)
 	return a == b and a != ""
+
+
+func test_witness_bark_nonempty_and_filled() -> bool:
+	for s in 12:
+		var line := NpcDialogue.witness_bark(s)
+		if line == "" or line.contains("{") or line.contains("}"):
+			return false
+	return true
+
+
+func test_witness_bark_is_deterministic() -> bool:
+	var a := NpcDialogue.witness_bark(7)
+	var b := NpcDialogue.witness_bark(7)
+	return a == b

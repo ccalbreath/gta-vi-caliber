@@ -57,6 +57,8 @@ var _wp: int = 0
 # Active fright: seconds left running, and the world point being fled.
 var _panic_left: float = 0.0
 var _panic_from: Vector3 = Vector3.ZERO
+# Lingering memory (0..1) of a crime witnessed nearby — fades over ~13 s.
+var _crime_memory: float = 0.0
 
 
 func _ready() -> void:
@@ -170,11 +172,13 @@ func _physics_process(delta: float) -> void:
 		_target = _path[_wp]
 	super._physics_process(delta)
 	_fade_bubble(delta)
+	_crime_memory = NpcMemory.decay(_crime_memory, delta)
 	_react_left -= delta
 	if _react_left <= 0.0:
 		_react_left = react_interval
 		_maybe_react()
 		_maybe_catch_panic()
+		_maybe_witness_bark()
 		_maybe_weather_bark()
 		_maybe_socialize()
 
@@ -250,6 +254,7 @@ func _maybe_catch_panic() -> void:
 			continue
 		if NpcReaction.catches_panic(global_position.distance_to(other.global_position), _bravery):
 			_start_panic(other.panic_origin())
+			_crime_memory = 1.0  # witnessed the mayhem — remembers the culprit
 			return
 
 
@@ -315,6 +320,28 @@ func _nearest_citizen(radius: float) -> Citizen:
 func take_damage(amount: float, point: Vector3, normal: Vector3) -> void:
 	super.take_damage(amount, point, normal)
 	_start_panic(point)
+	_crime_memory = 1.0
+
+
+## Lingering memory (0..1) of a witnessed crime — for the wanted/debug systems.
+func crime_memory() -> float:
+	return _crime_memory
+
+
+## Call the player out when recognised. A rattled witness, mid-loiter, blurts a
+## (cowardly, absurd) line — the city remembering your rap sheet.
+func _maybe_witness_bark() -> void:
+	if is_dead() or is_panicking():
+		return
+	if _bubble != null and _bubble.modulate.a > 0.25:
+		return
+	if (_voice_seed + _bark_n) % 2 != 0:
+		return
+	var player := _nearest_player()
+	if player == null:
+		return
+	if NpcMemory.recognizes(_crime_memory, global_position.distance_to(player.global_position)):
+		_say(NpcDialogue.witness_bark(_next_seed()))
 
 
 # --- helpers ----------------------------------------------------------------
