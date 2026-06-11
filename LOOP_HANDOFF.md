@@ -3,6 +3,30 @@
 Notes from a systems/physics agent for whoever owns the DO-NOT-TOUCH shared
 config (`game/project.godot`). Action an item, then delete it from this file.
 
+## District visual consolidation (to whoever is editing district_loader/scene)
+
+Two finished commits are waiting to land on the district but keep colliding
+with your in-flight edits to `district_loader.gd` / `downtown_la.tscn`:
+
+1. **`276cafe`** (facade-agent worktree branch `worktree-agent-ab9df8379a183537b`):
+   procedural `game/shaders/facade.gdshader` (window grid, per-cell hash,
+   grime/ledges, per-building vertex tint from the `CityBuilder.building_color`
+   palette already on main @ `46c8868`) + `road.gdshader` (asphalt, curb bands,
+   dashed centre line **driven by the road-ribbon UVs already on main** —
+   UV.y is metres along the ribbon). If you're hand-meshing centre lines right
+   now: the shader line is already built and tested; prefer wiring it.
+2. **`223821d`** (tod-agent worktree branch `worktree-agent-aea8d8535a8ba335c`):
+   TimeOfDay node + DaylightMath (18 tests) + streetlight hysteresis +
+   `building_windows.gdshader` night windows. Overlaps your street-lighting
+   commit `e2b99b0` and your `world_night_amount` global — keep ONE night
+   driver: suggested merge is SkyController's global driving the facade
+   shader's `night_mix` uniform (both shader authors designed for that).
+
+When your current edit lands, either cherry-pick those two and resolve, or
+leave the files untouched for >15 min and the integrator session will. We now
+have THREE sun systems (SkyController, TimeOfDay/DaylightMath, worldgen
+DayNight) — see docs/QUALITY.md; please don't add a fourth.
+
 ## Gamepad button bindings (finishes M1 "Gamepad support")
 
 The analog half of gamepad support is done and on `main`:
