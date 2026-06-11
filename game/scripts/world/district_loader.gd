@@ -34,6 +34,7 @@ func _ready() -> void:
 	var built_buildings := _build_buildings(data.get("buildings", []), proj)
 	_build_roads(data.get("roads", []), proj)
 	_build_streetlights(data.get("roads", []), proj)
+	_build_trees(data.get("roads", []), proj)
 	_place_actors_on_street(data.get("roads", []), proj)
 
 	var nb: int = (data.get("buildings", []) as Array).size()
@@ -45,6 +46,54 @@ func _ready() -> void:
 		)
 	)
 	district_built.emit(nb, nr)
+
+
+## Scatter street trees on the setback behind the kerb of the wider roads, with
+## per-tree scale and yaw variety. Shares one trunk + one canopy mesh across all
+## trees and caps the count, so a whole green avenue costs almost nothing.
+func _build_trees(roads: Array, proj: GeoProjection) -> void:
+	var bark := StandardMaterial3D.new()
+	bark.albedo_color = Color(0.32, 0.23, 0.16)
+	bark.roughness = 0.95
+	var leaf := StandardMaterial3D.new()
+	leaf.albedo_color = Color(0.21, 0.42, 0.18)
+	leaf.roughness = 0.9
+	leaf.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var trunk_mesh := TreeMesh.to_mesh(TreeMesh.trunk())
+	var canopy_mesh := TreeMesh.to_mesh(TreeMesh.canopy())
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1337
+	var container := Node3D.new()
+	container.name = "Trees"
+	add_child(container)
+
+	var placed := 0
+	for r in roads:
+		if placed >= 120:
+			break
+		if float(r.get("width_m", 0.0)) < 9.0:
+			continue
+		var path := _project_ring(r["path"], proj)
+		for p in StreetLight.sample_along(path, 26.0, float(r["width_m"]) * 0.5 + 2.6):
+			if placed >= 120:
+				break
+			var tree := Node3D.new()
+			tree.position = Vector3(p.x, 0.0, p.y)
+			var scale_factor := rng.randf_range(0.8, 1.25)
+			tree.scale = Vector3(scale_factor, scale_factor, scale_factor)
+			tree.rotation.y = rng.randf() * TAU
+			var trunk := MeshInstance3D.new()
+			trunk.mesh = trunk_mesh
+			trunk.material_override = bark
+			tree.add_child(trunk)
+			var crown := MeshInstance3D.new()
+			crown.mesh = canopy_mesh
+			crown.material_override = leaf
+			crown.position = Vector3(0.0, 3.9, 0.0)
+			tree.add_child(crown)
+			container.add_child(tree)
+			placed += 1
 
 
 ## Drop emissive lamp posts along the major roads (kerb side, ~42 m apart). They
