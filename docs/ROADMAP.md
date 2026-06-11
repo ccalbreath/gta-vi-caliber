@@ -92,7 +92,7 @@ Goal: the acceptance test — a 90-second in-engine trailer from a release build
 - [ ] Lighting pass: GI (SDFGI/HDDAGI tuning or `engine/` solution), volumetrics
 - [ ] Ocean v2: foam, wakes, buoyancy
 - [ ] Crowd density pass (**`engine/`: GPU-driven crowd rendering**)
-- [ ] Cinematic camera tooling for capture
+- [x] Cinematic camera tooling for capture
 - [ ] Performance lockdown: 60 FPS @ 1080p mid-range GPU, captured profiles
 - [ ] Cut, score, and publish the trailer
 
