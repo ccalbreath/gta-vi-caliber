@@ -86,3 +86,34 @@ static func lean_angle(accel: float, accel_reference: float, max_lean: float) ->
 	if accel_reference <= 0.0:
 		return 0.0
 	return clampf(accel / accel_reference, -1.0, 1.0) * max_lean
+
+
+# --- Articulated gait: two-bone limb flexion ---------------------------------
+# These turn the single-segment swing into a believable two-bone limb. All
+# angles are radians on a normalised walk cycle where a leg's hip swing is
+# sin(phase): the foot is planted through stance (phase 0..PI) and swings
+# through the air (phase PI..TAU), so the knee flexes mainly during swing. The
+# animator scales amplitudes by the move blend so a slow walk bends less than a
+# sprint. Covered by tests/unit/test_gait_kinematics.gd.
+
+
+## Knee flexion magnitude (always >= 0 — a knee only folds one way). One dominant
+## bend as the leg lifts and swings through, peaking near phase = 3*PI/2, plus a
+## small constant load-bearing flex so a planted leg never locks robotically.
+static func knee_flex(phase: float, amplitude: float, stance_flex: float = 0.12) -> float:
+	var swing: float = maxf(0.0, -sin(phase))  # positive only through swing
+	return stance_flex + amplitude * pow(swing, 1.3)
+
+
+## Ankle pitch (signed): toe lifts (dorsiflexion) approaching heel-strike and
+## points (plantarflexion) through toe-off, a quarter-cycle ahead of the hip, so
+## the sole stays roughly level across the step instead of skating flat.
+static func ankle_pitch(phase: float, amplitude: float) -> float:
+	return sin(phase + PI * 0.5) * amplitude
+
+
+## Elbow flexion for a swinging arm (always >= 0). Arms carry a relaxed constant
+## bend that deepens a touch as the arm drives forward, so they read as arms and
+## not straight planks. arm_phase is the arm's stride phase (the legs' + PI).
+static func elbow_flex(arm_phase: float, amplitude: float, base_bend: float = 0.35) -> float:
+	return base_bend + amplitude * maxf(0.0, sin(arm_phase))
