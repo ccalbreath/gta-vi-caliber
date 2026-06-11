@@ -1,13 +1,17 @@
 # Godot
 game/.godot/
 game/*.translation
-game/export_presets.cfg
+
+# Export output
+dist/
 
 # Built native libraries (artifacts only — never committed)
 game/bin/*.so
 game/bin/*.dylib
 game/bin/*.dll
 game/bin/*.framework/
+game/bin/*.gdextension
+game/bin/*.uid
 
 # Engine build artifacts
 engine/**/*.o
@@ -15,6 +19,7 @@ engine/**/*.os
 engine/**/*.obj
 engine/.sconsign.dblite
 engine/.sconf_temp/
+engine/bin/
 .sconsign.dblite
 
 # Reference footage — copyrighted study material, local only

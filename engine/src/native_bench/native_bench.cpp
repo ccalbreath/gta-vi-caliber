@@ -2,6 +2,8 @@
 
 #include <godot_cpp/core/class_db.hpp>
 
+#include "bench_kernels.h"
+
 using namespace godot;
 
 void NativeBench::_bind_methods() {
@@ -14,9 +16,5 @@ String NativeBench::ping() const {
 }
 
 int64_t NativeBench::sum_of_squares(int64_t n) const {
-    int64_t total = 0;
-    for (int64_t i = 0; i < n; ++i) {
-        total += i * i;
-    }
-    return total;
+    return worldcore_kernels::sum_of_squares(n);
 }

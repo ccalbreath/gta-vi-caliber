@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+; A Citizen is a Pedestrian with an inner life: same rig, body and collision,
+; but the root script is swapped for citizen.gd, which drives a daily routine,
+; personality and speech bubble on top of the inherited movement.
+
+[ext_resource type="PackedScene" path="res://scenes/npc/pedestrian.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/npc/citizen.gd" id="2_cit"]
+
+[node name="Citizen" instance=ExtResource("1_base")]
+script = ExtResource("2_cit")

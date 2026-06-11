@@ -20,7 +20,7 @@ Goal: every clone runs instantly; contribution pipeline works end to end.
 - [x] `tools/check.sh` local gate = CI (format, lint, import, smoke, unit tests)
 - [x] GitHub Actions CI, issue templates, PR template
 - [ ] Vendor [gdUnit4](https://github.com/MikeSchulze/gdUnit4) into `game/addons/` and port the unit-test runner to it
-- [ ] First exported build artifacts (Linux/Windows/macOS) uploaded by CI on tag
+- [x] First exported build artifacts (Linux/Windows/macOS) uploaded by CI on tag
 
 ## M1 — Locomotion & camera feel
 
@@ -29,7 +29,7 @@ Goal: moving around is *fun* before there is anything to do.
 - [ ] Character model + run/walk/idle/jump animations (original or CC0; see `art` issues)
 - [x] Acceleration/deceleration curves, air control, coyote time (+ jump buffering)
 - [x] Camera: collision probe, shoulder offset, FOV kick on sprint
-- [ ] Footstep audio hooked to surface type
+- [x] Footstep audio hooked to surface type
 - [x] Greybox "movement playground" scene with stairs, slopes, gaps, ladders
 - [ ] Gamepad support + rebindable input
 
@@ -40,9 +40,9 @@ Goal: get in a car, drive it, crash it, get out.
 - [x] `VehicleBody3D`-based car with tuned suspension (greybox body)
 - [x] Seamless enter/exit interaction
 - [x] Chase camera with speed-based FOV and look-behind
-- [ ] Engine/tire/impact audio loops
+- [x] Engine/tire/impact audio loops
 - [x] Damage model v1 (visual deformation can wait; mechanical state first)
-- [ ] Motorbike + boat prototypes
+- [x] Motorbike + boat prototypes
 
 ## M3 — Streaming world foundation *(engine track begins)*
 
@@ -51,9 +51,9 @@ Goal: walk or drive 4 km in any direction with no loading screen.
 - [ ] World partitioned into tiles with seam-free LOD terrain
 - [ ] **`engine/`: async tile streamer GDExtension** (load/unload around camera, priority by velocity vector)
 - [ ] **`engine/`: runtime impostor baker** for distant buildings
-- [ ] Floating-origin shift to dodge float precision at distance
+- [x] Floating-origin shift to dodge float precision at distance
 - [ ] Streaming debug HUD (tiles resident, VRAM, frame budget)
-- [ ] Benchmark scene + captured profile checked into `docs/profiles/`
+- [x] Benchmark scene + captured profile checked into `docs/profiles/`
 
 ## M4 — A living district
 
@@ -95,8 +95,8 @@ Goal: the acceptance test — a 90-second in-engine trailer from a release build
 Lives in `engine/`; rules in [ARCHITECTURE.md](ARCHITECTURE.md). Anything
 generically useful is offered upstream to Godot.
 
-- [ ] godot-cpp vendored as submodule + first compiled module on all 3 platforms
-- [ ] CI job building `engine/` and running its C++ tests
+- [x] godot-cpp vendored as submodule + first compiled module on all 3 platforms
+- [x] CI job building `engine/` and running its C++ tests
 - [ ] Streaming module (M3)
 - [ ] Impostor baker (M3)
 - [ ] Crowd/traffic simulation core (M4+, only with profile evidence)

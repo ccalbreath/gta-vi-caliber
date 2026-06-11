@@ -11,6 +11,7 @@ extends SceneTree
 const SCENES: PackedStringArray = [
 	"res://scenes/world/sandbox.tscn",
 	"res://scenes/world/playground.tscn",
+	"res://scenes/world/districts/downtown_la.tscn",
 ]
 
 var _index: int = -1

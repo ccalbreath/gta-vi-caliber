@@ -1,0 +1,92 @@
+extends RefCounted
+## Unit tests for CityBuilder geometry. Buildings and roads are generated from
+## hundreds of real footprints, so the prism/ribbon math has to be exactly right.
+
+# PackedVector2Array(...) is not a constant expression in GDScript, so this
+# shared fixture is a runtime member rather than a const.
+var _square := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10)])
+
+
+func test_clean_ring_drops_closing_duplicate() -> bool:
+	var closed := PackedVector2Array(
+		[Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10), Vector2(0, 0)]
+	)
+	return CityBuilder.clean_ring(closed).size() == 4
+
+
+func test_prism_vertex_and_index_counts() -> bool:
+	# 4 walls × 4 verts + 4 roof verts = 20 verts.
+	# 4 walls × 6 + roof (4-2)×3 = 24 + 6 = 30 indices.
+	var geo := CityBuilder.extrude_prism(_square, 0.0, 25.0)
+	var verts: PackedVector3Array = geo["vertices"]
+	var idx: PackedInt32Array = geo["indices"]
+	return verts.size() == 20 and idx.size() == 30
+
+
+func test_prism_reaches_requested_height() -> bool:
+	var geo := CityBuilder.extrude_prism(_square, 5.0, 100.0)
+	var max_y := -INF
+	var min_y := INF
+	for v in geo["vertices"] as PackedVector3Array:
+		max_y = maxf(max_y, v.y)
+		min_y = minf(min_y, v.y)
+	return absf(max_y - 105.0) < 0.001 and absf(min_y - 5.0) < 0.001
+
+
+func test_prism_normals_are_unit_length() -> bool:
+	var geo := CityBuilder.extrude_prism(_square, 0.0, 10.0)
+	for nrm in geo["normals"] as PackedVector3Array:
+		if absf(nrm.length() - 1.0) > 0.001:
+			return false
+	return true
+
+
+func test_degenerate_footprint_returns_empty() -> bool:
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(1, 1)])
+	return CityBuilder.extrude_prism(line, 0.0, 10.0).is_empty()
+
+
+func test_signed_area_sign_follows_winding() -> bool:
+	var ccw := CityBuilder.signed_area(_square)
+	var cw := _square.duplicate()
+	cw.reverse()
+	return ccw > 0.0 and CityBuilder.signed_area(cw) < 0.0
+
+
+func test_winding_is_normalised_before_extrude() -> bool:
+	# A clockwise footprint must produce the same mesh size as its CCW twin.
+	var cw := _square.duplicate()
+	cw.reverse()
+	var a := CityBuilder.extrude_prism(_square, 0.0, 10.0)
+	var b := CityBuilder.extrude_prism(cw, 0.0, 10.0)
+	return (
+		(a["vertices"] as PackedVector3Array).size() == (b["vertices"] as PackedVector3Array).size()
+	)
+
+
+func test_road_ribbon_quad_per_segment() -> bool:
+	# 3 points → 2 segments → 8 verts, 12 indices.
+	var path := PackedVector2Array([Vector2(0, 0), Vector2(20, 0), Vector2(40, 0)])
+	var geo := CityBuilder.road_ribbon(path, 8.0, 0.05)
+	return (
+		(geo["vertices"] as PackedVector3Array).size() == 8
+		and (geo["indices"] as PackedInt32Array).size() == 12
+	)
+
+
+func test_road_ribbon_width_is_correct() -> bool:
+	var path := PackedVector2Array([Vector2(0, 0), Vector2(10, 0)])
+	var geo := CityBuilder.road_ribbon(path, 6.0, 0.0)
+	var verts: PackedVector3Array = geo["vertices"]
+	# First two verts straddle the start point across the 6 m width.
+	return absf(verts[0].distance_to(verts[1]) - 6.0) < 0.001
+
+
+func test_arrays_to_mesh_builds_surface() -> bool:
+	var geo := CityBuilder.extrude_prism(_square, 0.0, 10.0)
+	var mesh := CityBuilder.arrays_to_mesh(geo)
+	return mesh != null and mesh.get_surface_count() == 1
+
+
+func test_arrays_to_mesh_empty_is_null() -> bool:
+	return CityBuilder.arrays_to_mesh({}) == null

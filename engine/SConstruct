@@ -2,7 +2,9 @@
 """Builds all GDExtension modules under src/ into game/bin/.
 
 Standard godot-cpp build: https://docs.godotengine.org/en/stable/tutorials/scripting/gdextension/gdextension_cpp_example.html
-Usage: scons platform=<macos|linux|windows> target=<template_debug|template_release>
+Usage:
+    scons platform=<macos|linux|windows> target=<template_debug|template_release>
+    scons tests        # also build bin/test_worldcore (plain C++ unit tests)
 """
 import os
 import sys
@@ -11,7 +13,7 @@ if not os.path.isdir("godot-cpp"):
     sys.exit(
         "godot-cpp submodule missing.\n"
         "Run: git submodule update --init --recursive\n"
-        "(or see engine/README.md if the submodule isn't vendored yet)"
+        "(see engine/README.md for the version pin)"
     )
 
 env = SConscript("godot-cpp/SConstruct")
@@ -19,7 +21,7 @@ env = SConscript("godot-cpp/SConstruct")
 env.Append(CPPPATH=["src/"])
 sources = Glob("src/*.cpp") + Glob("src/*/*.cpp")
 
-LIB_NAME = "gta_native"
+LIB_NAME = "worldcore"
 
 if env["platform"] == "macos":
     library = env.SharedLibrary(
@@ -34,4 +36,16 @@ else:
         source=sources,
     )
 
-Default(library)
+# The manifest is copied (not symlinked) so game/bin/ works standalone.
+manifest = env.Command(
+    "../game/bin/worldcore.gdextension",
+    "worldcore.gdextension.example",
+    Copy("$TARGET", "$SOURCE"),
+)
+
+Default([library, manifest])
+
+# Plain C++ unit tests (no Godot runtime needed): `scons tests`.
+test_env = env.Clone()
+test_program = test_env.Program("bin/test_worldcore", ["tests/test_worldcore.cpp"])
+Alias("tests", test_program)

@@ -1,8 +1,17 @@
-[gd_scene load_steps=37 format=3]
+[gd_scene load_steps=39 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://scenes/ui/debug_hud.tscn" id="2_hud"]
 [ext_resource type="PackedScene" path="res://scenes/vehicles/car.tscn" id="3_car"]
+[ext_resource type="PackedScene" path="res://scenes/ui/weapon_hud.tscn" id="4_whud"]
+[ext_resource type="PackedScene" path="res://scenes/props/target_dummy.tscn" id="5_target"]
+[ext_resource type="PackedScene" path="res://scenes/npc/pedestrian.tscn" id="6_ped"]
+[ext_resource type="PackedScene" path="res://scenes/npc/police.tscn" id="7_police"]
+[ext_resource type="Script" path="res://scripts/systems/wanted_tracker.gd" id="8_wanted"]
+[ext_resource type="Script" path="res://scripts/systems/player_health.gd" id="9_health"]
+[ext_resource type="Script" path="res://scripts/missions/mission_director.gd" id="10_mission"]
+[ext_resource type="Script" path="res://scripts/systems/save_manager.gd" id="11_save"]
+[ext_resource type="Script" path="res://scripts/combat/melee_controller.gd" id="12_melee"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_horizon_color = Color(0.66, 0.67, 0.69, 1)
@@ -323,3 +332,65 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0.6, 8)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 
 [node name="DebugHud" parent="." instance=ExtResource("2_hud")]
+
+[node name="WeaponHud" parent="." instance=ExtResource("4_whud")]
+
+[node name="Targets" type="Node3D" parent="."]
+
+[node name="Target1" parent="Targets" instance=ExtResource("5_target")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -12)
+
+[node name="Target2" parent="Targets" instance=ExtResource("5_target")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -13)
+
+[node name="Target3" parent="Targets" instance=ExtResource("5_target")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, -12)
+
+[node name="Target4" parent="Targets" instance=ExtResource("5_target")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -19)
+
+[node name="Target5" parent="Targets" instance=ExtResource("5_target")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -19)
+
+[node name="Target6" parent="Targets" instance=ExtResource("5_target")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11, 0, -16)
+
+[node name="Pedestrians" type="Node3D" parent="."]
+
+[node name="Ped1" parent="Pedestrians" instance=ExtResource("6_ped")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.5, 6)
+
+[node name="Ped2" parent="Pedestrians" instance=ExtResource("6_ped")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.5, 14)
+
+[node name="Ped3" parent="Pedestrians" instance=ExtResource("6_ped")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.5, 10)
+
+[node name="Ped4" parent="Pedestrians" instance=ExtResource("6_ped")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0.5, -6)
+
+[node name="Ped5" parent="Pedestrians" instance=ExtResource("6_ped")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.5, 18)
+
+[node name="WantedTracker" type="Node" parent="."]
+script = ExtResource("8_wanted")
+
+[node name="PlayerHealth" type="Node" parent="."]
+script = ExtResource("9_health")
+
+[node name="MissionDirector" type="Node" parent="."]
+script = ExtResource("10_mission")
+
+[node name="SaveManager" type="Node" parent="."]
+script = ExtResource("11_save")
+
+[node name="MeleeController" type="Node" parent="."]
+script = ExtResource("12_melee")
+
+[node name="Police" type="Node3D" parent="."]
+
+[node name="Cop1" parent="Police" instance=ExtResource("7_police")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0.5, -14)
+
+[node name="Cop2" parent="Police" instance=ExtResource("7_police")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0.5, 16)
