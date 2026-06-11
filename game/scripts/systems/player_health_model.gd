@@ -45,6 +45,12 @@ func tick(delta: float) -> void:
 		health = minf(health + regen_rate * delta, max_health)
 
 
+## Restore health (negative ignored), capped at max. Does not resurrect — a
+## dead player must respawn, so callers should guard on is_dead().
+func heal(amount: float) -> void:
+	health = minf(health + maxf(amount, 0.0), max_health)
+
+
 func fraction() -> float:
 	return health / max_health
 

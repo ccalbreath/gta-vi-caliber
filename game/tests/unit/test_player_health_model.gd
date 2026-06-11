@@ -72,6 +72,22 @@ func test_fraction() -> bool:
 	return is_equal_approx(h.fraction(), 0.75)
 
 
+func test_heal_restores_capped_at_max() -> bool:
+	var h := PlayerHealthModel.new(100.0)
+	h.apply(60.0)
+	h.heal(30.0)
+	var partial := is_equal_approx(h.health, 70.0)
+	h.heal(999.0)
+	return partial and is_equal_approx(h.health, 100.0)
+
+
+func test_heal_ignores_negative() -> bool:
+	var h := PlayerHealthModel.new(100.0)
+	h.apply(40.0)
+	h.heal(-10.0)
+	return is_equal_approx(h.health, 60.0)
+
+
 func test_revive_restores_full() -> bool:
 	var h := PlayerHealthModel.new(80.0)
 	h.apply(80.0)

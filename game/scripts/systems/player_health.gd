@@ -56,6 +56,14 @@ func is_dead() -> bool:
 	return _dead
 
 
+## Heal from a pickup/medkit; ignored while dead (respawn handles that).
+func heal(amount: float) -> void:
+	if _dead:
+		return
+	_model.heal(amount)
+	changed.emit(_model.fraction())
+
+
 ## Snapshot for SaveManager.
 func serialize() -> Dictionary:
 	return {"health": _model.health}
