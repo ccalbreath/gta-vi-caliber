@@ -1,8 +1,9 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/vehicles/car.gd" id="1_car"]
 [ext_resource type="Script" path="res://scripts/camera/chase_camera.gd" id="2_chase"]
 [ext_resource type="Script" path="res://scripts/vehicles/vehicle_audio.gd" id="3_audio"]
+[ext_resource type="Script" path="res://scripts/vehicles/car_body.gd" id="4_body"]
 
 [sub_resource type="StandardMaterial3D" id="body_mat"]
 albedo_color = Color(0.75, 0.2, 0.15, 1)
@@ -35,6 +36,9 @@ collision_layer = 1
 collision_mask = 3
 mass = 300.0
 script = ExtResource("1_car")
+
+[node name="Body" type="Node3D" parent="."]
+script = ExtResource("4_body")
 
 [node name="Chassis" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
