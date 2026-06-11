@@ -5,6 +5,9 @@ extends DirectionalLight3D
 
 @export var minutes_per_second: float = 60.0  # 1 real second = 1 game minute
 @export var start_hour: float = 9.0
+## Multiplies the computed sun energy — lets a scene push a brighter, punchier
+## key light than the baseline day curve without editing the shared GameClock.
+@export var energy_scale: float = 1.0
 
 var _time: float = 9.0
 var _env: WorldEnvironment
@@ -25,7 +28,7 @@ func _apply() -> void:
 	rotation_degrees = Vector3(
 		-GameClock.sun_elevation_deg(_time), GameClock.sun_azimuth_deg(_time), 0.0
 	)
-	light_energy = GameClock.light_energy(_time)
+	light_energy = GameClock.light_energy(_time) * energy_scale
 	if _env == null or _env.environment == null:
 		return
 	var sky := _env.environment.sky

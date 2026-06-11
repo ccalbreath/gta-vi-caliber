@@ -35,7 +35,7 @@ static func horizon_color(hour: float) -> Color:
 	var elevation := sun_elevation_deg(hour)
 	var night := Color(0.05, 0.06, 0.1)
 	var dusk := Color(0.85, 0.45, 0.25)
-	var day := Color(0.7, 0.72, 0.73)
+	var day := Color(0.62, 0.72, 0.85)
 	if elevation <= 0.0:
 		return night
 	if elevation < 12.0:
