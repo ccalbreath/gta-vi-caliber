@@ -5,6 +5,17 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-10 (night) — coastal district lands; world goes multi-district
+
+Venice Beach scene on main: real-shoreline sand + Ocean v1 + golden-hour
+sky over 1332 footprints (M4 coastal box ticked). The worldgen merge made
+the world 18 districts / 24,846 buildings on one shared projection origin;
+npc-life brought citizens; gate now runs 955 tests over 5 smoke scenes.
+Probe shot at dusk reads warm and inhabited (lit windows, sidewalk streets).
+Postcard remaining: a Venice beauty dolly (beauty_capture waypoints are
+downtown-hardcoded), ocean foam (v2), and the district-scoped GI pass the
+lighting owner has under measurement.
+
 ## 2026-06-10 (evening) — district visual integration
 
 Integrated in one pass: procedural façades (window grids, per-building
