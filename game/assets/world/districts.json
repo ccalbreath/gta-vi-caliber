@@ -20,6 +20,20 @@
       "roads": 537
     },
     {
+      "name": "chinatown",
+      "data": "res://assets/world/chinatown.json",
+      "centroid": {
+        "lat": 34.0642296,
+        "lon": -118.2378784
+      },
+      "world_offset": {
+        "x": 1336.4,
+        "z": -1547.1
+      },
+      "buildings": 371,
+      "roads": 706
+    },
+    {
       "name": "downtown_la",
       "data": "res://assets/world/downtown_la.json",
       "centroid": {
@@ -32,6 +46,20 @@
       },
       "buildings": 199,
       "roads": 901
+    },
+    {
+      "name": "echo_park",
+      "data": "res://assets/world/echo_park.json",
+      "centroid": {
+        "lat": 34.0767005,
+        "lon": -118.2614438
+      },
+      "world_offset": {
+        "x": -837.2,
+        "z": -2935.4
+      },
+      "buildings": 1983,
+      "roads": 882
     },
     {
       "name": "hollywood",
@@ -62,6 +90,20 @@
       "roads": 562
     },
     {
+      "name": "mid_wilshire",
+      "data": "res://assets/world/mid_wilshire.json",
+      "centroid": {
+        "lat": 34.0645795,
+        "lon": -118.3388742
+      },
+      "world_offset": {
+        "x": -7978.9,
+        "z": -1586.1
+      },
+      "buildings": 1441,
+      "roads": 636
+    },
+    {
       "name": "santa_monica",
       "data": "res://assets/world/santa_monica.json",
       "centroid": {
@@ -76,6 +118,20 @@
       "roads": 767
     },
     {
+      "name": "silver_lake",
+      "data": "res://assets/world/silver_lake.json",
+      "centroid": {
+        "lat": 34.0873942,
+        "lon": -118.2688083
+      },
+      "world_offset": {
+        "x": -1516.4,
+        "z": -4125.8
+      },
+      "buildings": 2479,
+      "roads": 497
+    },
+    {
       "name": "venice_beach",
       "data": "res://assets/world/venice_beach.json",
       "centroid": {
@@ -88,6 +144,34 @@
       },
       "buildings": 1332,
       "roads": 678
+    },
+    {
+      "name": "west_hollywood",
+      "data": "res://assets/world/west_hollywood.json",
+      "centroid": {
+        "lat": 34.089159,
+        "lon": -118.3786086
+      },
+      "world_offset": {
+        "x": -11643.7,
+        "z": -4322.2
+      },
+      "buildings": 1128,
+      "roads": 711
+    },
+    {
+      "name": "westwood",
+      "data": "res://assets/world/westwood.json",
+      "centroid": {
+        "lat": 34.0636913,
+        "lon": -118.4403321
+      },
+      "world_offset": {
+        "x": -17336.7,
+        "z": -1487.2
+      },
+      "buildings": 798,
+      "roads": 1075
     }
   ]
 }
