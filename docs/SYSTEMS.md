@@ -112,3 +112,10 @@ the busted/arrest fail-loop (`miami_arrest_probe`). `WantedEvasionController`,
 `MissionReward`, `ProgressionTracker`, `StatsCoordinator`, `MissionCampaign`,
 `PaySprayShop`, and `SideJobBoard` are the self-wiring coordinators already in the
 scene — copy their shape to wire the rest.
+
+`MarketEventCoordinator` is a ready-to-drop self-wiring node (cf. PaySprayShop):
+it owns a `StockMarket`, subscribes to the `wanted` group's `stars_changed` to
+rally defense stocks on a crime spree, and applies `HitContract` effects via
+`apply_hit_effect`. Its node-level wiring is CI-gated headless by
+`tests/market_event_probe.gd` (a mock tree, no scene file). Adding it to
+`miami.tscn` is the remaining step to make the stock-market loop live in play.
