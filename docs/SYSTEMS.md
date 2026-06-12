@@ -66,6 +66,7 @@ Groups the live scene already publishes: `player`, `player_health`,
 | `TrafficSignal` | junction light cycle + right-of-way | `tick`, `light_for`, `should_stop`, `yields_to` | place at intersections; gate `TrafficCar` at the stop line |
 | `EmergencyServices` | ambulance/fire dispatch | `service_for`, `nearest_responder`, response timer | spawn a responder on a wreck/fire/injury incident |
 | `WeatherEffects` | rain/fog gameplay impact | `grip_multiplier`, `visibility_range`, `ai_sight_multiplier` | feed `WeatherController` level into handling + detection |
+| `AmbientEvents` | weighted freeroam encounters (mugging/race/heist) | `trigger_next`, `eligible_ids`, `can_fire`, `trigger` | a world director calls `trigger_next(rng, now, {stars, district})` on a timer and spawns the returned encounter; per-event cooldowns + a global gap prevent spam |
 
 ## Missions / activities
 
