@@ -23,6 +23,7 @@ plus per-class GDScript smoke tests under `game/tests/unit/`.
 | `SpatialHash` | M4 | Uniform grid for fast 2D radius/neighbour queries (turns O(n²) all-pairs into ~O(local density)) — the crowd/traffic lookup backbone | `insert(id, xz)`, `query_radius(xz, r)`, `clear()` |
 | `CrowdSteering` | M4 | Boids (separation/alignment/cohesion) + goal-seeking (`arrive`) + obstacle avoidance (`avoid`) — pedestrian navigation | `steer(pos, vel, npos, nvel)`, `arrive(pos, vel, target, slow)`, `avoid(pos, obs_pos, obs_radii, margin)` |
 | `TrafficModel` | M4 | Intelligent Driver Model car-following — cruise to desired speed, keep a safe time-headway gap, brake when it closes | `acceleration(speed, gap, leader_speed)` |
+| `FlowField` | M4 | Dijkstra crowd flow-field — built once per goal over a cost grid (wall = cost < 0), then every agent samples a routing direction around obstacles (no per-agent A*; no diagonal corner-cutting) | `build(w, h, costs, goal)`, `direction_at(xz)`, `is_built()` |
 
 ## Runnable demos
 
@@ -32,6 +33,19 @@ plus per-class GDScript smoke tests under `game/tests/unit/`.
 - `game/scenes/world/traffic_demo.tscn` — a single-lane ring road of cars
   following each other via `TrafficModel`. Headless probe:
   `game/tests/traffic_demo_probe.gd` (asserts no car ever overlaps).
+- `game/scenes/world/flow_field_demo.tscn` — a crowd routing around wall barriers
+  to a goal via `FlowField`. Headless probe: `game/tests/flow_field_demo_probe.gd`
+  (asserts the crowd reaches the goal and never enters a wall).
+
+## Benchmarks & CI
+
+- `game/tests/native_bench_probe.gd` — `SpatialHash` vs naive GDScript neighbour
+  search (~21× faster, fair exact-set comparison).
+- `game/tests/crowd_capacity_probe.gd` — crowd capacity at realistic density
+  (~4000 agents/step within a 16 ms / 60 FPS budget).
+- All probes above run in CI on every engine change (3 platforms) via
+  `.github/workflows/engine.yml`, alongside the C++ unit tests
+  (`engine/tests/test_worldcore.cpp`).
 
 ## Adding a module
 
