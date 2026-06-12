@@ -87,10 +87,20 @@ needs a ledger row and must be original (not an imitation of a specific work).
 | `game/assets/world/*.json` (18 districts + `districts.json` index) | Building footprints/heights + road centerlines for the LA-region districts (venice_beach, santa_monica, hollywood, …), same extractor | © OpenStreetMap contributors | https://www.openstreetmap.org/copyright | ODbL 1.0 (data only; attribution embedded in each file and credits) |
 | `game/assets/characters/player_male_01/` | Player character: Universal Base Characters (Standard) "Superhero Male" glTF base mesh + "Simple Parted" rigged hairstyle + PBR textures, ~15.6k tris total, 65-joint humanoid rig. Two broken texture URIs in the upstream body .gltf fixed (`*_png.png` → `*.png`) | Quaternius | https://quaternius.com/packs/universalbasecharacters.html | CC0 1.0 |
 | `game/assets/characters/universal_animations/` | Universal Animation Library (Standard) GLB: 45 humanoid clips (idle/walk/jog/sprint/jump/land + extras), same rig as the base characters, shared by player & future NPCs | Quaternius | https://quaternius.com/packs/universalanimationlibrary.html | CC0 1.0 |
+| `game/addons/gdUnit4/src/core/assets/touch-button.png` | Vendored gdUnit4 editor-plugin UI icon | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/reporters/html/template/css/logo.png` | Vendored gdUnit4 report logo | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/ui/settings/logo.png` | Vendored gdUnit4 editor-plugin logo | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/border_bottom.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/border_top.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/dot1.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/dot2.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/embedded.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/horizontal-line2.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
 
 *(Append one row per asset. Path relative to repo root. "Source" is `original`
 or a URL. License must be CC0, CC-BY-4.0, or CC-BY-4.0-compatible. Exception:
 **geodata** — factual map data such as OpenStreetMap extracts is accepted under
 ODbL 1.0; it must keep its attribution embedded in the file, get a credits-screen
 entry, and stay in `game/assets/world/`. ODbL share-alike applies to the data
-files themselves, not to the game's code or rendered output.)*
+files themselves, not to the game's code or rendered output. Vendored
+`game/addons/**` plugin UI assets may use the upstream plugin license.)*

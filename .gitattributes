@@ -39,6 +39,9 @@ game/assets/**/*.bin filter=lfs diff=lfs merge=lfs -text
 *.h text eol=lf
 *.hpp text eol=lf
 
+# Vendored addons are copied wholesale; preserve upstream file bytes and whitespace.
+game/addons/** -text whitespace=-trailing-space
+
 # GitHub Linguist hints
 *.gd linguist-language=GDScript
 docs/** linguist-documentation

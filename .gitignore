@@ -4,6 +4,12 @@ game/*.translation
 
 # Export output
 dist/
+game/export_presets.cfg
+
+# gdUnit4 generated reports + addon caches
+game/reports/
+game/addons/**/*.uid
+game/addons/**/*.import
 
 # Built native libraries (artifacts only — never committed)
 game/bin/*.so
