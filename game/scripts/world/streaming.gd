@@ -18,13 +18,19 @@ static func resolve(
 	unload_radius: float,
 	resident: Dictionary
 ) -> Dictionary:
-	var to_load: Array[String] = []
+	var load_candidates: Array[Dictionary] = []
 	var to_unload: Array[String] = []
 	for d in districts:
 		var dist := camera_xz.distance_to(d["offset"])
 		var is_resident := resident.has(d["name"])
 		if not is_resident and dist <= load_radius:
-			to_load.append(d["name"])
+			load_candidates.append({"name": d["name"], "distance": dist})
 		elif is_resident and dist > unload_radius:
 			to_unload.append(d["name"])
+	load_candidates.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool: return a["distance"] < b["distance"]
+	)
+	var to_load: Array[String] = []
+	for candidate in load_candidates:
+		to_load.append(candidate["name"])
 	return {"to_load": to_load, "to_unload": to_unload}

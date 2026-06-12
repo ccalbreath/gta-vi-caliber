@@ -117,15 +117,14 @@ func _check_after_animated_motion(
 	if is_equal_approx(_imported.global_position.y, before_y):
 		_fail("imported Mara mesh did not inherit animated hip motion")
 		return false
-	if not _check_rigged_mara_binding(body, rig):
-		return false
-	if not _check_secondary_motion(pelvis, torso, shoulder_l, head):
-		return false
-	if not _check_mara_gear_motion_and_shape(body):
-		return false
-	if not _check_face_life(body):
-		return false
-	return _check_mara_material_quality()
+	return (
+		_check_rigged_mara_binding(body, rig)
+		and _check_secondary_motion(pelvis, torso, shoulder_l, head)
+		and _check_premium_stride_detail(torso)
+		and _check_mara_gear_motion_and_shape(body)
+		and _check_face_life(body)
+		and _check_mara_material_quality()
+	)
 
 
 func _check_rigged_mara_binding(body: Node, rig: CharacterAnimator) -> bool:
@@ -141,15 +140,41 @@ func _check_rigged_mara_binding(body: Node, rig: CharacterAnimator) -> bool:
 		_player.get_node_or_null("Rig/Hips/ShoulderL/mara_three_replacement_shoulder_cap_l")
 		as MeshInstance3D
 	)
+	var shoulder_slope := (
+		_player.get_node_or_null("Rig/Hips/ShoulderL/mara_three_replacement_shoulder_slope_l")
+		as MeshInstance3D
+	)
+	var sleeve_panel := (
+		_player.get_node_or_null(
+			"Rig/Hips/ShoulderL/mara_three_replacement_upper_arm_sleeve_panel_l"
+		)
+		as MeshInstance3D
+	)
+	var forearm_cuff := (
+		_player.get_node_or_null("Rig/Hips/ShoulderL/Elbow/mara_three_replacement_forearm_cuff_l")
+		as MeshInstance3D
+	)
 	var original_arm := _find_mesh(_imported, "mara_rigged_upper_arm_l")
 	if skeleton == null or jacket == null or head == null or boot == null:
 		_fail("Three.js rigged Mara skeleton or skinned meshes are missing")
 		return false
-	if replacement_arm == null or replacement_cap == null or original_arm == null:
+	if (
+		replacement_arm == null
+		or replacement_cap == null
+		or shoulder_slope == null
+		or sleeve_panel == null
+		or forearm_cuff == null
+		or original_arm == null
+	):
 		_fail("Three.js rigged Mara replacement arms are missing")
 		return false
+	var details_ok := _check_replacement_arm_detail_materials(
+		shoulder_slope, sleeve_panel, forearm_cuff
+	)
 	if not original_arm.get_meta("mara_rigged_arm_skin_hidden", false):
 		_fail("malformed imported Mara arm skin was not hidden")
+		details_ok = false
+	if not details_ok:
 		return false
 	var shoulder_index := skeleton.find_bone("MaraShoulderL")
 	var head_index := skeleton.find_bone("MaraHead")
@@ -174,6 +199,25 @@ func _check_rigged_mara_binding(body: Node, rig: CharacterAnimator) -> bool:
 	return false
 
 
+func _check_replacement_arm_detail_materials(
+	shoulder_slope: MeshInstance3D, sleeve_panel: MeshInstance3D, forearm_cuff: MeshInstance3D
+) -> bool:
+	var shoulder_slope_mat := shoulder_slope.material_override as StandardMaterial3D
+	var sleeve_panel_mat := sleeve_panel.material_override as StandardMaterial3D
+	var forearm_cuff_mat := forearm_cuff.material_override as StandardMaterial3D
+	if (
+		shoulder_slope_mat != null
+		and sleeve_panel_mat != null
+		and forearm_cuff_mat != null
+		and _check_jacket_material(shoulder_slope_mat)
+		and _check_jacket_material(sleeve_panel_mat)
+		and _check_jacket_material(forearm_cuff_mat)
+	):
+		return true
+	_fail("Three.js rigged Mara replacement arm detail materials are missing")
+	return false
+
+
 func _check_idle_life(hips: Node3D, head: Node3D, rig: CharacterAnimator) -> bool:
 	rig.animate(Vector3.ZERO, true, 0.0, false, 0.25)
 	var first_hips := hips.position
@@ -194,6 +238,19 @@ func _check_secondary_motion(
 		_fail("playable Mara head did not receive secondary motion")
 		return false
 	return _check_stride_twist(pelvis, torso, shoulder_l, head)
+
+
+func _check_premium_stride_detail(torso: Node3D) -> bool:
+	var shoulder_l := _player.get_node_or_null("Rig/Hips/ShoulderL") as Node3D
+	var shoulder_r := _player.get_node_or_null("Rig/Hips/ShoulderR") as Node3D
+	if shoulder_l == null or shoulder_r == null:
+		_fail("playable Mara shoulders are missing for premium stride check")
+		return false
+	var shoulder_delta := absf(shoulder_l.position.y - shoulder_r.position.y)
+	if shoulder_delta > 0.001 and absf(torso.rotation.x) > 0.001:
+		return true
+	_fail("playable Mara stride did not add shoulder lift and chest compression")
+	return false
 
 
 func _check_turn_lean(hips: Node3D, rig: CharacterAnimator) -> bool:
@@ -236,6 +293,16 @@ func _check_mara_gear_motion_and_shape(body: Node) -> bool:
 
 
 func _check_mara_soft_motion(body: Node) -> bool:
+	var rig := _player.get_node_or_null("Rig")
+	if rig != null:
+		body.call("_set_procedural_visible", rig, true)
+		var hips := _player.get_node_or_null("Rig/Hips") as Node3D
+		var torso := _player.get_node_or_null("Rig/Hips/Torso") as Node3D
+		if hips != null:
+			hips.position.x = 0.05
+			hips.rotation.z = 0.04
+		if torso != null:
+			torso.rotation.y = 0.06
 	var pendant := _player.get_node_or_null("Rig/Hips/MaraPendant") as Node3D
 	var strap := _player.get_node_or_null("Rig/Hips/MaraMessengerStrap") as Node3D
 	var hair := _player.get_node_or_null("Rig/Hips/Head/MaraRearHairMass") as Node3D
@@ -250,7 +317,7 @@ func _check_mara_soft_motion(body: Node) -> bool:
 		return false
 	var before_position := pendant.position
 	var before_rotation := strap.rotation
-	body.call("_process", 0.1)
+	body.call("_update_mara_soft_motion", 0.1)
 	var pendant_moved := pendant.position.distance_to(before_position) > 0.0001
 	var strap_rotated := strap.rotation.distance_to(before_rotation) > 0.0001
 	if pendant_moved and strap_rotated and hair.get_meta("mara_soft_motion", false):
@@ -470,120 +537,344 @@ func _check_mara_material_quality() -> bool:
 
 func _check_imported_mara_material_quality() -> bool:
 	var head := _find_mesh(_imported, "mara_rigged_head")
+	var face_mask := _find_mesh(_imported, "mara_rigged_skin_face_mask")
 	var jacket := _find_mesh(_imported, "mara_rigged_jacket")
+	var jacket_front_panel := _find_mesh(_imported, "mara_rigged_jacket_front_panel_l")
+	var shirt_draped_front := _find_mesh(_imported, "mara_rigged_shirt_draped_front")
+	var trouser_front_panel := _find_mesh(_imported, "mara_rigged_trouser_front_panel_l")
 	var strap := _find_mesh(_imported, "mara_rigged_cross_body_strap")
 	var pendant := _find_mesh(_imported, "mara_rigged_pendant")
 	var belt := _find_mesh(_imported, "mara_rigged_belt")
 	var eye := _find_mesh(_imported, "mara_rigged_eye_l")
+	var eye_socket_shadow := _find_mesh(_imported, "mara_rigged_eye_socket_shadow_l")
+	var eye_sclera := _find_mesh(_imported, "mara_rigged_eye_sclera_l")
+	var eye_iris := _find_mesh(_imported, "mara_rigged_eye_iris_l")
 	var mouth := _find_mesh(_imported, "mara_rigged_mouth")
 	var eye_highlight := _find_mesh(_imported, "mara_rigged_eye_highlight_l")
+	var cornea_glint := _find_mesh(_imported, "mara_rigged_cornea_glint_l")
 	var lip := _find_mesh(_imported, "mara_rigged_mouth_upper_lip")
 	var cheek := _find_mesh(_imported, "mara_rigged_cheek_l")
+	var upper_eyelid := _find_mesh(_imported, "mara_rigged_upper_eyelid_l")
+	var lid_crease := _find_mesh(_imported, "mara_rigged_lid_crease_l")
+	var lash := _find_mesh(_imported, "mara_rigged_lash_l")
+	var brow_ridge := _find_mesh(_imported, "mara_rigged_skin_brow_ridge_l")
+	var under_eye_shadow := _find_mesh(_imported, "mara_rigged_skin_under_eye_shadow_l")
+	var nostril := _find_mesh(_imported, "mara_rigged_nostril_l")
+	var nasolabial_fold := _find_mesh(_imported, "mara_rigged_skin_nasolabial_fold_l")
+	var temple := _find_mesh(_imported, "mara_rigged_skin_temple_l")
+	var mouth_corner := _find_mesh(_imported, "mara_rigged_mouth_corner_l")
+	var mouth_soft_seam := _find_mesh(_imported, "mara_rigged_mouth_soft_seam")
+	var philtrum := _find_mesh(_imported, "mara_rigged_philtrum_l")
+	var under_lip_plane := _find_mesh(_imported, "mara_rigged_skin_under_lip_plane")
+	var chin := _find_mesh(_imported, "mara_rigged_chin")
+	var jaw_shadow := _find_mesh(_imported, "mara_rigged_jaw_shadow_l")
+	var hair_crown := _find_mesh(_imported, "mara_rigged_hair_crown")
+	var hair_forelock := _find_mesh(_imported, "mara_rigged_hair_forelock")
+	var hair_sideburn := _find_mesh(_imported, "mara_rigged_hair_sideburn_l")
+	var hair_parting_line := _find_mesh(_imported, "mara_rigged_hair_parting_line")
+	var hairline_wisps := _find_mesh(_imported, "mara_rigged_hairline_wisps_l")
 	var hair_strand := _find_mesh(_imported, "mara_rigged_hair_strand_l")
+	var hair_flyaway := _find_mesh(_imported, "mara_rigged_hair_flyaway_l")
+	var hair_nape_layer := _find_mesh(_imported, "mara_rigged_hair_nape_layer_l")
 	var collar := _find_mesh(_imported, "mara_rigged_jacket_collar_l")
 	var zipper := _find_mesh(_imported, "mara_rigged_jacket_zipper")
+	var zipper_pull := _find_mesh(_imported, "mara_rigged_jacket_zipper_pull")
 	var jacket_seam := _find_mesh(_imported, "mara_rigged_jacket_seam_l")
+	var jacket_topstitch := _find_mesh(_imported, "mara_rigged_jacket_topstitch_l")
+	var sleeve_wrinkle := _find_mesh(_imported, "mara_rigged_sleeve_wrinkle_l")
 	var shirt_fold := _find_mesh(_imported, "mara_rigged_shirt_fold_l")
 	var trouser_crease := _find_mesh(_imported, "mara_rigged_trouser_crease_l")
+	var knee_fold := _find_mesh(_imported, "mara_rigged_knee_fold_l")
+	var thigh_side_seam := _find_mesh(_imported, "mara_rigged_thigh_side_seam_l")
 	var boot_toe := _find_mesh(_imported, "mara_rigged_boot_toe_l")
+	var boot_rivet := _find_mesh(_imported, "mara_rigged_boot_rivet_outer_l")
+	var belt_buckle := _find_mesh(_imported, "mara_rigged_belt_buckle")
+	var strap_buckle := _find_mesh(_imported, "mara_rigged_strap_buckle")
+	var finger := _find_mesh(_imported, "mara_rigged_index_finger_l")
+	var palm_pad := _find_mesh(_imported, "mara_rigged_palm_pad_l")
+	var knuckle := _find_mesh(_imported, "mara_rigged_index_knuckle_l")
+	var nail := _find_mesh(_imported, "mara_rigged_index_nail_l")
 	if (
 		head == null
+		or face_mask == null
 		or jacket == null
+		or jacket_front_panel == null
+		or shirt_draped_front == null
+		or trouser_front_panel == null
 		or strap == null
 		or pendant == null
 		or belt == null
 		or eye == null
+		or eye_socket_shadow == null
+		or eye_sclera == null
+		or eye_iris == null
 		or mouth == null
 		or eye_highlight == null
+		or cornea_glint == null
 		or lip == null
 		or cheek == null
+		or upper_eyelid == null
+		or lid_crease == null
+		or lash == null
+		or brow_ridge == null
+		or under_eye_shadow == null
+		or nostril == null
+		or nasolabial_fold == null
+		or temple == null
+		or mouth_corner == null
+		or mouth_soft_seam == null
+		or philtrum == null
+		or under_lip_plane == null
+		or chin == null
+		or jaw_shadow == null
+		or hair_crown == null
+		or hair_forelock == null
+		or hair_sideburn == null
+		or hair_parting_line == null
+		or hairline_wisps == null
 		or hair_strand == null
+		or hair_flyaway == null
+		or hair_nape_layer == null
 		or collar == null
 		or zipper == null
+		or zipper_pull == null
 		or jacket_seam == null
+		or jacket_topstitch == null
+		or sleeve_wrinkle == null
 		or shirt_fold == null
 		or trouser_crease == null
+		or knee_fold == null
+		or thigh_side_seam == null
 		or boot_toe == null
+		or boot_rivet == null
+		or belt_buckle == null
+		or strap_buckle == null
+		or finger == null
+		or palm_pad == null
+		or knuckle == null
+		or nail == null
 	):
 		_fail("imported rigged Three.js Mara material-quality nodes are missing")
 		return false
 	var skin := head.material_override as StandardMaterial3D
+	var face_mask_mat := face_mask.material_override as StandardMaterial3D
 	var jacket_mat := jacket.material_override as StandardMaterial3D
+	var jacket_front_panel_mat := jacket_front_panel.material_override as StandardMaterial3D
+	var shirt_draped_front_mat := shirt_draped_front.material_override as StandardMaterial3D
+	var trouser_front_panel_mat := trouser_front_panel.material_override as StandardMaterial3D
 	var strap_mat := strap.material_override as StandardMaterial3D
 	var pendant_mat := pendant.material_override as StandardMaterial3D
 	var belt_mat := belt.material_override as StandardMaterial3D
 	var eye_mat := eye.material_override as StandardMaterial3D
+	var eye_socket_shadow_mat := eye_socket_shadow.material_override as StandardMaterial3D
+	var eye_sclera_mat := eye_sclera.material_override as StandardMaterial3D
+	var eye_iris_mat := eye_iris.material_override as StandardMaterial3D
 	var mouth_mat := mouth.material_override as StandardMaterial3D
 	var eye_highlight_mat := eye_highlight.material_override as StandardMaterial3D
+	var cornea_glint_mat := cornea_glint.material_override as StandardMaterial3D
 	var lip_mat := lip.material_override as StandardMaterial3D
 	var cheek_mat := cheek.material_override as StandardMaterial3D
+	var upper_eyelid_mat := upper_eyelid.material_override as StandardMaterial3D
+	var lid_crease_mat := lid_crease.material_override as StandardMaterial3D
+	var lash_mat := lash.material_override as StandardMaterial3D
+	var brow_ridge_mat := brow_ridge.material_override as StandardMaterial3D
+	var under_eye_shadow_mat := under_eye_shadow.material_override as StandardMaterial3D
+	var nostril_mat := nostril.material_override as StandardMaterial3D
+	var nasolabial_fold_mat := nasolabial_fold.material_override as StandardMaterial3D
+	var temple_mat := temple.material_override as StandardMaterial3D
+	var mouth_corner_mat := mouth_corner.material_override as StandardMaterial3D
+	var mouth_soft_seam_mat := mouth_soft_seam.material_override as StandardMaterial3D
+	var philtrum_mat := philtrum.material_override as StandardMaterial3D
+	var under_lip_plane_mat := under_lip_plane.material_override as StandardMaterial3D
+	var chin_mat := chin.material_override as StandardMaterial3D
+	var jaw_shadow_mat := jaw_shadow.material_override as StandardMaterial3D
+	var hair_crown_mat := hair_crown.material_override as StandardMaterial3D
+	var hair_forelock_mat := hair_forelock.material_override as StandardMaterial3D
+	var hair_sideburn_mat := hair_sideburn.material_override as StandardMaterial3D
+	var hair_parting_line_mat := hair_parting_line.material_override as StandardMaterial3D
+	var hairline_wisps_mat := hairline_wisps.material_override as StandardMaterial3D
 	var hair_strand_mat := hair_strand.material_override as StandardMaterial3D
+	var hair_flyaway_mat := hair_flyaway.material_override as StandardMaterial3D
+	var hair_nape_layer_mat := hair_nape_layer.material_override as StandardMaterial3D
 	var collar_mat := collar.material_override as StandardMaterial3D
 	var zipper_mat := zipper.material_override as StandardMaterial3D
+	var zipper_pull_mat := zipper_pull.material_override as StandardMaterial3D
 	var jacket_seam_mat := jacket_seam.material_override as StandardMaterial3D
+	var jacket_topstitch_mat := jacket_topstitch.material_override as StandardMaterial3D
+	var sleeve_wrinkle_mat := sleeve_wrinkle.material_override as StandardMaterial3D
 	var shirt_fold_mat := shirt_fold.material_override as StandardMaterial3D
 	var trouser_crease_mat := trouser_crease.material_override as StandardMaterial3D
+	var knee_fold_mat := knee_fold.material_override as StandardMaterial3D
+	var thigh_side_seam_mat := thigh_side_seam.material_override as StandardMaterial3D
 	var boot_toe_mat := boot_toe.material_override as StandardMaterial3D
+	var boot_rivet_mat := boot_rivet.material_override as StandardMaterial3D
+	var belt_buckle_mat := belt_buckle.material_override as StandardMaterial3D
+	var strap_buckle_mat := strap_buckle.material_override as StandardMaterial3D
+	var finger_mat := finger.material_override as StandardMaterial3D
+	var palm_pad_mat := palm_pad.material_override as StandardMaterial3D
+	var knuckle_mat := knuckle.material_override as StandardMaterial3D
+	var nail_mat := nail.material_override as StandardMaterial3D
 	if (
 		skin == null
+		or face_mask_mat == null
 		or jacket_mat == null
+		or jacket_front_panel_mat == null
+		or shirt_draped_front_mat == null
+		or trouser_front_panel_mat == null
 		or strap_mat == null
 		or pendant_mat == null
 		or belt_mat == null
 		or eye_mat == null
+		or eye_socket_shadow_mat == null
+		or eye_sclera_mat == null
+		or eye_iris_mat == null
 		or mouth_mat == null
 		or eye_highlight_mat == null
+		or cornea_glint_mat == null
 		or lip_mat == null
 		or cheek_mat == null
+		or upper_eyelid_mat == null
+		or lid_crease_mat == null
+		or lash_mat == null
+		or brow_ridge_mat == null
+		or under_eye_shadow_mat == null
+		or nostril_mat == null
+		or nasolabial_fold_mat == null
+		or temple_mat == null
+		or mouth_corner_mat == null
+		or mouth_soft_seam_mat == null
+		or philtrum_mat == null
+		or under_lip_plane_mat == null
+		or chin_mat == null
+		or jaw_shadow_mat == null
+		or hair_crown_mat == null
+		or hair_forelock_mat == null
+		or hair_sideburn_mat == null
+		or hair_parting_line_mat == null
+		or hairline_wisps_mat == null
 		or hair_strand_mat == null
+		or hair_flyaway_mat == null
+		or hair_nape_layer_mat == null
 		or collar_mat == null
 		or zipper_mat == null
+		or zipper_pull_mat == null
 		or jacket_seam_mat == null
+		or jacket_topstitch_mat == null
+		or sleeve_wrinkle_mat == null
 		or shirt_fold_mat == null
 		or trouser_crease_mat == null
+		or knee_fold_mat == null
+		or thigh_side_seam_mat == null
 		or boot_toe_mat == null
+		or boot_rivet_mat == null
+		or belt_buckle_mat == null
+		or strap_buckle_mat == null
+		or finger_mat == null
+		or palm_pad_mat == null
+		or knuckle_mat == null
+		or nail_mat == null
 	):
 		_fail("imported Three.js Mara material overrides are missing")
 		return false
 	return (
 		_check_skin_material(skin)
+		and _check_skin_material(face_mask_mat)
 		and _check_jacket_material(jacket_mat)
+		and _check_jacket_material(jacket_front_panel_mat)
+		and _check_jacket_material(shirt_draped_front_mat)
+		and _check_jacket_material(trouser_front_panel_mat)
 		and _check_leather_material(strap_mat)
 		and _check_leather_material(belt_mat)
 		and _check_eye_material(eye_mat)
+		and _check_eye_material(eye_iris_mat)
 		and _check_eye_material(eye_highlight_mat)
+		and _check_eye_material(cornea_glint_mat)
+		and String(eye_sclera_mat.get_meta("mara_imported_surface_profile", "")) == "sclera"
+		and (
+			String(eye_socket_shadow_mat.get_meta("mara_imported_surface_profile", ""))
+			== "skin_shadow"
+		)
 		and _check_skin_material(cheek_mat)
+		and _check_skin_material(upper_eyelid_mat)
+		and String(lid_crease_mat.get_meta("mara_imported_surface_profile", "")) == "skin_shadow"
+		and _check_skin_material(brow_ridge_mat)
+		and _check_skin_material(under_eye_shadow_mat)
+		and _check_skin_material(nasolabial_fold_mat)
+		and _check_skin_material(temple_mat)
+		and _check_skin_material(under_lip_plane_mat)
+		and _check_skin_material(chin_mat)
+		and _check_skin_material(jaw_shadow_mat)
 		and _check_jacket_material(collar_mat)
 		and _check_jacket_material(jacket_seam_mat)
+		and _check_jacket_material(jacket_topstitch_mat)
+		and _check_jacket_material(sleeve_wrinkle_mat)
 		and _check_jacket_material(shirt_fold_mat)
 		and _check_jacket_material(trouser_crease_mat)
+		and _check_jacket_material(knee_fold_mat)
+		and _check_jacket_material(thigh_side_seam_mat)
 		and _check_leather_material(boot_toe_mat)
+		and _check_skin_material(finger_mat)
+		and _check_skin_material(palm_pad_mat)
+		and _check_skin_material(knuckle_mat)
+		and _check_hair_material(lash_mat)
+		and _check_hair_material(hair_crown_mat)
+		and _check_hair_material(hair_forelock_mat)
+		and _check_hair_material(hair_sideburn_mat)
+		and (
+			String(hair_parting_line_mat.get_meta("mara_imported_surface_profile", ""))
+			== "skin_shadow"
+		)
+		and _check_hair_material(hairline_wisps_mat)
 		and _check_hair_material(hair_strand_mat)
+		and _check_hair_material(hair_flyaway_mat)
+		and _check_hair_material(hair_nape_layer_mat)
 		and String(mouth_mat.get_meta("mara_imported_surface_profile", "")) == "mouth"
 		and String(lip_mat.get_meta("mara_imported_surface_profile", "")) == "mouth"
+		and String(nostril_mat.get_meta("mara_imported_surface_profile", "")) == "mouth"
+		and String(mouth_corner_mat.get_meta("mara_imported_surface_profile", "")) == "mouth"
+		and String(nail_mat.get_meta("mara_imported_surface_profile", "")) == "sclera"
+		and (
+			String(mouth_soft_seam_mat.get_meta("mara_imported_surface_profile", ""))
+			== "skin_shadow"
+		)
+		and String(philtrum_mat.get_meta("mara_imported_surface_profile", "")) == "skin_shadow"
 		and pendant_mat.metallic > 0.5
 		and zipper_mat.metallic > 0.5
+		and zipper_pull_mat.metallic > 0.5
+		and boot_rivet_mat.metallic > 0.5
+		and belt_buckle_mat.metallic > 0.5
+		and strap_buckle_mat.metallic > 0.5
 	)
 
 
 func _check_skin_material(mat: StandardMaterial3D) -> bool:
-	if mat.subsurf_scatter_enabled and mat.clearcoat_enabled and mat.normal_enabled:
+	if (
+		mat.subsurf_scatter_enabled
+		and mat.clearcoat_enabled
+		and mat.normal_enabled
+		and mat.albedo_texture != null
+	):
 		return true
-	_fail("playable Mara skin material is missing premium skin shading")
+	_fail("playable Mara skin material is missing premium skin shading and albedo breakup")
 	return false
 
 
 func _check_jacket_material(mat: StandardMaterial3D) -> bool:
-	if mat.normal_enabled and mat.uv1_triplanar:
+	if mat.normal_enabled and mat.uv1_triplanar and mat.albedo_texture != null:
 		return true
-	_fail("playable Mara jacket material is missing triplanar fabric detail")
+	_fail("playable Mara jacket material is missing triplanar fabric detail and albedo breakup")
 	return false
 
 
 func _check_leather_material(mat: StandardMaterial3D) -> bool:
-	if mat.clearcoat_enabled and mat.normal_enabled and mat.uv1_triplanar:
+	if (
+		mat.clearcoat_enabled
+		and mat.normal_enabled
+		and mat.uv1_triplanar
+		and mat.albedo_texture != null
+	):
 		return true
-	_fail("playable Mara leather material is missing worn-sheen detail")
+	_fail("playable Mara leather material is missing worn-sheen detail and albedo breakup")
 	return false
 
 
@@ -601,9 +892,9 @@ func _check_hair_material(mat: StandardMaterial3D) -> bool:
 
 
 func _check_eye_material(mat: StandardMaterial3D) -> bool:
-	if mat.clearcoat_enabled and mat.clearcoat > 0.5:
+	if mat.clearcoat_enabled and mat.clearcoat > 0.5 and mat.emission_enabled:
 		return true
-	_fail("imported rigged Mara eyes are missing glossy eye shading")
+	_fail("imported rigged Mara eyes are missing glossy live-eye shading")
 	return false
 
 

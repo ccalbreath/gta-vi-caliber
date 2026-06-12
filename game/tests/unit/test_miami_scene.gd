@@ -23,3 +23,36 @@ func test_miami_game_hud_contains_full_map() -> bool:
 	var ok := hud.has_node("FullMap") and hud.has_node("Minimap")
 	scene.free()
 	return ok
+
+
+func test_miami_keeps_cinematic_quality_floor() -> bool:
+	var packed := MIAMI_SCENE
+	if packed == null:
+		return false
+	var scene := packed.instantiate()
+	var world_quality := scene.get_node("WorldEnvironment") as WorldQuality
+	var ok := (
+		world_quality != null and world_quality.minimum_tier == CinematicEnvironment.Quality.MEDIUM
+	)
+	scene.free()
+	return ok
+
+
+func test_miami_render_grade_keeps_geometry_readable() -> bool:
+	var packed := MIAMI_SCENE
+	if packed == null:
+		return false
+	var scene := packed.instantiate()
+	var world_quality := scene.get_node("WorldEnvironment") as WorldQuality
+	var sun := scene.get_node("Sun") as DirectionalLight3D
+	var env := world_quality.environment if world_quality != null else null
+	var ok := (
+		env != null
+		and env.tonemap_exposure <= 0.65
+		and env.ambient_light_energy <= 0.55
+		and env.adjustment_brightness <= 0.9
+		and sun != null
+		and sun.light_energy <= 1.0
+	)
+	scene.free()
+	return ok

@@ -3,7 +3,7 @@ extends SceneTree
 ## Renders a scene at a chosen resolution from a free camera so building/material
 ## quality can be judged without streaming pop-in or the third-person rig.
 ## Run WITHOUT --headless (needs the GPU):
-##   SCENE=res://scenes/world/districts/downtown_la.tscn \
+##   SCENE=res://scenes/world/miami.tscn \
 ##   CAMPOS=80,14,90 CAMLOOK=0,40,0 TOD=16 RES=1920x1080 \
 ##   SHOT=/tmp/hero.png godot --path game --script res://tests/hero_capture.gd
 ##
@@ -26,7 +26,7 @@ func _initialize() -> void:
 	DisplayServer.window_set_size(res)
 	var scene := OS.get_environment("SCENE")
 	if scene == "":
-		scene = "res://scenes/world/districts/downtown_la.tscn"
+		scene = "res://scenes/world/miami.tscn"
 	change_scene_to_file(scene)
 
 

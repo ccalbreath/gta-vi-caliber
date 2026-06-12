@@ -19,7 +19,7 @@ var _failures: PackedStringArray = []
 
 func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(OUT_DIR)
-	change_scene_to_file("res://scenes/world/sandbox.tscn")
+	change_scene_to_file("res://scenes/world/miami.tscn")
 
 
 func _process(_delta: float) -> bool:
@@ -179,7 +179,7 @@ func _phase_exit_car() -> void:
 
 func _to_district() -> void:
 	_next("district_load")
-	change_scene_to_file("res://scenes/world/districts/downtown_la.tscn")
+	change_scene_to_file("res://scenes/world/miami.tscn")
 
 
 func _next(phase: String) -> void:

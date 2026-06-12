@@ -33,6 +33,15 @@ step() { printf '\n==> %s\n' "$1"; }
 
 GD_DIRS=(game/scripts game/tests)
 
+# `python3 -m pip install --user gdtoolkit` puts gdformat/gdlint in the
+# Python user script directory, which is not always on PATH in non-login shells.
+if ! command -v gdformat >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
+    PY_USER_BIN="$(python3 -m site --user-base 2>/dev/null)/bin"
+    if [[ -d "$PY_USER_BIN" ]]; then
+        PATH="$PY_USER_BIN:$PATH"
+    fi
+fi
+
 # --- 1. format ---------------------------------------------------------------
 require gdformat
 if [[ "$FIX" == 1 ]]; then
@@ -67,6 +76,8 @@ step "unit tests"
 # a scene edit silently unhooking the simulation.
 step "miami wiring probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_wiring_probe.gd
+step "miami facade probe"
+"$GODOT_BIN" --headless --path game --script res://tests/miami_facade_probe.gd
 step "miami loop probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_loop_probe.gd
 step "miami mission probe"

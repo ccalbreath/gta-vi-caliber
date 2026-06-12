@@ -97,3 +97,42 @@ func test_apply_quality_preserves_existing_sky() -> bool:
 	e.sky = sky
 	CinematicEnvironment.apply_quality(e, CinematicEnvironment.Quality.MEDIUM)
 	return e.sky == sky and e.background_mode == Environment.BG_SKY
+
+
+func test_apply_quality_preserves_authored_scene_grade() -> bool:
+	var e := Environment.new()
+	e.ambient_light_energy = 0.78
+	e.tonemap_exposure = 0.82
+	e.tonemap_white = 8.0
+	e.adjustment_enabled = true
+	e.adjustment_contrast = 1.14
+	e.adjustment_saturation = 1.33
+	e.adjustment_brightness = 0.94
+	e.fog_enabled = true
+	e.fog_light_color = Color(1.0, 0.72, 0.5)
+	e.fog_aerial_perspective = 0.85
+	e.volumetric_fog_enabled = true
+	e.volumetric_fog_density = 0.012
+	e.volumetric_fog_albedo = Color(1.0, 0.86, 0.72)
+	CinematicEnvironment.apply_quality(e, CinematicEnvironment.Quality.HIGH)
+	return (
+		is_equal_approx(e.ambient_light_energy, 0.78)
+		and is_equal_approx(e.tonemap_exposure, 0.82)
+		and is_equal_approx(e.tonemap_white, 8.0)
+		and is_equal_approx(e.adjustment_contrast, 1.14)
+		and is_equal_approx(e.adjustment_saturation, 1.33)
+		and is_equal_approx(e.adjustment_brightness, 0.94)
+		and _colors_match(e.fog_light_color, Color(1.0, 0.72, 0.5))
+		and is_equal_approx(e.fog_aerial_perspective, 0.85)
+		and is_equal_approx(e.volumetric_fog_density, 0.012)
+		and _colors_match(e.volumetric_fog_albedo, Color(1.0, 0.86, 0.72))
+	)
+
+
+func _colors_match(a: Color, b: Color) -> bool:
+	return (
+		is_equal_approx(a.r, b.r)
+		and is_equal_approx(a.g, b.g)
+		and is_equal_approx(a.b, b.b)
+		and is_equal_approx(a.a, b.a)
+	)

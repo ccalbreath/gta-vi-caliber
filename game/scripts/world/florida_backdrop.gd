@@ -8,19 +8,6 @@ extends Node3D
 
 const WATER_VOLUME_SCRIPT := preload("res://scripts/world/water_volume.gd")
 const OCEAN_SCRIPT := preload("res://scripts/world/ocean.gd")
-const THREE_FLORIDA_LANDMARK_PACK: PackedScene = preload(
-	"res://assets/buildings/florida_landmark_pack.glb"
-)
-const THREE_FLORIDA_CITY_BLOCK_PACK: PackedScene = preload(
-	"res://assets/buildings/florida_city_block_pack.glb"
-)
-const THREE_FLORIDA_NEON_DETAIL_PACK: PackedScene = preload(
-	"res://assets/buildings/florida_neon_detail_pack.glb"
-)
-const THREE_FLORIDA_REGIONAL_PACK: PackedScene = preload(
-	"res://assets/buildings/florida_regional_pack.glb"
-)
-
 @export var map_scale: float = 4.6
 @export var water_size_m: float = 12000.0
 @export var ocean_y: float = -0.18
@@ -50,11 +37,13 @@ var _cypress_mat: StandardMaterial3D
 var _leaf_mat: StandardMaterial3D
 
 var _landmarks: FloridaLandmarks
+var _threejs: FloridaThreeJsPlacements
 
 
 func _ready() -> void:
 	_make_materials()
 	_landmarks = FloridaLandmarks.new(self)
+	_threejs = FloridaThreeJsPlacements.new(self)
 	_build_water()
 	_build_land()
 	_build_key_islands()
@@ -65,10 +54,15 @@ func _ready() -> void:
 	_build_marinas()
 	_build_beach_resorts()
 	_build_landmarks()
-	_build_threejs_models()
-	_build_threejs_city_blocks()
-	_build_threejs_neon_details()
-	_build_threejs_regional_destinations()
+	_threejs.build_landmark_models()
+	_threejs.build_city_blocks()
+	_threejs.build_neon_details()
+	_threejs.build_regional_destinations()
+	_threejs.build_infrastructure_details()
+	_threejs.build_environment_details()
+	_threejs.build_traffic_marine_details()
+	_threejs.build_vista_details()
+	_threejs.build_streetlife_details()
 	_build_city_accents()
 	_build_map_markers()
 	_build_wetlands()
@@ -567,183 +561,6 @@ func _build_landmarks() -> void:
 				_landmarks.add_launch_tower(root, pos, yaw)
 			"arch":
 				_landmarks.add_resort_arch(root, pos, yaw)
-
-
-func _build_threejs_models() -> void:
-	var root := Node3D.new()
-	root.name = "ThreeJsFloridaModels"
-	add_child(root)
-
-	var placements := [
-		{
-			"name": "ThreeJsMiamiResortPack",
-			"position": Vector2(980.0, -1700.0),
-			"yaw": -0.42,
-			"scale": 1.25
-		},
-		{
-			"name": "ThreeJsKeysResortPack",
-			"position": Vector2(-1220.0, -3400.0),
-			"yaw": 0.34,
-			"scale": 1.0
-		},
-		{
-			"name": "ThreeJsGulfRoutePack",
-			"position": Vector2(-1720.0, -760.0),
-			"yaw": 0.78,
-			"scale": 1.15
-		}
-	]
-	for placement in placements:
-		var model := THREE_FLORIDA_LANDMARK_PACK.instantiate() as Node3D
-		if model == null:
-			continue
-		var pos: Vector2 = placement["position"]
-		var s := float(placement["scale"])
-		model.name = String(placement["name"])
-		model.position = Vector3(pos.x, land_y + 0.12, pos.y)
-		model.rotation.y = float(placement["yaw"])
-		model.scale = Vector3(s, s, s)
-		root.add_child(model, true)
-
-
-func _build_threejs_city_blocks() -> void:
-	var root := Node3D.new()
-	root.name = "ThreeJsFloridaCityBlocks"
-	add_child(root)
-
-	var placements := [
-		{
-			"name": "ThreeJsBrickellCityBlock",
-			"position": Vector2(720.0, -1320.0),
-			"yaw": -0.18,
-			"scale": 1.8
-		},
-		{
-			"name": "ThreeJsBeachCityBlock",
-			"position": Vector2(1240.0, -2260.0),
-			"yaw": 0.56,
-			"scale": 1.45
-		},
-		{
-			"name": "ThreeJsGulfCityBlock",
-			"position": Vector2(-1480.0, -420.0),
-			"yaw": 0.22,
-			"scale": 1.55
-		},
-		{
-			"name": "ThreeJsNorthCoastCityBlock",
-			"position": Vector2(240.0, 1680.0),
-			"yaw": -0.74,
-			"scale": 1.35
-		}
-	]
-	for placement in placements:
-		var model := THREE_FLORIDA_CITY_BLOCK_PACK.instantiate() as Node3D
-		if model == null:
-			continue
-		var pos: Vector2 = placement["position"]
-		var s := float(placement["scale"])
-		model.name = String(placement["name"])
-		model.position = Vector3(pos.x, land_y + 0.14, pos.y)
-		model.rotation.y = float(placement["yaw"])
-		model.scale = Vector3(s, s, s)
-		root.add_child(model, true)
-
-
-func _build_threejs_neon_details() -> void:
-	var root := Node3D.new()
-	root.name = "ThreeJsFloridaNeonDetails"
-	add_child(root)
-
-	var placements := [
-		{
-			"name": "ThreeJsBeachNeonDetail",
-			"position": Vector2(1120.0, -2050.0),
-			"yaw": 0.42,
-			"scale": 1.4
-		},
-		{
-			"name": "ThreeJsBrickellNeonDetail",
-			"position": Vector2(610.0, -1190.0),
-			"yaw": -0.26,
-			"scale": 1.55
-		},
-		{
-			"name": "ThreeJsKeysNeonDetail",
-			"position": Vector2(-1040.0, -3220.0),
-			"yaw": 0.18,
-			"scale": 1.2
-		},
-		{
-			"name": "ThreeJsGulfNeonDetail",
-			"position": Vector2(-1600.0, -600.0),
-			"yaw": 0.76,
-			"scale": 1.35
-		}
-	]
-	for placement in placements:
-		var model := THREE_FLORIDA_NEON_DETAIL_PACK.instantiate() as Node3D
-		if model == null:
-			continue
-		var pos: Vector2 = placement["position"]
-		var s := float(placement["scale"])
-		model.name = String(placement["name"])
-		model.position = Vector3(pos.x, land_y + 0.16, pos.y)
-		model.rotation.y = float(placement["yaw"])
-		model.scale = Vector3(s, s, s)
-		root.add_child(model, true)
-		_landmarks.add_neon_light_cluster(model, s)
-
-
-func _build_threejs_regional_destinations() -> void:
-	var root := Node3D.new()
-	root.name = "ThreeJsFloridaRegionalDestinations"
-	add_child(root)
-
-	var placements := [
-		{
-			"name": "ThreeJsPanhandleRegionalPack",
-			"position": Vector2(80.0, 4100.0),
-			"yaw": -0.38,
-			"scale": 1.75
-		},
-		{
-			"name": "ThreeJsSpaceCoastRegionalPack",
-			"position": Vector2(1390.0, 1250.0),
-			"yaw": 0.48,
-			"scale": 1.45
-		},
-		{
-			"name": "ThreeJsWetlandRegionalPack",
-			"position": Vector2(-690.0, 1150.0),
-			"yaw": -0.72,
-			"scale": 1.65
-		},
-		{
-			"name": "ThreeJsKeysRegionalPack",
-			"position": Vector2(-980.0, -3510.0),
-			"yaw": 0.12,
-			"scale": 1.25
-		},
-		{
-			"name": "ThreeJsGulfRegionalPack",
-			"position": Vector2(-1320.0, -1220.0),
-			"yaw": 0.88,
-			"scale": 1.4
-		}
-	]
-	for placement in placements:
-		var model := THREE_FLORIDA_REGIONAL_PACK.instantiate() as Node3D
-		if model == null:
-			continue
-		var pos: Vector2 = placement["position"]
-		var s := float(placement["scale"])
-		model.name = String(placement["name"])
-		model.position = Vector3(pos.x, land_y + 0.18, pos.y)
-		model.rotation.y = float(placement["yaw"])
-		model.scale = Vector3(s, s, s)
-		root.add_child(model, true)
 
 
 func _add_marina(parent: Node, marina: Dictionary) -> void:

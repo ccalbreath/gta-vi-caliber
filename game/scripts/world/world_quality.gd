@@ -9,8 +9,11 @@ extends WorldEnvironment
 ## The scene keeps its own sky/background; only the grade + AO/reflections/GI
 ## layers are touched, so SkyController/DayNight tinting still drives the sky.
 
+@export_range(0, 3, 1) var minimum_tier: int = CinematicEnvironment.Quality.MEDIUM
+
 
 func _ready() -> void:
 	if environment == null:
 		environment = Environment.new()
-	CinematicEnvironment.apply_quality(environment, CinematicEnvironment.resolved_tier())
+	var tier := maxi(CinematicEnvironment.resolved_tier(), minimum_tier)
+	CinematicEnvironment.apply_quality(environment, tier)

@@ -11,7 +11,7 @@ var _frames := 0
 func _initialize() -> void:
 	var scene := OS.get_environment("SCENE")
 	if scene == "":
-		scene = "res://scenes/world/sandbox.tscn"
+		scene = "res://scenes/world/miami.tscn"
 	change_scene_to_file(scene)
 
 

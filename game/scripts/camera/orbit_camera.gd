@@ -71,6 +71,10 @@ const PITCH_MAX: float = 0.5
 @export var inspect_rim_light_range: float = 4.5
 @export var inspect_rim_light_color: Color = Color(0.70, 0.82, 1.0)
 @export var inspect_rim_light_offset: Vector3 = Vector3(-0.85, 0.35, -0.65)
+@export var inspect_eye_light_energy: float = 0.18
+@export var inspect_eye_light_range: float = 1.8
+@export var inspect_eye_light_color: Color = Color(1.0, 0.88, 0.72)
+@export var inspect_eye_light_offset: Vector3 = Vector3(0.0, 0.05, -0.34)
 
 var _pitch: float = 0.0
 var _recoil: float = 0.0
@@ -86,6 +90,7 @@ var _shake_noise: FastNoiseLite = null
 var _look_idle: float = 0.0
 var _inspect_light: SpotLight3D = null
 var _inspect_rim_light: OmniLight3D = null
+var _inspect_eye_light: OmniLight3D = null
 
 @onready var _arm: SpringArm3D = $SpringArm
 @onready var _camera: Camera3D = $SpringArm/Camera
@@ -137,6 +142,17 @@ func _create_inspect_light() -> void:
 		rim_light.visible = false
 		_camera.add_child(rim_light)
 		_inspect_rim_light = rim_light
+	if inspect_eye_light_energy > 0.0:
+		var eye_light := OmniLight3D.new()
+		eye_light.name = "CharacterInspectEyeLight"
+		eye_light.position = inspect_eye_light_offset
+		eye_light.light_energy = inspect_eye_light_energy
+		eye_light.light_color = inspect_eye_light_color
+		eye_light.omni_range = inspect_eye_light_range
+		eye_light.shadow_enabled = false
+		eye_light.visible = false
+		_camera.add_child(eye_light)
+		_inspect_eye_light = eye_light
 
 
 ## Hold the camera in the tighter aim FOV. WeaponController sets this each frame
@@ -218,6 +234,8 @@ func _update_inspect_light(inspecting: bool) -> void:
 		_inspect_light.visible = inspecting
 	if _inspect_rim_light != null:
 		_inspect_rim_light.visible = inspecting
+	if _inspect_eye_light != null:
+		_inspect_eye_light.visible = inspecting
 
 
 func _update_inspect_state(inspecting: bool) -> void:

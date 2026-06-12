@@ -5,7 +5,7 @@ extends SceneTree
 ##   godot --path game --script res://tests/benchmark.gd
 ## Results: printed + written to /tmp/gta6_benchmark.md for docs/profiles/.
 
-const SCENE := "res://scenes/world/districts/downtown_la.tscn"
+const SCENE := "res://scenes/world/miami.tscn"
 const OUT_PATH := "/tmp/gta6_benchmark.md"
 const WARMUP_FRAMES := 120
 const MEASURE_FRAMES := 900

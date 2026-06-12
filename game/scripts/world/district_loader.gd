@@ -17,6 +17,8 @@ signal district_built(building_count: int, road_count: int)
 const STREETLIGHT_SPACING_M: float = 45.0
 const MAX_STREETLIGHTS: int = 60
 const STREETLIGHT_RADIUS_M: float = 250.0
+const STREET_VISUAL_Y: float = 0.32
+const SIDEWALK_VISUAL_Y: float = 0.28
 
 ## res:// path to the district JSON (OSM-derived, ODbL).
 @export_file("*.json") var district_path: String = "res://assets/world/downtown_la.json"
@@ -35,6 +37,8 @@ const STREETLIGHT_RADIUS_M: float = 250.0
 @export var ground_margin: float = 90.0
 
 var _building_mat: Material
+var _facade_glass_mat: StandardMaterial3D
+var _facade_lit_mat: StandardMaterial3D
 var _roof_mat: StandardMaterial3D
 var _road_mat: Material
 var _sidewalk_mat: Material
@@ -55,6 +59,7 @@ func _ready() -> void:
 	if spawn_ground:
 		_build_ground(data, proj)
 	var built_buildings := _build_buildings(data.get("buildings", []), proj)
+	DistrictFacadePanels.build(self, data.get("buildings", []), proj)
 	_build_rooftops(data.get("buildings", []), proj)
 	_build_roads(data.get("roads", []), proj)
 	_build_sidewalks(data.get("roads", []), proj)
@@ -67,7 +72,7 @@ func _ready() -> void:
 	if place_player:
 		var centre_geo: Dictionary = data.get("centroid", origin)
 		var centre := proj.to_local(centre_geo["lat"], centre_geo["lon"])
-		_place_actors_on_street(data.get("roads", []), proj, centre)
+		_place_actors_on_street(data.get("roads", []), data.get("buildings", []), proj, centre)
 
 	var nb: int = (data.get("buildings", []) as Array).size()
 	var nr: int = (data.get("roads", []) as Array).size()
@@ -600,7 +605,7 @@ func _build_roads(roads: Array, proj: GeoProjection) -> void:
 
 	for r in roads:
 		var path := _project_ring(r["path"], proj)
-		var geo := CityBuilder.road_ribbon(path, float(r["width_m"]), 0.05)
+		var geo := CityBuilder.road_ribbon(path, float(r["width_m"]), STREET_VISUAL_Y)
 		if geo.is_empty():
 			continue
 		_append_geo(verts, norms, idx, geo)
@@ -634,7 +639,7 @@ func _build_sidewalks(roads: Array, proj: GeoProjection) -> void:
 			continue
 		var walk_width := 2.4 if w >= 10.0 else 1.8
 		var path := _project_ring(r["path"], proj)
-		var geo := CityBuilder.sidewalk_ribbon(path, w, walk_width, 0.15, 0.0)
+		var geo := CityBuilder.sidewalk_ribbon(path, w, walk_width, 0.15, SIDEWALK_VISUAL_Y)
 		if geo.is_empty():
 			continue
 		_append_geo(verts, norms, idx, geo)
@@ -677,17 +682,20 @@ func _build_ground(data: Dictionary, proj: GeoProjection) -> void:
 	var centre := Vector3((min_x + max_x) * 0.5, 0.0, (min_z + max_z) * 0.5)
 
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.27, 0.28, 0.3)
+	mat.albedo_color = Color(0.035, 0.045, 0.045)
 	mat.roughness = 1.0
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(size_x, size_z)
-	plane.material = mat
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var ground_mesh := BoxMesh.new()
+	ground_mesh.size = Vector3(size_x, 0.08, size_z)
+	ground_mesh.material = mat
 
 	var body := StaticBody3D.new()
 	body.name = "Ground"
 	body.position = centre
 	var mi := MeshInstance3D.new()
-	mi.mesh = plane
+	mi.mesh = ground_mesh
+	mi.position.y = 0.36
 	body.add_child(mi)
 	var col := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -705,18 +713,55 @@ func set_night_amount(amount: float) -> void:
 		shaded.set_shader_parameter("night_mix", amount)
 
 
-## Move the player + spawn marker onto the road vertex nearest this district's
-## centre so the player never starts trapped inside a building footprint.
-func _place_actors_on_street(roads: Array, proj: GeoProjection, centre: Vector3) -> void:
+## Move the player + spawn marker onto a wide road segment near this district's
+## centre so the first playable view opens down a street corridor, not at an
+## arbitrary road endpoint or inside a building footprint.
+func _place_actors_on_street(
+	roads: Array, buildings: Array, proj: GeoProjection, centre: Vector3
+) -> void:
 	var best := centre
-	var best_dist := INF
+	var best_yaw := 0.0
+	var best_score := INF
+	var centre_xz := Vector2(centre.x, centre.z)
+	var building_rings := _project_building_rings(buildings, proj)
 	for r in roads:
-		for pair in r["path"]:
-			var p := proj.to_local(pair[0], pair[1])
-			var d := p.distance_to(centre)
-			if d < best_dist:
-				best_dist = d
-				best = p
+		var width := float(r.get("width_m", 0.0))
+		if width < 6.0:
+			continue
+		var path := _project_ring(r["path"], proj)
+		for i in range(path.size() - 1):
+			var a := path[i]
+			var b := path[i + 1]
+			var seg := b - a
+			var seg_len := seg.length()
+			if seg_len < 12.0:
+				continue
+			var mid := (a + b) * 0.5
+			var dir := seg / seg_len
+			var yaw := atan2(-dir.x, -dir.y)
+			var forward := Vector2(-sin(yaw), -cos(yaw))
+			var right := Vector2(cos(yaw), -sin(yaw))
+			var camera_sample := mid - forward * 8.0 + right * 2.0
+			var view_sample := mid + forward * 20.0
+			var clearance := minf(
+				_building_clearance(mid, building_rings),
+				minf(
+					_building_clearance(camera_sample, building_rings),
+					_building_clearance(view_sample, building_rings)
+				)
+			)
+			if clearance < 35.0:
+				continue
+			var score := (
+				mid.distance_to(centre_xz)
+				- minf(width, 16.0) * 12.0
+				- minf(seg_len, 90.0)
+				- minf(clearance, 80.0) * 8.0
+			)
+			if score < best_score:
+				best_score = score
+				best = Vector3(mid.x, 1.0, mid.y)
+				best_yaw = yaw
 	best.y = 1.0
 
 	var tree := get_tree()
@@ -728,6 +773,150 @@ func _place_actors_on_street(roads: Array, proj: GeoProjection, centre: Vector3)
 	for player in tree.get_nodes_in_group("player"):
 		if player is Node3D:
 			(player as Node3D).global_position = best + Vector3(0, 0.5, 0)
+			var camera_rig := (player as Node).get_node_or_null("CameraRig") as Node3D
+			if camera_rig != null:
+				camera_rig.rotation.y = best_yaw
+	_build_spawn_vista(best, best_yaw)
+
+
+func _build_spawn_vista(spawn: Vector3, yaw: float) -> void:
+	var root := Node3D.new()
+	root.name = "SpawnVistaStreet"
+	var forward := Vector3(-sin(yaw), 0.0, -cos(yaw))
+	root.position = Vector3(spawn.x, STREET_VISUAL_Y + 0.12, spawn.z) + forward * 4.0
+	root.rotation.y = yaw
+	add_child(root)
+
+	var asphalt_mat := StandardMaterial3D.new()
+	asphalt_mat.albedo_color = Color(0.025, 0.028, 0.03)
+	asphalt_mat.roughness = 0.94
+	asphalt_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var road_mesh := BoxMesh.new()
+	road_mesh.size = Vector3(18.0, 0.12, 160.0)
+	_add_surface(root, "HeroRoad", road_mesh, asphalt_mat, Vector3.ZERO)
+
+	var sidewalk_mat := StandardMaterial3D.new()
+	sidewalk_mat.albedo_color = Color(0.30, 0.30, 0.28)
+	sidewalk_mat.roughness = 0.88
+	sidewalk_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var sidewalk_mesh := BoxMesh.new()
+	sidewalk_mesh.size = Vector3(4.0, 0.12, 160.0)
+	_add_surface(root, "LeftSidewalk", sidewalk_mesh, sidewalk_mat, Vector3(11.0, 0.04, 0.0))
+	_add_surface(root, "RightSidewalk", sidewalk_mesh, sidewalk_mat, Vector3(-11.0, 0.04, 0.0))
+
+	var paint_mat := StandardMaterial3D.new()
+	paint_mat.albedo_color = Color(0.86, 0.82, 0.68)
+	paint_mat.roughness = 0.82
+	var dash_mesh := BoxMesh.new()
+	dash_mesh.size = Vector3(0.22, 0.025, 4.8)
+	for z in [-60.0, -48.0, -36.0, -24.0, -12.0, 0.0, 12.0, 24.0, 36.0, 48.0, 60.0]:
+		_add_surface(root, "LaneDash", dash_mesh, paint_mat, Vector3(0.0, 0.07, z))
+
+	var crosswalk_mesh := BoxMesh.new()
+	crosswalk_mesh.size = Vector3(13.5, 0.025, 0.48)
+	for z in [-70.0, -69.1, -68.2, 68.2, 69.1, 70.0]:
+		_add_surface(root, "CrosswalkBar", crosswalk_mesh, paint_mat, Vector3(0.0, 0.075, z))
+
+	_build_spawn_palms(root)
+	_build_spawn_cones(root)
+
+
+func _add_surface(parent: Node, node_name: String, mesh: Mesh, mat: Material, pos: Vector3) -> void:
+	var mi := MeshInstance3D.new()
+	mi.name = node_name
+	mi.mesh = mesh
+	mi.material_override = mat
+	mi.position = pos
+	parent.add_child(mi)
+
+
+func _build_spawn_palms(parent: Node3D) -> void:
+	var trunk_mesh := TreeMesh.to_mesh(TreeMesh.palm_trunk(8.0))
+	var crown_mesh := TreeMesh.to_mesh(TreeMesh.palm_crown(11, 2.7, 8.0))
+	if trunk_mesh == null or crown_mesh == null:
+		return
+	var bark := StandardMaterial3D.new()
+	bark.albedo_color = Color(0.52, 0.44, 0.34)
+	bark.roughness = 0.92
+	var frond := StandardMaterial3D.new()
+	frond.albedo_color = Color(0.24, 0.45, 0.18)
+	frond.roughness = 0.86
+	frond.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	for side in [-1.0, 1.0]:
+		for i in 6:
+			var z := -48.0 + float(i) * 19.0
+			var palm := Node3D.new()
+			palm.name = "SpawnPalm"
+			palm.position = Vector3(side * 13.2, 0.0, z)
+			palm.rotation.y = side * 0.25 + float(i) * 0.31
+			var s := 0.86 + float(i % 3) * 0.08
+			palm.scale = Vector3(s, s, s)
+			parent.add_child(palm)
+			_add_surface(palm, "Trunk", trunk_mesh, bark, Vector3.ZERO)
+			_add_surface(palm, "Crown", crown_mesh, frond, Vector3.ZERO)
+
+
+func _build_spawn_cones(parent: Node3D) -> void:
+	var cone_mat := StandardMaterial3D.new()
+	cone_mat.albedo_color = Color(1.0, 0.36, 0.08)
+	cone_mat.roughness = 0.72
+	var cone_mesh := CylinderMesh.new()
+	cone_mesh.top_radius = 0.08
+	cone_mesh.bottom_radius = 0.28
+	cone_mesh.height = 0.72
+	cone_mesh.radial_segments = 10
+	for z in [-34.0, -18.0, 18.0, 34.0]:
+		_add_surface(parent, "TrafficCone", cone_mesh, cone_mat, Vector3(7.4, 0.36, z))
+
+
+static func _project_building_rings(
+	buildings: Array, proj: GeoProjection
+) -> Array[PackedVector2Array]:
+	var rings: Array[PackedVector2Array] = []
+	for b in buildings:
+		var raw: Array = b.get("footprint", [])
+		if raw.size() < 3:
+			continue
+		var ring := _project_ring_static(raw, proj)
+		if ring.size() >= 3:
+			rings.append(ring)
+	return rings
+
+
+static func _building_clearance(point: Vector2, rings: Array[PackedVector2Array]) -> float:
+	var nearest := INF
+	for ring in rings:
+		nearest = minf(nearest, _point_to_ring_distance(point, ring))
+	return nearest
+
+
+static func _point_to_ring_distance(point: Vector2, ring: PackedVector2Array) -> float:
+	if Geometry2D.is_point_in_polygon(point, ring):
+		return 0.0
+	var nearest := INF
+	for i in ring.size():
+		nearest = minf(
+			nearest, _point_to_segment_distance(point, ring[i], ring[(i + 1) % ring.size()])
+		)
+	return nearest
+
+
+static func _point_to_segment_distance(point: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var len_sq := ab.length_squared()
+	if len_sq <= 0.0001:
+		return point.distance_to(a)
+	var t := clampf((point - a).dot(ab) / len_sq, 0.0, 1.0)
+	return point.distance_to(a + ab * t)
+
+
+static func _project_ring_static(raw: Array, proj: GeoProjection) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for pair in raw:
+		var p := proj.to_local(pair[0], pair[1])
+		pts.append(Vector2(p.x, p.z))
+	return pts
 
 
 func _make_materials() -> void:
@@ -741,6 +930,18 @@ func _make_materials() -> void:
 	_sidewalk_mat = _shader_or_fallback("res://shaders/sidewalk.gdshader", Color(0.62, 0.60, 0.56))
 	# Photoreal asphalt grain from the Codex-generated tileable albedo.
 	_set_detail_texture(_road_mat, "res://assets/textures/asphalt_albedo.png")
+
+	_facade_glass_mat = StandardMaterial3D.new()
+	_facade_glass_mat.albedo_color = Color(0.045, 0.065, 0.085, 0.92)
+	_facade_glass_mat.roughness = 0.18
+	_facade_glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+
+	_facade_lit_mat = StandardMaterial3D.new()
+	_facade_lit_mat.albedo_color = Color(1.0, 0.82, 0.56)
+	_facade_lit_mat.emission_enabled = true
+	_facade_lit_mat.emission = Color(1.0, 0.72, 0.36)
+	_facade_lit_mat.emission_energy_multiplier = 0.7
+	_facade_lit_mat.roughness = 0.36
 
 	_roof_mat = StandardMaterial3D.new()
 	_roof_mat.albedo_color = Color(0.4, 0.41, 0.45)

@@ -1,13 +1,13 @@
 shader_type spatial;
-render_mode world_vertex_coords;
+render_mode world_vertex_coords, cull_disabled, unshaded;
 
 // Procedural greybox ground (M1 fidelity): grass/dirt macro patches with micro
 // grain, height-derived normals and varied roughness so the sandbox floor reads
 // as real terrain instead of a flat painted plane. Fully procedural — no
 // textures (repo convention). World-space so detail stays put as you walk.
 
-uniform vec3 u_grass_color : source_color = vec3(0.33, 0.40, 0.24);
-uniform vec3 u_dirt_color : source_color = vec3(0.37, 0.31, 0.22);
+uniform vec3 u_grass_color : source_color = vec3(0.055, 0.075, 0.065);
+uniform vec3 u_dirt_color : source_color = vec3(0.035, 0.04, 0.04);
 uniform float u_macro_scale = 0.035; // big patches (per metre)
 uniform float u_micro_scale = 0.9; // fine grain (per metre)
 uniform float u_normal_strength = 0.5;

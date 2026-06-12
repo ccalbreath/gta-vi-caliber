@@ -11,6 +11,7 @@ var _camera_rig: OrbitCamera
 var _imported: Node3D
 var _inspect_light: SpotLight3D
 var _inspect_rim_light: OmniLight3D
+var _inspect_eye_light: OmniLight3D
 var _initial_yaw := 0.0
 var _initial_gameplay_yaw := 0.0
 var _started_inspect := false
@@ -71,6 +72,10 @@ func _check_inspection_view() -> bool:
 	if absf(wrapf(_camera_rig.gameplay_yaw() - _initial_gameplay_yaw, -PI, PI)) > 0.01:
 		_fail("player inspect camera changed gameplay movement yaw")
 		return false
+	return _check_inspection_lighting()
+
+
+func _check_inspection_lighting() -> bool:
 	_resolve_inspect_light()
 	if _inspect_light == null or not _inspect_light.visible or _inspect_light.shadow_enabled:
 		_fail("player inspect camera did not enable shadowless character fill light")
@@ -81,6 +86,14 @@ func _check_inspection_view() -> bool:
 		or _inspect_rim_light.shadow_enabled
 	):
 		_fail("player inspect camera did not enable shadowless character rim light")
+		return false
+	if (
+		_inspect_eye_light == null
+		or not _inspect_eye_light.visible
+		or _inspect_eye_light.shadow_enabled
+		or _inspect_eye_light.light_energy <= 0.0
+	):
+		_fail("player inspect camera did not enable shadowless character eye light")
 		return false
 	return true
 
@@ -98,6 +111,9 @@ func _check_returned_view() -> bool:
 		return true
 	if _inspect_rim_light != null and _inspect_rim_light.visible:
 		_fail("player inspect camera left character rim light enabled")
+		return true
+	if _inspect_eye_light != null and _inspect_eye_light.visible:
+		_fail("player inspect camera left character eye light enabled")
 		return true
 	print("player_mara_camera_runtime: OK")
 	quit(0)
@@ -118,6 +134,11 @@ func _resolve_inspect_light() -> void:
 	if _inspect_rim_light == null:
 		_inspect_rim_light = (
 			_player.get_node_or_null("CameraRig/SpringArm/Camera/CharacterInspectRimLight")
+			as OmniLight3D
+		)
+	if _inspect_eye_light == null:
+		_inspect_eye_light = (
+			_player.get_node_or_null("CameraRig/SpringArm/Camera/CharacterInspectEyeLight")
 			as OmniLight3D
 		)
 

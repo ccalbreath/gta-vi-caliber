@@ -1,13 +1,13 @@
 shader_type spatial;
-render_mode world_vertex_coords;
+render_mode world_vertex_coords, cull_disabled;
 
 // Original state-map ground material: wet tropical grass, dark marsh basins,
 // sandy uplands, and fine procedural grain. No texture assets required.
 
-uniform vec3 grass_low : source_color = vec3(0.12, 0.25, 0.12);
-uniform vec3 grass_high : source_color = vec3(0.28, 0.42, 0.18);
-uniform vec3 marsh_color : source_color = vec3(0.08, 0.16, 0.10);
-uniform vec3 dry_sand_color : source_color = vec3(0.58, 0.50, 0.31);
+uniform vec3 grass_low : source_color = vec3(0.055, 0.11, 0.07);
+uniform vec3 grass_high : source_color = vec3(0.11, 0.18, 0.10);
+uniform vec3 marsh_color : source_color = vec3(0.035, 0.07, 0.045);
+uniform vec3 dry_sand_color : source_color = vec3(0.18, 0.15, 0.10);
 uniform float macro_scale = 0.0022;
 uniform float detail_scale = 0.042;
 uniform float normal_strength = 0.38;

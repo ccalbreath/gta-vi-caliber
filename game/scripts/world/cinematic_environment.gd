@@ -126,30 +126,48 @@ static func apply_quality(env: Environment, tier: int = Quality.MEDIUM) -> Envir
 	if env == null:
 		env = Environment.new()
 
+	var had_glow := env.glow_enabled
+	var had_fog := env.fog_enabled
+	var had_volumetric := env.volumetric_fog_enabled
+	var had_adjustment := env.adjustment_enabled
+	var authored_ambient_energy := env.ambient_light_energy
+	var authored_tonemap_exposure := env.tonemap_exposure
+	var authored_tonemap_white := env.tonemap_white
+	var authored_adjustment_contrast := env.adjustment_contrast
+	var authored_adjustment_saturation := env.adjustment_saturation
+	var authored_adjustment_brightness := env.adjustment_brightness
+	var authored_fog_color := env.fog_light_color
+	var authored_fog_aerial_perspective := env.fog_aerial_perspective
+	var authored_volumetric_albedo := env.volumetric_fog_albedo
+	var authored_volumetric_density := env.volumetric_fog_density
+	var authored_volumetric_emission := env.volumetric_fog_emission
+
 	# --- always-on, ~free: image-based ambient + filmic grade + bloom --------
 	if env.background_mode == Environment.BG_CLEAR_COLOR:
 		env.background_mode = Environment.BG_SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 1.0
+	env.ambient_light_energy = authored_ambient_energy
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_white = 6.0
-	env.tonemap_exposure = 1.0
+	env.tonemap_white = maxf(authored_tonemap_white, 6.0)
+	env.tonemap_exposure = authored_tonemap_exposure
 	env.glow_enabled = true
 	env.glow_intensity = 0.7
 	env.glow_bloom = 0.12
-	env.glow_hdr_threshold = 1.1
+	env.glow_hdr_threshold = minf(env.glow_hdr_threshold, 1.1) if had_glow else 1.1
 	env.adjustment_enabled = true
-	env.adjustment_contrast = 1.08
-	env.adjustment_saturation = 1.14
-	env.adjustment_brightness = 1.01
+	env.adjustment_contrast = authored_adjustment_contrast if had_adjustment else 1.08
+	env.adjustment_saturation = authored_adjustment_saturation if had_adjustment else 1.14
+	env.adjustment_brightness = authored_adjustment_brightness if had_adjustment else 1.01
 	# Light exponential fog reads as aerial-perspective depth; effectively free.
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
-	env.fog_light_color = Color(0.74, 0.79, 0.86)
-	env.fog_density = 0.0008
-	env.fog_sky_affect = 0.2
-	env.fog_aerial_perspective = 0.5
+	env.fog_light_color = authored_fog_color if had_fog else Color(0.74, 0.79, 0.86)
+	env.fog_density = env.fog_density if had_fog else 0.0008
+	env.fog_sky_affect = minf(env.fog_sky_affect, 0.2) if had_fog else 0.2
+	env.fog_aerial_perspective = (
+		authored_fog_aerial_perspective if had_fog else maxf(env.fog_aerial_perspective, 0.5)
+	)
 
 	# Reset the tier-gated heavies so apply_quality is idempotent across tiers.
 	env.ssao_enabled = false
@@ -174,8 +192,16 @@ static func apply_quality(env: Environment, tier: int = Quality.MEDIUM) -> Envir
 	if tier >= Quality.HIGH:
 		env.ssil_enabled = true
 		env.volumetric_fog_enabled = true
-		env.volumetric_fog_density = 0.002
-		env.volumetric_fog_albedo = Color(0.82, 0.86, 0.92)
+		env.volumetric_fog_density = (
+			authored_volumetric_density
+			if had_volumetric
+			else maxf(env.volumetric_fog_density, 0.002)
+		)
+		env.volumetric_fog_albedo = (
+			authored_volumetric_albedo if had_volumetric else Color(0.82, 0.86, 0.92)
+		)
+		if had_volumetric:
+			env.volumetric_fog_emission = authored_volumetric_emission
 
 	# --- ULTRA: real-time global illumination (SDFGI) ----------------------
 	if tier >= Quality.ULTRA:

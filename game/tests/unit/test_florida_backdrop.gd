@@ -19,6 +19,11 @@ func test_backdrop_builds_named_premium_layers() -> bool:
 		and backdrop.has_node("ThreeJsFloridaCityBlocks")
 		and backdrop.has_node("ThreeJsFloridaNeonDetails")
 		and backdrop.has_node("ThreeJsFloridaRegionalDestinations")
+		and backdrop.has_node("ThreeJsFloridaInfrastructureDetails")
+		and backdrop.has_node("ThreeJsFloridaEnvironmentDetails")
+		and backdrop.has_node("ThreeJsFloridaTrafficMarineDetails")
+		and backdrop.has_node("ThreeJsFloridaVistaDetails")
+		and backdrop.has_node("ThreeJsFloridaStreetlifeDetails")
 		and backdrop.has_node("OriginalCityAnchors")
 		and backdrop.has_node("OriginalMapMarkers")
 		and backdrop.has_node("WetlandCypressTrunks")
@@ -167,6 +172,161 @@ func test_backdrop_threejs_regional_destinations_contain_meshes() -> bool:
 		mesh_count += _count_mesh_instances(child)
 	backdrop.free()
 	return mesh_count >= 450
+
+
+func test_backdrop_builds_threejs_infrastructure_instances() -> bool:
+	var backdrop := FloridaBackdrop.new()
+	backdrop._ready()
+	var models := backdrop.get_node("ThreeJsFloridaInfrastructureDetails")
+	var required := [
+		"ThreeJsTurnpikeInfrastructure",
+		"ThreeJsWetlandInfrastructure",
+		"ThreeJsKeysInfrastructure",
+		"ThreeJsBeachInfrastructure",
+		"ThreeJsPanhandleInfrastructure",
+		"ThreeJsGulfInfrastructure"
+	]
+	for node_name in required:
+		if not models.has_node(node_name):
+			backdrop.free()
+			return false
+	backdrop.free()
+	return true
+
+
+func test_backdrop_threejs_infrastructure_details_contain_meshes() -> bool:
+	var backdrop := FloridaBackdrop.new()
+	backdrop._ready()
+	var models := backdrop.get_node("ThreeJsFloridaInfrastructureDetails")
+	var mesh_count := 0
+	for child in models.get_children():
+		mesh_count += _count_mesh_instances(child)
+	backdrop.free()
+	return mesh_count >= 650
+
+
+func test_backdrop_builds_threejs_environment_instances() -> bool:
+	var backdrop := FloridaBackdrop.new()
+	backdrop._ready()
+	var models := backdrop.get_node("ThreeJsFloridaEnvironmentDetails")
+	var required := [
+		"ThreeJsBeachEnvironment",
+		"ThreeJsWetlandEnvironment",
+		"ThreeJsKeysEnvironment",
+		"ThreeJsGulfEnvironment",
+		"ThreeJsNorthCoastEnvironment",
+		"ThreeJsCityEdgeEnvironment"
+	]
+	for node_name in required:
+		if not models.has_node(node_name):
+			backdrop.free()
+			return false
+	backdrop.free()
+	return true
+
+
+func test_backdrop_threejs_environment_details_contain_meshes() -> bool:
+	var backdrop := FloridaBackdrop.new()
+	backdrop._ready()
+	var models := backdrop.get_node("ThreeJsFloridaEnvironmentDetails")
+	var mesh_count := 0
+	for child in models.get_children():
+		mesh_count += _count_mesh_instances(child)
+	backdrop.free()
+	return mesh_count >= 900
+
+
+func test_backdrop_builds_threejs_traffic_marine_instances() -> bool:
+	var backdrop := FloridaBackdrop.new()
+	backdrop._ready()
+	var models := backdrop.get_node("ThreeJsFloridaTrafficMarineDetails")
+	var required := [
+		"ThreeJsBeachTrafficMarine",
+		"ThreeJsMarinaTrafficMarine",
+		"ThreeJsKeysTrafficMarine",
+		"ThreeJsGulfTrafficMarine",
+		"ThreeJsNorthTrafficMarine",
+		"ThreeJsTurnpikeTrafficMarine"
+	]
+	for node_name in required:
+		if not models.has_node(node_name):
+			backdrop.free()
+			return false
+	backdrop.free()
+	return true
+
+
+func test_backdrop_threejs_traffic_marine_details_contain_meshes() -> bool:
+	var backdrop := FloridaBackdrop.new()
+	backdrop._ready()
+	var models := backdrop.get_node("ThreeJsFloridaTrafficMarineDetails")
+	var mesh_count := 0
+	for child in models.get_children():
+		mesh_count += _count_mesh_instances(child)
+	backdrop.free()
+	return mesh_count >= 850
+
+
+func test_backdrop_builds_threejs_vista_instances() -> bool:
+	var backdrop := FloridaBackdrop.new()
+	backdrop._ready()
+	var models := backdrop.get_node("ThreeJsFloridaVistaDetails")
+	var required := [
+		"ThreeJsBeachVista",
+		"ThreeJsKeysVista",
+		"ThreeJsGulfVista",
+		"ThreeJsPanhandleVista",
+		"ThreeJsSpaceCoastVista",
+		"ThreeJsCityVista"
+	]
+	for node_name in required:
+		if not models.has_node(node_name):
+			backdrop.free()
+			return false
+	backdrop.free()
+	return true
+
+
+func test_backdrop_threejs_vista_details_contain_meshes() -> bool:
+	var backdrop := FloridaBackdrop.new()
+	backdrop._ready()
+	var models := backdrop.get_node("ThreeJsFloridaVistaDetails")
+	var mesh_count := 0
+	for child in models.get_children():
+		mesh_count += _count_mesh_instances(child)
+	backdrop.free()
+	return mesh_count >= 650
+
+
+func test_backdrop_builds_threejs_streetlife_instances() -> bool:
+	var backdrop := FloridaBackdrop.new()
+	backdrop._ready()
+	var models := backdrop.get_node("ThreeJsFloridaStreetlifeDetails")
+	var required := [
+		"ThreeJsBeachStreetlife",
+		"ThreeJsBrickellStreetlife",
+		"ThreeJsKeysStreetlife",
+		"ThreeJsGulfStreetlife",
+		"ThreeJsNorthStreetlife",
+		"ThreeJsSpaceCoastStreetlife"
+	]
+	for node_name in required:
+		if not models.has_node(node_name):
+			backdrop.free()
+			return false
+	backdrop.free()
+	return true
+
+
+func test_backdrop_threejs_streetlife_details_contain_meshes() -> bool:
+	var backdrop := FloridaBackdrop.new()
+	backdrop._ready()
+	var models := backdrop.get_node("ThreeJsFloridaStreetlifeDetails")
+	var mesh_count := 0
+	for child in models.get_children():
+		mesh_count += _count_mesh_instances(child)
+	backdrop.free()
+	return mesh_count >= 1000
 
 
 func _count_mesh_instances(node: Node) -> int:

@@ -1,4 +1,5 @@
 shader_type spatial;
+render_mode cull_disabled;
 // Procedural road ribbon — no textures. CityBuilder.road_ribbon writes UVs
 // where UV.x spans the ribbon width 0..1 and UV.y accumulates metres along
 // the centreline, so paint and wear stay in road space regardless of where
@@ -37,13 +38,31 @@ void fragment() {
 	// Faint dashed centre line, repainted long ago: wear varies per dash.
 	float line_mask = 1.0 - smoothstep(0.012, 0.022, abs(x - 0.5));
 	float dash = step(fract(along / 8.0), 0.55);
-	float wear = 0.45 + 0.4 * hash21(vec2(floor(along / 8.0), 7.0));
-	float paint = line_mask * dash * wear * (1.0 - side);
+	float wear = 0.58 + 0.34 * hash21(vec2(floor(along / 8.0), 7.0));
+	float centre_paint = line_mask * dash * wear * (1.0 - side);
+
+	// Thin shoulder/turn-lane ghosts near each side of the asphalt. They are
+	// intentionally uneven so the street reads like maintained real asphalt, not
+	// a clean procedural ribbon.
+	float left_lane = 1.0 - smoothstep(0.006, 0.013, abs(x - 0.32));
+	float right_lane = 1.0 - smoothstep(0.006, 0.013, abs(x - 0.68));
+	float lane_dash = step(fract((along + 3.5) / 14.0), 0.72);
+	float lane_wear = 0.24 + 0.22 * hash21(vec2(floor(along / 14.0), floor(x * 8.0)));
+	float lane_paint = (left_lane + right_lane) * lane_dash * lane_wear * (1.0 - side);
+	float paint = clamp(centre_paint + lane_paint, 0.0, 1.0);
 
 	// Patchy asphalt tone so long straights don't read as one flat slab.
 	float n = (hash21(floor(vec2(along * 1.5, x * 12.0))) - 0.5) * 0.03;
+	float patch_cell = hash21(floor(vec2(along * 0.08, x * 5.0)));
+	float patch = step(0.78, patch_cell) * (1.0 - smoothstep(0.12, 0.36, abs(x - 0.5)));
+	float tar = (1.0 - smoothstep(0.004, 0.018, abs(fract(along * 0.18 + x * 1.7) - 0.5))) * 0.12;
+	float tire = (
+		1.0 - smoothstep(0.025, 0.085, min(abs(x - 0.39), abs(x - 0.61)))
+	) * (0.06 + 0.08 * hash21(floor(vec2(along * 0.65, x * 9.0))));
 
 	vec3 col = asphalt_color + vec3(n);
+	col = mix(col, col * 0.72, patch * 0.34);
+	col *= 1.0 - tar - tire;
 	col = mix(col, sidewalk_color + vec3(n), side);
 
 	// Asphalt grain from the Codex tileable albedo (luminance modulation), kept

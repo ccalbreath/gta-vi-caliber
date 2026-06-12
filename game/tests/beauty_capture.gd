@@ -7,7 +7,7 @@ extends SceneTree
 ## Stills land in /tmp/gta6_beauty/ every ~1.5 s of the move.
 
 const OUT_DIR := "/tmp/gta6_beauty"
-const DEFAULT_SCENE := "res://scenes/world/districts/downtown_la.tscn"
+const DEFAULT_SCENE := "res://scenes/world/miami.tscn"
 const WARMUP_FRAMES := 90
 const STILL_INTERVAL_FRAMES := 90
 

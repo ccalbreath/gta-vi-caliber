@@ -2,7 +2,7 @@ extends SceneTree
 ## Sustained-FPS probe (M6 perf workflow). Boots a scene, lets streaming/effects
 ## settle, then averages Engine FPS over a window and prints it. Run WITHOUT
 ## --headless (needs the GPU):
-##   SCENE=res://scenes/world/los_angeles_streamed.tscn TOD=16.8 \
+##   SCENE=res://scenes/world/miami.tscn TOD=16.8 \
 ##   godot --path game --script res://tests/fps_probe.gd
 ## Env: SCENE, TOD (optional), WARMUP frames (default 400), SAMPLE frames (240).
 
@@ -19,7 +19,7 @@ func _initialize() -> void:
 	_sample = int(OS.get_environment("SAMPLE")) if OS.get_environment("SAMPLE") != "" else 240
 	var scene := OS.get_environment("SCENE")
 	if scene == "":
-		scene = "res://scenes/world/los_angeles_streamed.tscn"
+		scene = "res://scenes/world/miami.tscn"
 	change_scene_to_file(scene)
 
 

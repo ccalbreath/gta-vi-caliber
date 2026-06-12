@@ -67,26 +67,45 @@ static func finish_material(mesh: MeshInstance3D) -> void:
 	var src := mesh.get_active_material(0)
 	if src != null:
 		key += " " + src.resource_name.to_lower()
-	if key.contains("eye") and not key.contains("eyelid"):
+	if key.contains("sclera"):
+		mesh.material_override = _eye_sclera_material()
+	elif key.contains("highlight") or key.contains("glint") or key.contains("wetline"):
+		mesh.material_override = _eye_wet_material()
+	elif (
+		key.contains("socket_shadow")
+		or key.contains("lid_crease")
+		or key.contains("philtrum")
+		or key.contains("soft_seam")
+		or key.contains("parting_line")
+	):
+		mesh.material_override = _skin_shadow_material()
+	elif key.contains("eye") and not key.contains("eyelid") and not key.contains("skin"):
 		mesh.material_override = _eye_material()
-	elif key.contains("mouth"):
+	elif key.contains("mouth") or key.contains("nostril"):
 		mesh.material_override = _mouth_material()
 	elif (
 		key.contains("skin")
 		or key.contains("head")
 		or key.contains("hand")
+		or key.contains("finger")
+		or key.contains("thumb")
 		or key.contains("nose")
 		or key.contains("cheek")
 		or key.contains("eyelid")
+		or key.contains("chin")
+		or key.contains("jaw")
 	):
 		mesh.material_override = _skin_material()
-	elif key.contains("hair"):
+	elif key.contains("hair") or key.contains("lash"):
 		mesh.material_override = _hair_material()
 	elif (
 		key.contains("brass")
 		or key.contains("pendant")
 		or key.contains("earring")
 		or key.contains("zipper")
+		or key.contains("rivet")
+		or key.contains("buckle")
+		or key.contains("pull")
 	):
 		mesh.material_override = _metal_material()
 	elif (
@@ -106,6 +125,7 @@ static func finish_material(mesh: MeshInstance3D) -> void:
 		or key.contains("trouser")
 		or key.contains("thigh")
 		or key.contains("shin")
+		or key.contains("knee")
 	):
 		mesh.material_override = _fabric_material(Color(0.42, 0.50, 0.46), "fabric")
 	elif (
@@ -113,6 +133,7 @@ static func finish_material(mesh: MeshInstance3D) -> void:
 		or key.contains("lapel")
 		or key.contains("torso")
 		or key.contains("collar")
+		or key.contains("sleeve")
 	):
 		mesh.material_override = _fabric_material(Color(0.02, 0.024, 0.026), "jacket")
 
@@ -199,8 +220,15 @@ static func _bind_rigged_replacement_arm(
 	if shoulder == null or elbow == null:
 		return
 	_bind_replacement_part(visual, "mara_three_replacement_shoulder_cap_%s" % mesh_suffix, shoulder)
+	_bind_replacement_part(
+		visual, "mara_three_replacement_shoulder_slope_%s" % mesh_suffix, shoulder
+	)
 	_bind_replacement_part(visual, "mara_three_replacement_upper_arm_%s" % mesh_suffix, shoulder)
+	_bind_replacement_part(
+		visual, "mara_three_replacement_upper_arm_sleeve_panel_%s" % mesh_suffix, shoulder
+	)
 	_bind_replacement_part(visual, "mara_three_replacement_forearm_%s" % mesh_suffix, elbow)
+	_bind_replacement_part(visual, "mara_three_replacement_forearm_cuff_%s" % mesh_suffix, elbow)
 	_bind_replacement_part(visual, "mara_three_replacement_hand_%s" % mesh_suffix, elbow)
 
 
@@ -251,6 +279,7 @@ static func _reparent_keep_global(node: Node3D, target: Node3D) -> void:
 static func _skin_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.78, 0.55, 0.43)
+	mat.albedo_texture = TEXTURES.skin_albedo()
 	mat.roughness = 0.5
 	mat.subsurf_scatter_enabled = true
 	mat.subsurf_scatter_skin_mode = true
@@ -269,6 +298,7 @@ static func _skin_material() -> StandardMaterial3D:
 static func _fabric_material(color: Color, profile: String) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
+	mat.albedo_texture = TEXTURES.fabric_albedo()
 	mat.roughness = 0.78
 	mat.rim_enabled = true
 	mat.rim = 0.08
@@ -294,17 +324,57 @@ static func _eye_material() -> StandardMaterial3D:
 	mat.clearcoat_enabled = true
 	mat.clearcoat = 0.65
 	mat.clearcoat_roughness = 0.08
+	mat.emission_enabled = true
+	mat.emission = Color(0.035, 0.026, 0.018)
 	mat.set_meta("mara_imported_surface_profile", "eye")
+	return mat
+
+
+static func _eye_sclera_material() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.86, 0.78, 0.68)
+	mat.roughness = 0.24
+	mat.clearcoat_enabled = true
+	mat.clearcoat = 0.58
+	mat.clearcoat_roughness = 0.12
+	mat.rim_enabled = true
+	mat.rim = 0.1
+	mat.rim_tint = 0.16
+	mat.set_meta("mara_imported_surface_profile", "sclera")
+	return mat
+
+
+static func _eye_wet_material() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.95, 0.88, 0.78)
+	mat.roughness = 0.1
+	mat.clearcoat_enabled = true
+	mat.clearcoat = 0.82
+	mat.clearcoat_roughness = 0.05
+	mat.emission_enabled = true
+	mat.emission = Color(0.08, 0.065, 0.05)
+	mat.set_meta("mara_imported_surface_profile", "eye")
+	return mat
+
+
+static func _skin_shadow_material() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.38, 0.22, 0.18)
+	mat.roughness = 0.72
+	mat.subsurf_scatter_enabled = true
+	mat.subsurf_scatter_skin_mode = true
+	mat.subsurf_scatter_strength = 0.18
+	mat.set_meta("mara_imported_surface_profile", "skin_shadow")
 	return mat
 
 
 static func _mouth_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.22, 0.075, 0.065)
-	mat.roughness = 0.5
+	mat.albedo_color = Color(0.34, 0.13, 0.11)
+	mat.roughness = 0.46
 	mat.clearcoat_enabled = true
-	mat.clearcoat = 0.22
-	mat.clearcoat_roughness = 0.34
+	mat.clearcoat = 0.28
+	mat.clearcoat_roughness = 0.28
 	mat.set_meta("mara_imported_surface_profile", "mouth")
 	return mat
 
@@ -320,9 +390,12 @@ static func _hair_material() -> StandardMaterial3D:
 
 static func _metal_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.86, 0.62, 0.24)
+	mat.albedo_color = Color(0.52, 0.45, 0.31)
 	mat.metallic = 0.8
-	mat.roughness = 0.3
+	mat.roughness = 0.42
+	mat.clearcoat_enabled = true
+	mat.clearcoat = 0.08
+	mat.clearcoat_roughness = 0.32
 	mat.set_meta("mara_imported_surface_profile", "metal")
 	return mat
 

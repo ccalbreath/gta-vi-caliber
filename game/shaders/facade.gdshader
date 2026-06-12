@@ -132,6 +132,20 @@ void fragment() {
 	float wall_metal = mix(m_metal, g_metal, is_glass);
 	float wall_spec = mix(m_spec, g_spec, is_glass);
 
+	// Strong readable facade relief at gameplay distance: the old pastel wall
+	// fill collapsed into one tan slab in the default camera. Keep the Art-Deco
+	// colour, but cut it with visible mullion/storey grid and cooler shadow glass.
+	float bay_grid = (
+		1.0 - smoothstep(0.035, 0.075, min(fract(u / window_step), 1.0 - fract(u / window_step)))
+	);
+	float floor_grid = (
+		1.0 - smoothstep(0.025, 0.065, min(fract(v / floor_height), 1.0 - fract(v / floor_height)))
+	);
+	float readable_grid = clamp((bay_grid + floor_grid) * wall, 0.0, 1.0);
+	wall_albedo = mix(wall_albedo, wall_albedo * vec3(0.62, 0.68, 0.76), wall * 0.22);
+	wall_albedo = mix(wall_albedo, vec3(0.035, 0.045, 0.055), readable_grid * 0.72);
+	wall_rough = mix(wall_rough, 0.42, readable_grid);
+
 	// Storefront band: bottom ~5 m gets tall dark glass with wide mullion bays.
 	float ground = (1.0 - smoothstep(4.0, 5.2, v)) * wall;
 	float sf_frame = 1.0 - smoothstep(0.0, 0.16, fract(u / 3.4));

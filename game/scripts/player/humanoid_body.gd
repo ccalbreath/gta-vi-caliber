@@ -276,7 +276,7 @@ func _build_materials() -> void:
 		null if use_mara_hero_profile else load("res://assets/textures/denim.png") as Texture2D,
 		not use_mara_hero_profile
 	)
-	_jacket = _fabric(Color(0.025, 0.03, 0.032), 0.82, 0.08, null, false)
+	_jacket = _fabric(Color(0.025, 0.03, 0.032), 0.82, 0.08)
 	_glove = _leather(Color(0.018, 0.017, 0.016), 0.66, leather_tex)
 	_strap = _leather(Color(0.045, 0.034, 0.026), 0.72, leather_tex)
 	_metal = StandardMaterial3D.new()

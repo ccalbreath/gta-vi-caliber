@@ -25,7 +25,7 @@ var _anchor := Vector3.ZERO
 
 
 func _initialize() -> void:
-	change_scene_to_file("res://scenes/world/districts/downtown_la.tscn")
+	change_scene_to_file("res://scenes/world/miami.tscn")
 
 
 func _process(_delta: float) -> bool:

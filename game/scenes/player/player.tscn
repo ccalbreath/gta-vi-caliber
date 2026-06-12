@@ -168,9 +168,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 script = ExtResource("2_camera")
 
 [node name="SpringArm" type="SpringArm3D" parent="CameraRig"]
-transform = Transform3D(1, 0, 0, 0, 0.939373, 0.342898, 0, -0.342898, 0.939373, 0, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 0.796084, 0.605186, 0, -0.605186, 0.796084, 0, 0, 0)
 collision_mask = 1
-spring_length = 4.0
+spring_length = 8.0
 
 [node name="Camera" type="Camera3D" parent="CameraRig/SpringArm"]
 current = true

@@ -12,6 +12,16 @@ func test_near_district_loads() -> bool:
 	return r["to_load"].has("downtown_la") and not r["to_load"].has("hollywood")
 
 
+func test_multiple_loads_are_nearest_first() -> bool:
+	var districts := [
+		{"name": "far", "offset": Vector2(1000, 0)},
+		{"name": "near", "offset": Vector2(100, 0)},
+		{"name": "mid", "offset": Vector2(500, 0)},
+	]
+	var r := Streaming.resolve(Vector2.ZERO, districts, 1500.0, 2200.0, {})
+	return r["to_load"] == ["near", "mid", "far"]
+
+
 func test_far_resident_unloads() -> bool:
 	var r := Streaming.resolve(Vector2(0, 0), DISTRICTS, 1500.0, 2200.0, {"hollywood": true})
 	return r["to_unload"].has("hollywood")
