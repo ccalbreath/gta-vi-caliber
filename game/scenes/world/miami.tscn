@@ -1,4 +1,4 @@
-[gd_scene load_steps=37 format=3]
+[gd_scene load_steps=38 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -36,6 +36,7 @@
 [ext_resource type="Script" path="res://scripts/missions/mission_campaign.gd" id="30_campaign"]
 [ext_resource type="Script" path="res://scripts/world/pay_spray_shop.gd" id="31_payspray"]
 [ext_resource type="Script" path="res://scripts/systems/arrest_controller.gd" id="32_arrest"]
+[ext_resource type="Script" path="res://scripts/npc/police_helicopter.gd" id="33_heli"]
 
 [sub_resource type="BoxShape3D" id="payspray_shape"]
 size = Vector3(12, 6, 12)
@@ -257,6 +258,9 @@ search_duration = 6.0
 
 [node name="ArrestController" type="Node" parent="."]
 script = ExtResource("32_arrest")
+
+[node name="PoliceHelicopter" type="Node3D" parent="."]
+script = ExtResource("33_heli")
 
 [node name="Pickups" type="Node3D" parent="."]
 
