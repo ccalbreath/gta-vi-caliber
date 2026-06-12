@@ -92,6 +92,13 @@ func _finish() -> bool:
 			print("miami mission probe: FAIL — progression xp is %d" % xp)
 			quit(1)
 			return true
+		var stats := get_first_node_in_group("stats")
+		var passed := int(stats.stat("missions_passed")) if stats != null else 0
+		if passed < 1:
+			push_error("miami mission probe FAIL :: mission complete but stats not recorded")
+			print("miami mission probe: FAIL — missions_passed is %d" % passed)
+			quit(1)
+			return true
 		print("miami mission probe: OK (mission complete, earned $%d + %d respect)" % [earned, xp])
 		quit(0)
 	else:
