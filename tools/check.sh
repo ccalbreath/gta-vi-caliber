@@ -56,8 +56,8 @@ step "headless import"
 step "smoke test"
 "$GODOT_BIN" --headless --path game --script res://tests/smoke_test.gd
 
-# --- 5. unit tests ------------------------------------------------------------
-step "unit tests"
+# --- 5. gdUnit4 unit tests ----------------------------------------------------
+step "gdUnit4 unit tests"
 "$GODOT_BIN" --headless --path game --script res://tests/run_tests.gd
 
 printf '\nAll checks passed ✔\n'

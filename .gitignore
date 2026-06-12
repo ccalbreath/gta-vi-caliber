@@ -2,6 +2,9 @@
 game/.godot/
 game/*.translation
 game/export_presets.cfg
+game/reports/
+game/addons/**/*.uid
+game/addons/**/*.import
 
 # Built native libraries (artifacts only — never committed)
 game/bin/*.so

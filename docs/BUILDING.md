@@ -71,7 +71,7 @@ gdformat --check game/scripts game/tests
 gdlint game/scripts game/tests
 godot --headless --path game --import        # validates project + resources
 godot --headless --path game --script tests/smoke_test.gd
-godot --headless --path game --script tests/run_tests.gd
+godot --headless --path game --script tests/run_tests.gd    # gdUnit4 unit tests
 ```
 
 ## Troubleshooting

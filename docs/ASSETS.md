@@ -41,6 +41,16 @@ close to existing commercial work regardless of provenance.
 | Path | Description | Author | Source | License |
 | --- | --- | --- | --- | --- |
 | `game/icon.svg` | Project icon (sun over road) | project contributors | original | CC BY 4.0 |
+| `game/addons/gdUnit4/src/core/assets/touch-button.png` | Vendored gdUnit4 editor-plugin UI icon | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/reporters/html/template/css/logo.png` | Vendored gdUnit4 report logo | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/ui/settings/logo.png` | Vendored gdUnit4 editor-plugin logo | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/border_bottom.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/border_top.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/dot1.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/dot2.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/embedded.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
+| `game/addons/gdUnit4/src/update/assets/horizontal-line2.png` | Vendored gdUnit4 editor-plugin UI image | godot-gdunit-labs | https://github.com/godot-gdunit-labs/gdUnit4/tree/v6.1.3/addons/gdUnit4 | MIT |
 
 *(Append one row per asset. Path relative to repo root. "Source" is `original`
-or a URL. License must be CC0, CC-BY-4.0, or CC-BY-4.0-compatible.)*
+or a URL. License must be CC0, CC-BY-4.0, or CC-BY-4.0-compatible; vendored
+`game/addons/**` plugin UI assets may use the upstream plugin license.)*

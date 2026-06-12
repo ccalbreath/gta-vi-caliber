@@ -50,5 +50,5 @@ jobs:
         run: ~/godot-bin/godot --headless --path game --import
       - name: Smoke test
         run: ~/godot-bin/godot --headless --path game --script res://tests/smoke_test.gd
-      - name: Unit tests
+      - name: gdUnit4 unit tests
         run: ~/godot-bin/godot --headless --path game --script res://tests/run_tests.gd

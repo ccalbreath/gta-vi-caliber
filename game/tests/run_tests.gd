@@ -1,41 +1,33 @@
 extends SceneTree
-## Minimal dependency-free unit-test runner. Run via:
+## Compatibility entry point for gdUnit4's command-line runner.
+## Run via:
 ##   godot --headless --path game --script res://tests/run_tests.gd
-##
-## Discovers res://tests/unit/test_*.gd. Each test script extends RefCounted;
-## every zero-argument method whose name starts with "test_" is executed and
-## passes iff it returns true. (Roadmap: replace with vendored gdUnit4.)
 
-const UNIT_DIR: String = "res://tests/unit"
+var _cli_runner: GdUnitTestCIRunner
 
 
 func _initialize() -> void:
-	var passed := 0
-	var failed := 0
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_MINIMIZED)
+	_cli_runner = GdUnitTestCIRunner.new()
+	_cli_runner._debug_cmd_args = _gdunit_args()
+	root.add_child(_cli_runner)
 
-	var dir := DirAccess.open(UNIT_DIR)
-	if dir == null:
-		push_error("test runner: cannot open %s" % UNIT_DIR)
-		quit(1)
-		return
 
-	for file in dir.get_files():
-		if not (file.begins_with("test_") and file.ends_with(".gd")):
-			continue
-		var script: GDScript = load("%s/%s" % [UNIT_DIR, file])
-		var suite: RefCounted = script.new()
-		for method in script.get_script_method_list():
-			var method_name: String = method["name"]
-			if not method_name.begins_with("test_") or method["args"].size() > 0:
-				continue
-			if suite.call(method_name) == true:
-				passed += 1
-			else:
-				failed += 1
-				push_error("FAIL %s :: %s" % [file, method_name])
+func _finalize() -> void:
+	queue_delete(_cli_runner)
 
-	print("unit tests: %d passed, %d failed" % [passed, failed])
-	if failed > 0 or passed == 0:
-		quit(1)
-	else:
-		quit(0)
+
+func _gdunit_args() -> PackedStringArray:
+	return PackedStringArray(
+		[
+			"res://addons/gdUnit4/bin/GdUnitCmdTool.gd",
+			"--ignoreHeadlessMode",
+			"-a",
+			"res://tests/unit",
+			"-c",
+			"-rd",
+			"res://reports",
+			"-rc",
+			"1",
+		]
+	)
