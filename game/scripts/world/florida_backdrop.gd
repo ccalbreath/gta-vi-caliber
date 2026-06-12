@@ -71,6 +71,7 @@ func _ready() -> void:
 	_build_clouds()
 	_build_bay_boats()
 	_build_seabirds()
+	_build_air_banner()
 	_build_swim_volume()
 
 
@@ -735,6 +736,14 @@ func _build_coastal_palms() -> void:
 	palms.map_scale = map_scale
 	palms.ground_y = land_y + 0.05
 	add_child(palms)
+
+
+func _build_air_banner() -> void:
+	# A banner-tow plane circling the beach with a satirical ad — ambient air
+	# life plus the humor/tone axis. Default centre is over South Beach.
+	var banner := AirBanner.new()
+	banner.name = "AirBanner"
+	add_child(banner)
 
 
 func _build_seabirds() -> void:

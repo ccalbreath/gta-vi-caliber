@@ -5,6 +5,24 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 8) — the beach banner plane (life + the first joke)
+
+Track Q on TWO axes at once — ambient life *and* humor/tone (the satire axis,
+previously untouched). Added `AirBanner`: the iconic Miami banner-tow plane,
+a light aircraft circling the beach dragging a satirical ad banner (white
+Label3D text on a hot-pink sheet, swaying on its tow point). Original parody
+copy, rotated per plane ("SUNBURN INSURANCE — CLAIM BY DUSK", "VICE BEACH P.D.:
+SMILE, YOU'RE ON CAMERA", …) — nothing lifted from any real product. Pure
+time-driven circular flight; built in populate() for headless tests. Reads
+exactly as intended (`/tmp/banner_close.png` — the ad is legible and correctly
+oriented). Added over South Beach via FloridaBackdrop; verified in isolation +
+4 unit tests (count, circling, tows-a-banner, carries-an-ad). Process note: the
+PlaneMesh banner needed a z-only 90° rotation (an extra x-rotation first made it
+edge-on), and radius-0 still leaves a random heading, so the isolation cam pins
+the plane transform to read the banner broadside. Honest limit: it's one
+decorative orbit, and the ad pool is 5 lines — a real tone pass would tie ads to
+districts/events with Track N.
+
 ## 2026-06-12 (cont. 7) — gulls in the sky: ambient life, not just scenery
 
 Track Q (detail/life), a deliberate diversification — the backdrop had grown
