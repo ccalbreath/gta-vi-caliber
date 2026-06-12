@@ -137,6 +137,10 @@ static func apply_quality(env: Environment, tier: int = Quality.MEDIUM) -> Envir
 	var authored_adjustment_saturation := env.adjustment_saturation
 	var authored_adjustment_brightness := env.adjustment_brightness
 	var authored_fog_color := env.fog_light_color
+	# Captured before any write: assigning fog_mode below resets fog_density
+	# to 1.0 inside the engine setter (even re-assigning the current mode), so
+	# reading env.fog_density after it preserves the clobber, not the author.
+	var authored_fog_density := env.fog_density
 	var authored_fog_aerial_perspective := env.fog_aerial_perspective
 	var authored_volumetric_albedo := env.volumetric_fog_albedo
 	var authored_volumetric_density := env.volumetric_fog_density
@@ -163,7 +167,7 @@ static func apply_quality(env: Environment, tier: int = Quality.MEDIUM) -> Envir
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
 	env.fog_light_color = authored_fog_color if had_fog else Color(0.74, 0.79, 0.86)
-	env.fog_density = env.fog_density if had_fog else 0.0008
+	env.fog_density = authored_fog_density if had_fog else 0.0008
 	env.fog_sky_affect = minf(env.fog_sky_affect, 0.2) if had_fog else 0.2
 	env.fog_aerial_perspective = (
 		authored_fog_aerial_perspective if had_fog else maxf(env.fog_aerial_perspective, 0.5)

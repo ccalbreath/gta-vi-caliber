@@ -129,6 +129,27 @@ func test_apply_quality_preserves_authored_scene_grade() -> bool:
 	)
 
 
+func test_quality_preserves_authored_fog_density() -> bool:
+	# Regression (issue #10's brown wash): assigning Environment.fog_mode
+	# resets fog_density to 1.0 inside the engine setter, even when the mode
+	# is unchanged. apply_quality must hand back the authored density, not the
+	# clobber — miami authors 0.00008, and 1.0 fogs out the entire world.
+	var e := Environment.new()
+	e.fog_enabled = true
+	e.fog_density = 0.00008
+	CinematicEnvironment.apply_quality(e, CinematicEnvironment.Quality.MEDIUM)
+	return is_equal_approx(e.fog_density, 0.00008)
+
+
+func test_quality_defaults_fog_density_when_not_authored() -> bool:
+	# The other arm of the same assignment: a scene without authored fog still
+	# gets the light aerial-perspective default, not the engine's 1.0.
+	var e := Environment.new()
+	e.fog_enabled = false
+	CinematicEnvironment.apply_quality(e, CinematicEnvironment.Quality.MEDIUM)
+	return is_equal_approx(e.fog_density, 0.0008)
+
+
 func _colors_match(a: Color, b: Color) -> bool:
 	return (
 		is_equal_approx(a.r, b.r)
