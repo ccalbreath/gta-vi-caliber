@@ -58,6 +58,14 @@ func test_switch_cooldown() -> bool:
 	return not blocked and allowed and r.active() == "mara"
 
 
+func test_repeated_untimed_switches() -> bool:
+	# A caller that doesn't pass a timestamp can switch back and forth freely.
+	var r := CharacterRoster.new()
+	return (
+		r.switch_to("rico") and r.switch_to("mara") and r.switch_to("rico") and r.active() == "rico"
+	)
+
+
 func test_independent_money_persists_across_switch() -> bool:
 	var r := CharacterRoster.new()
 	r.add_money("mara", 1000)  # 3500

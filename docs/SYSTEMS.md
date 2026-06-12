@@ -130,3 +130,8 @@ rally defense stocks on a crime spree, and applies `HitContract` effects via
 headline and heats the active district (which cools over time via `_process`). The
 two directors split the signal cleanly — market vs news+real-estate — so both can
 sit in the scene. CI-gated headless by `tests/crime_reaction_probe.gd`.
+
+`CharacterSwitcher` owns a `CharacterRoster` and syncs each lead's wallet through
+the live `player_stats` node on `request_switch()` (write the current wallet back,
+load the incoming lead's), so per-character money persists across switches. CI-gated
+headless by `tests/character_switch_probe.gd`.

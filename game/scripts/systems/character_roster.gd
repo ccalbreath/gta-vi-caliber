@@ -84,7 +84,9 @@ func switch_to(id: String, now: float = INF) -> bool:
 	if not can_switch(id, now):
 		return false
 	_active = id
-	_last_switch_at = now
+	# A caller that doesn't track time (now == INF) must never be cooldown-blocked
+	# on the next switch, so park the stamp at -INF instead of INF.
+	_last_switch_at = -INF if is_inf(now) else now
 	return true
 
 
