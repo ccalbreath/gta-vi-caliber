@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3]
+[gd_scene load_steps=46 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -43,6 +43,7 @@
 [ext_resource type="Shader" path="res://assets/shaders/sky.gdshader" id="38_sky"]
 [ext_resource type="Script" path="res://scripts/world/sky_controller.gd" id="39_skyctl"]
 [ext_resource type="Script" path="res://scripts/world/rain.gd" id="40_rain"]
+[ext_resource type="Script" path="res://scripts/world/floating_origin.gd" id="41_origin"]
 
 [sub_resource type="BoxShape3D" id="payspray_shape"]
 size = Vector3(12, 6, 12)
@@ -157,6 +158,12 @@ script = ExtResource("35_islands")
 script = ExtResource("3_streamer")
 load_radius = 8500.0
 unload_radius = 9500.0
+
+; Districts sit up to ~6.5 km out; beyond ~2 km float32 jitter sets in, so the
+; world is teleported back around the player. The streamer and mission
+; waypoints reconstruct absolute coords from its origin_offset.
+[node name="FloatingOrigin" type="Node" parent="."]
+script = ExtResource("41_origin")
 
 ; Live weather: a rolling front (clear -> overcast -> rain -> clearing) that
 ; thickens the fog, darkens the sky-shader clouds, rains over the player, and

@@ -43,6 +43,7 @@ func _run_checks() -> void:
 	_expect_one("mission")
 	_expect_one("bark_director")
 	_expect_one("weather")
+	_expect_one("floating_origin")
 
 	# The weather front must actually be wired to the scene: fog driven through
 	# the WorldEnvironment and a Rain volume to switch on inside rain bands.
