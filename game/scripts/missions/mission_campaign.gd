@@ -73,6 +73,28 @@ func _missions() -> Array:
 			],
 			"waypoints": waypoints,
 		},
+		{
+			"id": "deal",
+			"title": "THE DEAL",
+			"objective_defs":
+			[
+				{"id": "reach_car", "text": "Take the car to the meet"},
+				{"id": "drive_strip", "text": "Close the deal downtown"},
+				{"id": "return_home", "text": "Bank the cut at the safehouse"},
+			],
+			"waypoints": waypoints,
+		},
+		{
+			"id": "kingpin",
+			"title": "KINGPIN",
+			"objective_defs":
+			[
+				{"id": "reach_car", "text": "One last ride"},
+				{"id": "drive_strip", "text": "Take the strip — it's yours now"},
+				{"id": "return_home", "text": "Return home the king of Vice City"},
+			],
+			"waypoints": waypoints,
+		},
 	]
 
 
