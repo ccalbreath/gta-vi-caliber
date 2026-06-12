@@ -56,14 +56,15 @@ func _draw() -> void:
 		var mp := MapProjection.world_to_map(poi["pos"], center, mpp)
 		var at := view_center + mp
 		draw_circle(at, 7.0, poi["color"])
-		draw_string(
-			_font,
-			at + Vector2(10, 5),
-			String(poi["label"]).to_upper(),
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			16
-		)
+		if String(poi["label"]) != "":
+			draw_string(
+				_font,
+				at + Vector2(10, 5),
+				String(poi["label"]).to_upper(),
+				HORIZONTAL_ALIGNMENT_LEFT,
+				-1,
+				16
+			)
 
 	if player != null:
 		var pp := view_center + MapProjection.world_to_map(player.global_position, center, mpp)
@@ -86,8 +87,11 @@ func _gather_pois() -> Array:
 		for node in get_tree().get_nodes_in_group("poi_%s" % place):
 			var n := node as Node3D
 			if n != null:
+				var label := String(n.get_meta("map_label", place))
+				if place == "route":
+					label = ""
 				out.append(
-					{"pos": n.global_position, "color": Minimap.POI_COLORS[place], "label": place}
+					{"pos": n.global_position, "color": Minimap.POI_COLORS[place], "label": label}
 				)
 	return out
 

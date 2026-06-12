@@ -38,6 +38,8 @@ func _process(_delta: float) -> bool:
 func _start_shot() -> void:
 	if OS.get_environment("BEAUTY_HIDE_HUD") == "1":
 		_hide_hud(current_scene)
+	if OS.get_environment("BEAUTY_SHOW_FULL_MAP") == "1":
+		_show_full_map(current_scene)
 	_camera = CinematicCamera.new()
 	_camera.far = 4000.0
 	current_scene.add_child(_camera)
@@ -78,6 +80,14 @@ func _hide_hud(root_node: Node) -> void:
 		if child is CanvasLayer or child is Control:
 			(child as Node).set("visible", false)
 		_hide_hud(child)
+
+
+func _show_full_map(root_node: Node) -> void:
+	for child in root_node.get_children():
+		if child is FullMap:
+			(child as FullMap).visible = true
+			(child as FullMap).queue_redraw()
+		_show_full_map(child)
 
 
 func _env_points(name: String) -> PackedVector3Array:

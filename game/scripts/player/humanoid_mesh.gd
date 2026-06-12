@@ -255,6 +255,18 @@ static func leg(length: float = 0.82) -> Dictionary:
 	return limb(length, 0.086, 0.08, 0.05, 16, 20)
 
 
+## Rounded rectangular/elliptical bar for straps, cords and bands.
+static func rounded_bar(length: float, half_width: float, half_depth: float) -> Dictionary:
+	var rings: Array = [
+		Vector3(length * 0.5, half_width * 0.82, half_depth * 0.82),
+		Vector3(length * 0.42, half_width, half_depth),
+		Vector3(0.0, half_width, half_depth),
+		Vector3(-length * 0.42, half_width, half_depth),
+		Vector3(-length * 0.5, half_width * 0.82, half_depth * 0.82),
+	]
+	return lofted(rings, 12)
+
+
 ## A rounded fist, spine along Y, sized to sit at the wrist.
 ## A hand: a flattened palm with four tapered fingers and a thumb off the side,
 ## merged into one mesh. Fingers point -Y (continuing the arm from the wrist).

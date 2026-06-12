@@ -44,7 +44,15 @@ void fragment() {
 	col = mix(col, shell_color, shells * 0.38);
 	col *= 0.86 + grain * 0.28;
 
+	// Specular anti-aliasing: wet bands used to drop roughness to 0.58 and raise
+	// specular, so the procedural wet streaks caught a hard sheen that shimmered
+	// as the camera moved. Keep a damp tone difference but a far gentler sheen,
+	// and trend fully matte in the distance where the streaks alias.
+	float dist = length(w_pos - CAMERA_POSITION_WORLD);
+	float aa = clamp((dist - 40.0) / 140.0, 0.0, 1.0);
+
 	ALBEDO = col;
-	ROUGHNESS = mix(0.92, 0.58, wet);
-	SPECULAR = 0.25 + wet * 0.2;
+	float rough = mix(0.94, 0.80, wet);
+	ROUGHNESS = mix(rough, 1.0, aa * 0.6);
+	SPECULAR = (0.18 + wet * 0.08) * (1.0 - aa * 0.7);
 }

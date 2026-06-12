@@ -41,7 +41,13 @@ const CITY_NODES: Array[Dictionary] = [
 ]
 
 const ROAD_PATHS: Array[Array] = [
-	[Vector2(260.0, -420.0), Vector2(170.0, -150.0), Vector2(150.0, 120.0), Vector2(40.0, 360.0), Vector2(20.0, 900.0)],
+	[
+		Vector2(260.0, -420.0),
+		Vector2(170.0, -150.0),
+		Vector2(150.0, 120.0),
+		Vector2(40.0, 360.0),
+		Vector2(20.0, 900.0)
+	],
 	[Vector2(260.0, -420.0), Vector2(40.0, -540.0), Vector2(-255.0, -700.0)],
 	[Vector2(150.0, 120.0), Vector2(-60.0, 210.0), Vector2(-150.0, 270.0), Vector2(-210.0, 480.0)],
 	[Vector2(170.0, -150.0), Vector2(315.0, 10.0), Vector2(305.0, 275.0)],
@@ -62,7 +68,12 @@ const MARINAS: Array[Dictionary] = [
 ]
 
 const LANDMARKS: Array[Dictionary] = [
-	{"kind": "lighthouse", "name": "Torch Key Light", "position": Vector2(250.0, -725.0), "rotation": 0.78},
+	{
+		"kind": "lighthouse",
+		"name": "Torch Key Light",
+		"position": Vector2(250.0, -725.0),
+		"rotation": 0.78
+	},
 	{"kind": "wheel", "name": "Sunset Wheel", "position": Vector2(310.0, -350.0), "rotation": 1.1},
 	{"kind": "launch", "name": "Atlas Point", "position": Vector2(315.0, 265.0), "rotation": 0.12},
 	{"kind": "arch", "name": "Gulf Gate", "position": Vector2(-260.0, -690.0), "rotation": -0.6},
@@ -86,13 +97,16 @@ static func closed_outline(scale: float = DEFAULT_SCALE) -> PackedVector2Array:
 static func city_nodes(scale: float = DEFAULT_SCALE) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for city in CITY_NODES:
-		out.append(
-			{
-				"name": city["name"],
-				"position": (city["position"] as Vector2) * scale,
-				"height": float(city["height"]) * scale,
-				"radius": float(city["radius"]) * scale,
-			}
+		(
+			out
+			. append(
+				{
+					"name": city["name"],
+					"position": (city["position"] as Vector2) * scale,
+					"height": float(city["height"]) * scale,
+					"radius": float(city["radius"]) * scale,
+				}
+			)
 		)
 	return out
 
@@ -110,12 +124,15 @@ static func road_paths(scale: float = DEFAULT_SCALE) -> Array[PackedVector2Array
 static func key_islands(scale: float = DEFAULT_SCALE) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for island in KEY_ISLANDS:
-		out.append(
-			{
-				"position": (island["position"] as Vector2) * scale,
-				"size": (island["size"] as Vector2) * scale,
-				"rotation": float(island["rotation"]),
-			}
+		(
+			out
+			. append(
+				{
+					"position": (island["position"] as Vector2) * scale,
+					"size": (island["size"] as Vector2) * scale,
+					"rotation": float(island["rotation"]),
+				}
+			)
 		)
 	return out
 
@@ -123,12 +140,15 @@ static func key_islands(scale: float = DEFAULT_SCALE) -> Array[Dictionary]:
 static func marinas(scale: float = DEFAULT_SCALE) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for marina in MARINAS:
-		out.append(
-			{
-				"position": (marina["position"] as Vector2) * scale,
-				"rotation": float(marina["rotation"]),
-				"slips": int(marina["slips"]),
-			}
+		(
+			out
+			. append(
+				{
+					"position": (marina["position"] as Vector2) * scale,
+					"rotation": float(marina["rotation"]),
+					"slips": int(marina["slips"]),
+				}
+			)
 		)
 	return out
 
@@ -136,13 +156,16 @@ static func marinas(scale: float = DEFAULT_SCALE) -> Array[Dictionary]:
 static func landmarks(scale: float = DEFAULT_SCALE) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for landmark in LANDMARKS:
-		out.append(
-			{
-				"kind": landmark["kind"],
-				"name": landmark["name"],
-				"position": (landmark["position"] as Vector2) * scale,
-				"rotation": float(landmark["rotation"]),
-			}
+		(
+			out
+			. append(
+				{
+					"kind": landmark["kind"],
+					"name": landmark["name"],
+					"position": (landmark["position"] as Vector2) * scale,
+					"rotation": float(landmark["rotation"]),
+				}
+			)
 		)
 	return out
 
@@ -155,7 +178,54 @@ static func bridge_paths(scale: float = DEFAULT_SCALE) -> Array[PackedVector2Arr
 	return out
 
 
-static func wetland_points(count: int, scale: float = DEFAULT_SCALE, seed: int = 60611) -> Array[Vector2]:
+static func route_samples(
+	scale: float = DEFAULT_SCALE, spacing: float = 260.0
+) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for path in road_paths(scale):
+		for i in range(path.size() - 1):
+			var a := path[i]
+			var b := path[i + 1]
+			var delta := b - a
+			var seg := delta.length()
+			if seg < spacing:
+				continue
+			var dir := delta / seg
+			var dist := spacing
+			while dist < seg:
+				out.append({"position": a + dir * dist, "direction": dir})
+				dist += spacing
+	return out
+
+
+static func poi_markers(scale: float = DEFAULT_SCALE) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for city in city_nodes(scale):
+		out.append({"name": city["name"], "kind": "city", "position": city["position"]})
+	for landmark in landmarks(scale):
+		out.append({"name": landmark["name"], "kind": "landmark", "position": landmark["position"]})
+	for marina in marinas(scale):
+		out.append({"name": "Marina", "kind": "marina", "position": marina["position"]})
+	var samples := route_samples(scale, 320.0)
+	for i in range(samples.size()):
+		var sample := samples[i]
+		out.append({"name": "Route %02d" % i, "kind": "route", "position": sample["position"]})
+	return out
+
+
+static func map_center(scale: float = DEFAULT_SCALE) -> Vector3:
+	var b := bounds(scale)
+	var c := b.get_center()
+	return Vector3(c.x, 0.0, c.y)
+
+
+static func map_extent(scale: float = DEFAULT_SCALE) -> Vector2:
+	return bounds(scale).size
+
+
+static func wetland_points(
+	count: int, scale: float = DEFAULT_SCALE, seed: int = 60611
+) -> Array[Vector2]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	var points: Array[Vector2] = []

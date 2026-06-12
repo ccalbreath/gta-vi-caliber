@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://scripts/world/florida_backdrop.gd" id="4_florida"]
 [ext_resource type="Script" path="res://scripts/world/weather_controller.gd" id="5_weather"]
 [ext_resource type="Script" path="res://scripts/world/world_quality.gd" id="6_quality"]
+[ext_resource type="PackedScene" path="res://scenes/ui/game_hud.tscn" id="7_gamehud"]
 [ext_resource type="Script" path="res://scripts/ui/streaming_hud.gd" id="9_shud"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
@@ -86,6 +87,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 
 [node name="DebugHud" parent="." instance=ExtResource("2_hud")]
+
+[node name="GameHud" parent="." instance=ExtResource("7_gamehud")]
 
 [node name="StreamingHud" type="CanvasLayer" parent="."]
 script = ExtResource("9_shud")

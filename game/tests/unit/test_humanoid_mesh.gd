@@ -88,6 +88,15 @@ func test_foot_is_longest_along_z() -> bool:
 	return box.size.z > box.size.x and box.size.z > box.size.y
 
 
+func test_rounded_bar_matches_strap_dimensions() -> bool:
+	var box := _aabb(HumanoidMesh.rounded_bar(0.78, 0.03, 0.015))
+	return (
+		absf(box.size.y - 0.78) < 0.01
+		and absf(box.size.x - 0.06) < 0.01
+		and absf(box.size.z - 0.03) < 0.01
+	)
+
+
 func test_neck_height_matches() -> bool:
 	var box := _aabb(HumanoidMesh.neck(0.16, 0.052))
 	return absf(box.size.y - 0.16) < 0.01
@@ -104,6 +113,7 @@ func test_all_parts_build_nonempty() -> bool:
 		HumanoidMesh.leg(),
 		HumanoidMesh.hand(),
 		HumanoidMesh.foot(),
+		HumanoidMesh.rounded_bar(0.2, 0.02, 0.01),
 	]
 	for geo in parts:
 		if geo.is_empty() or (geo["vertices"] as PackedVector3Array).is_empty():

@@ -92,7 +92,13 @@ func _check_animated_attachment() -> bool:
 		return true
 	var before_y := _imported.global_position.y
 	rig.animate(Vector3(5.0, 0.0, 0.0), true, 0.0, false, 0.1)
-	if not _check_after_animated_motion(before_y, body, pelvis, torso, shoulder_l, head):
+	if not _check_after_animated_motion(before_y, body, rig, pelvis, torso, shoulder_l, head):
+		return true
+	if not _check_idle_life(hips, head, rig):
+		return true
+	if not _check_turn_lean(hips, rig):
+		return true
+	if not _check_landing_compression(hips, rig):
 		return true
 	print("player_mara_runtime: OK")
 	quit(0)
@@ -100,20 +106,85 @@ func _check_animated_attachment() -> bool:
 
 
 func _check_after_animated_motion(
-	before_y: float, body: Node, pelvis: Node3D, torso: Node3D, shoulder_l: Node3D, head: Node3D
+	before_y: float,
+	body: Node,
+	rig: CharacterAnimator,
+	pelvis: Node3D,
+	torso: Node3D,
+	shoulder_l: Node3D,
+	head: Node3D
 ) -> bool:
 	if is_equal_approx(_imported.global_position.y, before_y):
 		_fail("imported Mara mesh did not inherit animated hip motion")
 		return false
+	if not _check_rigged_mara_binding(body, rig):
+		return false
 	if not _check_secondary_motion(pelvis, torso, shoulder_l, head):
 		return false
-	if not _check_mara_soft_motion(body):
-		return false
-	if not _check_mara_rounded_gear():
+	if not _check_mara_gear_motion_and_shape(body):
 		return false
 	if not _check_face_life(body):
 		return false
 	return _check_mara_material_quality()
+
+
+func _check_rigged_mara_binding(body: Node, rig: CharacterAnimator) -> bool:
+	var skeleton := _find_skeleton(_imported)
+	var jacket := _find_mesh(_imported, "mara_rigged_jacket")
+	var head := _find_mesh(_imported, "mara_rigged_head")
+	var boot := _find_mesh(_imported, "mara_rigged_boot_l")
+	var replacement_arm := (
+		_player.get_node_or_null("Rig/Hips/ShoulderL/mara_three_replacement_upper_arm_l")
+		as MeshInstance3D
+	)
+	var replacement_cap := (
+		_player.get_node_or_null("Rig/Hips/ShoulderL/mara_three_replacement_shoulder_cap_l")
+		as MeshInstance3D
+	)
+	var original_arm := _find_mesh(_imported, "mara_rigged_upper_arm_l")
+	if skeleton == null or jacket == null or head == null or boot == null:
+		_fail("Three.js rigged Mara skeleton or skinned meshes are missing")
+		return false
+	if replacement_arm == null or replacement_cap == null or original_arm == null:
+		_fail("Three.js rigged Mara replacement arms are missing")
+		return false
+	if not original_arm.get_meta("mara_rigged_arm_skin_hidden", false):
+		_fail("malformed imported Mara arm skin was not hidden")
+		return false
+	var shoulder_index := skeleton.find_bone("MaraShoulderL")
+	var head_index := skeleton.find_bone("MaraHead")
+	if shoulder_index < 0 or head_index < 0:
+		_fail("Three.js rigged Mara skeleton is missing animated bones")
+		return false
+	var shoulder_before := skeleton.get_bone_pose_rotation(shoulder_index)
+	var head_before := skeleton.get_bone_pose_rotation(head_index)
+	var replacement_before := replacement_arm.global_transform
+	rig.animate(Vector3(7.0, 0.0, 0.0), true, 0.0, false, 0.12)
+	body.call("_process", 0.016)
+	var arm_moved := not skeleton.get_bone_pose_rotation(shoulder_index).is_equal_approx(
+		shoulder_before
+	)
+	var head_moved := not skeleton.get_bone_pose_rotation(head_index).is_equal_approx(head_before)
+	var replacement_moved := not replacement_arm.global_transform.is_equal_approx(
+		replacement_before
+	)
+	if arm_moved and head_moved and replacement_moved:
+		return true
+	_fail("Three.js rigged Mara skeleton or replacement arms did not inherit animation")
+	return false
+
+
+func _check_idle_life(hips: Node3D, head: Node3D, rig: CharacterAnimator) -> bool:
+	rig.animate(Vector3.ZERO, true, 0.0, false, 0.25)
+	var first_hips := hips.position
+	var first_head_pitch := head.rotation.x
+	rig.animate(Vector3.ZERO, true, 0.0, false, 0.25)
+	var hips_moved := hips.position.distance_to(first_hips) > 0.0001
+	var head_moved := absf(head.rotation.x - first_head_pitch) > 0.0001
+	if hips_moved and head_moved:
+		return true
+	_fail("playable Mara idle pose did not breathe or shift weight")
+	return false
 
 
 func _check_secondary_motion(
@@ -123,6 +194,24 @@ func _check_secondary_motion(
 		_fail("playable Mara head did not receive secondary motion")
 		return false
 	return _check_stride_twist(pelvis, torso, shoulder_l, head)
+
+
+func _check_turn_lean(hips: Node3D, rig: CharacterAnimator) -> bool:
+	rig.animate(Vector3(-5.0, 0.0, 0.0), true, 0.0, false, 0.1)
+	if absf(hips.rotation.z) > 0.001:
+		return true
+	_fail("playable Mara did not lean into turn")
+	return false
+
+
+func _check_landing_compression(hips: Node3D, rig: CharacterAnimator) -> bool:
+	var before_y := hips.position.y
+	rig.animate(Vector3.ZERO, false, -10.0, false, 0.05)
+	rig.animate(Vector3.ZERO, true, 0.0, false, 0.016)
+	if hips.position.y < before_y - 0.001:
+		return true
+	_fail("playable Mara did not compress on landing")
+	return false
 
 
 func _check_stride_twist(pelvis: Node3D, torso: Node3D, shoulder_l: Node3D, head: Node3D) -> bool:
@@ -136,6 +225,14 @@ func _check_stride_twist(pelvis: Node3D, torso: Node3D, shoulder_l: Node3D, head
 		return true
 	_fail("playable Mara stride did not apply upper-body twist")
 	return false
+
+
+func _check_mara_gear_motion_and_shape(body: Node) -> bool:
+	return (
+		_check_mara_soft_motion(body)
+		and _check_mara_rounded_gear()
+		and _check_mara_foot_articulation()
+	)
 
 
 func _check_mara_soft_motion(body: Node) -> bool:
@@ -163,14 +260,35 @@ func _check_mara_soft_motion(body: Node) -> bool:
 
 
 func _check_mara_rounded_gear() -> bool:
-	var strap := _player.get_node_or_null("Rig/Hips/MaraMessengerStrap") as MeshInstance3D
-	var rear_strap := _player.get_node_or_null("Rig/Hips/MaraMessengerStrapBack") as MeshInstance3D
-	var cord := _player.get_node_or_null("Rig/Hips/MaraPendantCord") as MeshInstance3D
-	if strap == null or rear_strap == null or cord == null:
-		_fail("playable Mara rounded gear nodes are missing")
+	var rounded_paths: PackedStringArray = [
+		"Rig/Hips/MaraMessengerStrap",
+		"Rig/Hips/MaraMessengerStrapBack",
+		"Rig/Hips/MaraPendantCord",
+		"Rig/Hips/HipL/MaraThighUtilityBand",
+		"Rig/Hips/ShoulderL/Elbow/MaraWristWrap",
+	]
+	for path in rounded_paths:
+		var mesh := _player.get_node_or_null(path) as MeshInstance3D
+		if mesh == null:
+			_fail("playable Mara rounded gear node is missing: %s" % path)
+			return false
+		if mesh.mesh is BoxMesh:
+			_fail("playable Mara rounded gear still uses a box mesh: %s" % path)
+			return false
+	return true
+
+
+func _check_mara_foot_articulation() -> bool:
+	var ankle_l := _player.get_node_or_null("Rig/Hips/HipL/Knee/Ankle") as Node3D
+	var ankle_r := _player.get_node_or_null("Rig/Hips/HipR/Knee/Ankle") as Node3D
+	if ankle_l == null or ankle_r == null:
+		_fail("playable Mara ankle nodes are missing")
 		return false
-	if strap.mesh is BoxMesh or rear_strap.mesh is BoxMesh or cord.mesh is BoxMesh:
-		_fail("playable Mara key straps still use blocky box meshes")
+	if is_zero_approx(absf(ankle_l.rotation.y) + absf(ankle_l.rotation.z)):
+		_fail("playable Mara left foot did not receive toe-out/bank")
+		return false
+	if signf(ankle_l.rotation.y) == signf(ankle_r.rotation.y):
+		_fail("playable Mara feet do not mirror toe-out")
 		return false
 	return true
 
@@ -180,6 +298,9 @@ func _check_front_view() -> bool:
 	_imported = _player.get_node_or_null("Rig/Hips/MaraImportedMesh") as Node3D
 	if _imported == null:
 		_fail("MaraImportedMesh was not attached under Rig/Hips")
+		return false
+	if _imported.get_node_or_null("MaraRiggedProxy") == null:
+		_fail("MaraImportedMesh is not using the Three.js-authored rigged asset")
 		return false
 	if not _has_visible_mesh(_imported):
 		_fail("front camera did not show imported Mara mesh")
@@ -255,6 +376,26 @@ func _has_visible_mesh(node: Node) -> bool:
 	return false
 
 
+func _find_skeleton(node: Node) -> Skeleton3D:
+	if node is Skeleton3D:
+		return node
+	for child in node.get_children():
+		var found := _find_skeleton(child)
+		if found != null:
+			return found
+	return null
+
+
+func _find_mesh(node: Node, mesh_name: String) -> MeshInstance3D:
+	if node is MeshInstance3D and node.name == mesh_name:
+		return node
+	for child in node.get_children():
+		var found := _find_mesh(child, mesh_name)
+		if found != null:
+			return found
+	return null
+
+
 func _imported_casts_shadows() -> bool:
 	return _has_shadow_casting_mesh(_imported)
 
@@ -323,6 +464,55 @@ func _check_mara_material_quality() -> bool:
 		and _check_jacket_material(jacket_mat)
 		and _check_leather_material(strap_mat)
 		and _check_hair_material(hair_mat)
+		and _check_imported_mara_material_quality()
+	)
+
+
+func _check_imported_mara_material_quality() -> bool:
+	var head := _find_mesh(_imported, "mara_rigged_head")
+	var jacket := _find_mesh(_imported, "mara_rigged_jacket")
+	var strap := _find_mesh(_imported, "mara_rigged_cross_body_strap")
+	var pendant := _find_mesh(_imported, "mara_rigged_pendant")
+	var belt := _find_mesh(_imported, "mara_rigged_belt")
+	var eye := _find_mesh(_imported, "mara_rigged_eye_l")
+	var mouth := _find_mesh(_imported, "mara_rigged_mouth")
+	if (
+		head == null
+		or jacket == null
+		or strap == null
+		or pendant == null
+		or belt == null
+		or eye == null
+		or mouth == null
+	):
+		_fail("imported rigged Three.js Mara material-quality nodes are missing")
+		return false
+	var skin := head.material_override as StandardMaterial3D
+	var jacket_mat := jacket.material_override as StandardMaterial3D
+	var strap_mat := strap.material_override as StandardMaterial3D
+	var pendant_mat := pendant.material_override as StandardMaterial3D
+	var belt_mat := belt.material_override as StandardMaterial3D
+	var eye_mat := eye.material_override as StandardMaterial3D
+	var mouth_mat := mouth.material_override as StandardMaterial3D
+	if (
+		skin == null
+		or jacket_mat == null
+		or strap_mat == null
+		or pendant_mat == null
+		or belt_mat == null
+		or eye_mat == null
+		or mouth_mat == null
+	):
+		_fail("imported Three.js Mara material overrides are missing")
+		return false
+	return (
+		_check_skin_material(skin)
+		and _check_jacket_material(jacket_mat)
+		and _check_leather_material(strap_mat)
+		and _check_leather_material(belt_mat)
+		and _check_eye_material(eye_mat)
+		and String(mouth_mat.get_meta("mara_imported_surface_profile", "")) == "mouth"
+		and pendant_mat.metallic > 0.5
 	)
 
 
@@ -351,6 +541,13 @@ func _check_hair_material(mat: StandardMaterial3D) -> bool:
 	if mat.rim_enabled and String(mat.get_meta("mara_surface_profile", "")) == "hair":
 		return true
 	_fail("playable Mara hair material is missing silhouette shading")
+	return false
+
+
+func _check_eye_material(mat: StandardMaterial3D) -> bool:
+	if mat.clearcoat_enabled and mat.clearcoat > 0.5:
+		return true
+	_fail("imported rigged Mara eyes are missing glossy eye shading")
 	return false
 
 

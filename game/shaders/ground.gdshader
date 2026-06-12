@@ -53,8 +53,16 @@ void fragment() {
 	vec3 col = mix(u_dirt_color, u_grass_color, blend);
 	col *= 0.85 + 0.3 * micro; // micro brightness break-up
 	ALBEDO = col;
-	ROUGHNESS = mix(0.95, 0.78, blend); // grass a touch glossier than dry dirt
-	SPECULAR = 0.4;
+
+	// Specular anti-aliasing: the per-pixel micro-normal below aliases in the
+	// distance and the old sharp specular (0.4) made it sparkle/"flash" as the
+	// camera moved. Keep grass matte (high roughness, low specular) and fade the
+	// micro grain + push roughness to 1.0 with distance so far ground stays calm.
+	float dist = length(v_wpos - CAMERA_POSITION_WORLD);
+	float aa = clamp((dist - 40.0) / 140.0, 0.0, 1.0);
+
+	ROUGHNESS = mix(mix(0.97, 0.86, blend), 1.0, aa * 0.6);
+	SPECULAR = 0.2 * (1.0 - aa * 0.7);
 
 	// Height-derived normal from the micro field so grazing light catches grain.
 	float e = 0.5;
@@ -62,6 +70,7 @@ void fragment() {
 	float h_r = fbm((w + vec2(e, 0.0)) * u_micro_scale);
 	float h_d = fbm((w - vec2(0.0, e)) * u_micro_scale);
 	float h_u = fbm((w + vec2(0.0, e)) * u_micro_scale);
-	vec3 n = normalize(vec3((h_l - h_r) * u_normal_strength, 1.0, (h_d - h_u) * u_normal_strength));
+	float ns = u_normal_strength * (1.0 - aa);
+	vec3 n = normalize(vec3((h_l - h_r) * ns, 1.0, (h_d - h_u) * ns));
 	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
 }

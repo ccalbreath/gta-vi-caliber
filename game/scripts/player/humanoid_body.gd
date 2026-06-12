@@ -44,9 +44,13 @@ const KNEE_AMPLITUDE: float = 0.95
 const ELBOW_AMPLITUDE: float = 0.5
 ## Ankle roll (radians): toe lifts at heel-strike, points at toe-off. Subtle.
 const ANKLE_AMPLITUDE: float = 0.32
+const FOOT_TOE_OUT: float = 0.07
+const FOOT_TOE_SWING: float = 0.045
+const FOOT_BANK_AMPLITUDE: float = 0.055
 const BLINK_INTERVAL: float = 3.8
 const BLINK_DURATION: float = 0.16
 const MARA_SOFT_MOTION_RATE: float = 9.0
+const MARA_PROXY_BINDER := preload("res://scripts/player/imported_mara_proxy_binder.gd")
 
 ## Skin tone; tweak per-NPC later for crowd variety.
 @export var skin_color: Color = Color(0.86, 0.66, 0.54)
@@ -55,21 +59,11 @@ const MARA_SOFT_MOTION_RATE: float = 9.0
 @export var shoe_color: Color = Color(0.08, 0.08, 0.1)
 @export var hair_color: Color = Color(0.16, 0.11, 0.07)
 @export var eye_color: Color = Color(0.13, 0.09, 0.06)
-## Applies the original Mara Vale hero treatment to the playable rig: charcoal
-## cropped jacket, olive cargos, gloves, boots, strap, pendant, eyebrow scar and
-## silver-streaked asymmetrical hair. Kept procedural so the player remains
-## lightweight until a real authored GLB arrives.
 @export var use_mara_hero_profile: bool = false
-## Optional real imported Mara mesh. Current generated GLBs are static meshes
-## (no skin/animation), so this renders as a high-detail shell while the
-## procedural rig remains the animated playable body.
 @export var imported_mara_scene: PackedScene
 @export var imported_mara_offset: Vector3 = Vector3(0.0, 0.075, 0.0)
 @export var imported_mara_scale: float = 1.0
 @export var hide_procedural_when_imported: bool = false
-## Hybrid quality mode: the generated GLB has a strong front projection but an
-## unfinished rear shell. Show it for front/inspection views; use the clean
-## animated procedural Mara rig for normal rear third-person gameplay.
 @export var switch_imported_mara_by_camera: bool = false
 ## Show the imported front-projection GLB only when the camera is clearly in
 ## front of Mara; hide it only once the camera is clearly behind. The gap between
@@ -135,8 +129,8 @@ func _ready() -> void:
 	# swing amplitudes so normalisation tracks the animator's tuning.
 	var leg_amp: float = _rig_float(rig, "leg_amplitude", 0.7)
 	var arm_amp: float = _rig_float(rig, "arm_amplitude", 0.5)
-	_articulate_leg(rig, "Hips/HipL", "LegL", "FootL", leg_amp)
-	_articulate_leg(rig, "Hips/HipR", "LegR", "FootR", leg_amp)
+	_articulate_leg(rig, "Hips/HipL", "LegL", "FootL", leg_amp, 1.0)
+	_articulate_leg(rig, "Hips/HipR", "LegR", "FootR", leg_amp, -1.0)
 	_articulate_arm(rig, "Hips/ShoulderL", "ArmL", "HandL", arm_amp)
 	_articulate_arm(rig, "Hips/ShoulderR", "ArmR", "HandR", arm_amp)
 	_add_head_details(rig)
@@ -171,10 +165,17 @@ func _process(delta: float) -> void:
 		leg["prev"] = hip_angle
 		var cos_phase := sqrt(maxf(0.0, 1.0 - swing * swing)) * direction
 		leg["ankle"].rotation.x = -cos_phase * ANKLE_AMPLITUDE
+		leg["ankle"].rotation.y = Locomotion.foot_toe_out(
+			float(leg["side"]), swing, FOOT_TOE_OUT, FOOT_TOE_SWING
+		)
+		leg["ankle"].rotation.z = Locomotion.foot_bank(
+			float(leg["side"]), swing, FOOT_BANK_AMPLITUDE
+		)
 	for arm in _arms:
 		var shoulder: Node3D = arm["shoulder"]
 		var swing := clampf(shoulder.rotation.x / maxf(arm["amp"], 0.01), -1.0, 1.0)
 		arm["elbow"].rotation.x = Locomotion.elbow_flex_from_swing(swing, ELBOW_AMPLITUDE)
+	MARA_PROXY_BINDER.drive_rigged(_imported_visual, _rig)
 
 
 func _apply(rig: Node, path: String, geo: Dictionary, mat: Material) -> void:
@@ -465,6 +466,7 @@ func _add_imported_mara_mesh(rig: Node) -> void:
 	_imported_visual = visual
 	_prepare_imported_visual(visual)
 	hips.add_child.call_deferred(visual)
+	MARA_PROXY_BINDER.bind.call_deferred(visual, rig)
 	if hide_procedural_when_imported:
 		_set_procedural_visible.call_deferred(rig, false)
 
@@ -592,6 +594,7 @@ func _prepare_imported_visual(node: Node) -> void:
 		var mi := node as MeshInstance3D
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		mi.gi_mode = GeometryInstance3D.GI_MODE_DYNAMIC
+		MARA_PROXY_BINDER.finish_material(mi)
 	for child in node.get_children():
 		_prepare_imported_visual(child)
 
@@ -601,6 +604,7 @@ func _set_imported_visual_active(active: bool) -> void:
 		return
 	_imported_visual.visible = active
 	_set_imported_meshes_active(_imported_visual, active)
+	MARA_PROXY_BINDER.set_bound_parts_active(_rig, active)
 
 
 func _set_imported_meshes_active(node: Node, active: bool) -> void:
@@ -627,7 +631,10 @@ func _set_procedural_visible(rig: Node, visible: bool) -> void:
 func _set_meshes_visible(node: Node, visible: bool) -> void:
 	if node.name == "MaraImportedMesh":
 		return
-	if node.get_meta("humanoid_body_replaced", false):
+	if (
+		node.get_meta("humanoid_body_replaced", false)
+		or node.get_meta("mara_imported_proxy_bound", false)
+	):
 		return
 	if node is MeshInstance3D:
 		(node as MeshInstance3D).visible = visible
@@ -712,8 +719,9 @@ func _add_mara_full_body_gear(rig: Node, hips: Node3D) -> void:
 		var hip := rig.get_node_or_null("Hips/Hip%s" % ("L" if side > 0.0 else "R")) as Node3D
 		if hip == null:
 			continue
-		var thigh_band := _box("MaraThighUtilityBand", Vector3(0.15, 0.032, 0.13), _strap)
+		var thigh_band := _rounded_bar("MaraThighUtilityBand", 0.15, 0.016, 0.065, _strap)
 		thigh_band.position = Vector3(0.0, -0.17, -0.005)
+		thigh_band.rotation.z = PI * 0.5
 		hip.add_child(thigh_band)
 
 		var knee_pad := _box("MaraKneePad", Vector3(0.108, 0.068, 0.02), _jacket)
@@ -733,8 +741,9 @@ func _add_mara_full_body_gear(rig: Node, hips: Node3D) -> void:
 		)
 		if elbow == null:
 			continue
-		var wrist_wrap := _box("MaraWristWrap", Vector3(0.094, 0.032, 0.078), _strap)
+		var wrist_wrap := _rounded_bar("MaraWristWrap", 0.094, 0.016, 0.039, _strap)
 		wrist_wrap.position = Vector3(0.0, -0.255, 0.0)
+		wrist_wrap.rotation.z = PI * 0.5
 		elbow.add_child(wrist_wrap)
 		var knuckles := _box("MaraGloveKnuckles", Vector3(0.08, 0.014, 0.018), _metal)
 		knuckles.position = Vector3(0.0, -0.325, -0.042)
@@ -822,7 +831,7 @@ func _sphere(radius: float, mat: Material) -> MeshInstance3D:
 ## hidden, so anything reading their transform (e.g. footstep position) still
 ## works. Pivots match the original rig: knee at y=-0.41, ankle at y=-0.82.
 func _articulate_leg(
-	rig: Node, hip_path: String, leg_child: String, foot_child: String, amp: float
+	rig: Node, hip_path: String, leg_child: String, foot_child: String, amp: float, side: float
 ) -> void:
 	var hip: Node3D = rig.get_node_or_null(hip_path) as Node3D
 	if hip == null:
@@ -844,7 +853,7 @@ func _articulate_leg(
 	ankle.position = Vector3(0, -0.41, 0)
 	knee.add_child(ankle)
 	ankle.add_child(_seg(HumanoidMesh.foot(), _shoe, Vector3(0, 0, 0.06)))
-	_legs.append({"hip": hip, "knee": knee, "ankle": ankle, "amp": amp, "prev": 0.0})
+	_legs.append({"hip": hip, "knee": knee, "ankle": ankle, "amp": amp, "prev": 0.0, "side": side})
 
 
 ## Replace a single-segment arm with upper arm + elbow joint + forearm + hand.
@@ -908,17 +917,8 @@ func _box(node_name: String, size: Vector3, mat: Material) -> MeshInstance3D:
 func _rounded_bar(
 	node_name: String, length: float, half_width: float, half_depth: float, mat: Material
 ) -> MeshInstance3D:
-	var mi := MeshInstance3D.new()
-	var rings: Array = [
-		Vector3(length * 0.5, half_width * 0.82, half_depth * 0.82),
-		Vector3(length * 0.42, half_width, half_depth),
-		Vector3(0.0, half_width, half_depth),
-		Vector3(-length * 0.42, half_width, half_depth),
-		Vector3(-length * 0.5, half_width * 0.82, half_depth * 0.82),
-	]
+	var mi := _seg(HumanoidMesh.rounded_bar(length, half_width, half_depth), mat, Vector3.ZERO)
 	mi.name = node_name
-	mi.mesh = HumanoidMesh.to_mesh(HumanoidMesh.lofted(rings, 12))
-	mi.material_override = mat
 	return mi
 
 

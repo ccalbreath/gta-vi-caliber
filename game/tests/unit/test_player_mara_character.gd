@@ -3,7 +3,7 @@ extends RefCounted
 ## the Mara profile enabled and a real imported character mesh attached.
 
 const PLAYER_SCENE := "res://scenes/player/player.tscn"
-const MARA_MESH := "res://assets/characters/char_textured.glb"
+const MARA_MESH := "res://assets/characters/mara_three_rigged_proxy.glb"
 const LEATHER_TEX := "res://assets/textures/leather.png"
 
 
@@ -39,7 +39,7 @@ func test_player_mara_mesh_uses_hips_relative_offset() -> bool:
 	if body == null:
 		player.free()
 		return false
-	var ok: bool = body.get("imported_mara_offset") == Vector3(0.0, 0.075, 0.0)
+	var ok: bool = body.get("imported_mara_offset") == Vector3(0.0, -0.82, 0.0)
 	player.free()
 	return ok
 

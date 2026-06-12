@@ -58,15 +58,27 @@ void fragment() {
 	col = mix(col, dry_sand_color, dry * 0.42);
 	col *= 0.82 + detail * 0.34;
 
+	// Specular anti-aliasing: the procedural normal grain below is high-frequency,
+	// so in the distance it aliases under the pixel grid and the sharp specular
+	// lobe makes the ground sparkle/"flash" as the camera and sun move. Fade the
+	// normal perturbation flat and push roughness to fully matte with distance so
+	// far ground is calm; keep the grain only within ~40 m of the camera.
+	float dist = length(w_pos - CAMERA_POSITION_WORLD);
+	float aa = clamp((dist - 40.0) / 140.0, 0.0, 1.0);
+
 	float e = 2.0;
 	float h_l = fbm((p - vec2(e, 0.0)) * detail_scale);
 	float h_r = fbm((p + vec2(e, 0.0)) * detail_scale);
 	float h_d = fbm((p - vec2(0.0, e)) * detail_scale);
 	float h_u = fbm((p + vec2(0.0, e)) * detail_scale);
-	vec3 n = normalize(vec3((h_l - h_r) * normal_strength, 1.0, (h_d - h_u) * normal_strength));
+	float ns = normal_strength * (1.0 - aa);
+	vec3 n = normalize(vec3((h_l - h_r) * ns, 1.0, (h_d - h_u) * ns));
 
 	ALBEDO = col;
 	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
-	ROUGHNESS = mix(0.96, 0.72, marsh * 0.45);
-	SPECULAR = 0.35;
+	// Matte grass/marsh: high roughness floor + low specular so wet sheen never
+	// blows out, trending to 1.0 roughness in the distance.
+	float rough = mix(0.96, 0.86, marsh * 0.45);
+	ROUGHNESS = mix(rough, 1.0, aa * 0.6);
+	SPECULAR = 0.2 * (1.0 - aa * 0.7);
 }

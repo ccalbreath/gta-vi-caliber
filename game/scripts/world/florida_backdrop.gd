@@ -8,6 +8,18 @@ extends Node3D
 
 const WATER_VOLUME_SCRIPT := preload("res://scripts/world/water_volume.gd")
 const OCEAN_SCRIPT := preload("res://scripts/world/ocean.gd")
+const THREE_FLORIDA_LANDMARK_PACK: PackedScene = preload(
+	"res://assets/buildings/florida_landmark_pack.glb"
+)
+const THREE_FLORIDA_CITY_BLOCK_PACK: PackedScene = preload(
+	"res://assets/buildings/florida_city_block_pack.glb"
+)
+const THREE_FLORIDA_NEON_DETAIL_PACK: PackedScene = preload(
+	"res://assets/buildings/florida_neon_detail_pack.glb"
+)
+const THREE_FLORIDA_REGIONAL_PACK: PackedScene = preload(
+	"res://assets/buildings/florida_regional_pack.glb"
+)
 
 @export var map_scale: float = 4.6
 @export var water_size_m: float = 12000.0
@@ -31,22 +43,34 @@ var _resort_aqua_mat: StandardMaterial3D
 var _resort_coral_mat: StandardMaterial3D
 var _warning_light_mat: StandardMaterial3D
 var _steel_mat: StandardMaterial3D
+var _sign_face_mat: StandardMaterial3D
+var _sign_back_mat: StandardMaterial3D
+var _amber_light_mat: StandardMaterial3D
 var _cypress_mat: StandardMaterial3D
 var _leaf_mat: StandardMaterial3D
+
+var _landmarks: FloridaLandmarks
 
 
 func _ready() -> void:
 	_make_materials()
+	_landmarks = FloridaLandmarks.new(self)
 	_build_water()
 	_build_land()
 	_build_key_islands()
 	_build_coastline()
 	_build_routes()
 	_build_bridges()
+	_build_route_details()
 	_build_marinas()
 	_build_beach_resorts()
 	_build_landmarks()
+	_build_threejs_models()
+	_build_threejs_city_blocks()
+	_build_threejs_neon_details()
+	_build_threejs_regional_destinations()
 	_build_city_accents()
+	_build_map_markers()
 	_build_wetlands()
 	_build_swim_volume()
 
@@ -109,6 +133,21 @@ func _make_materials() -> void:
 	_steel_mat.albedo_color = Color(0.36, 0.39, 0.42)
 	_steel_mat.metallic = 0.55
 	_steel_mat.roughness = 0.36
+
+	_sign_face_mat = StandardMaterial3D.new()
+	_sign_face_mat.albedo_color = Color(0.05, 0.34, 0.28)
+	_sign_face_mat.roughness = 0.5
+
+	_sign_back_mat = StandardMaterial3D.new()
+	_sign_back_mat.albedo_color = Color(0.08, 0.10, 0.11)
+	_sign_back_mat.metallic = 0.25
+	_sign_back_mat.roughness = 0.44
+
+	_amber_light_mat = StandardMaterial3D.new()
+	_amber_light_mat.albedo_color = Color(1.0, 0.68, 0.28)
+	_amber_light_mat.emission_enabled = true
+	_amber_light_mat.emission = Color(1.0, 0.54, 0.16)
+	_amber_light_mat.emission_energy_multiplier = 1.8
 
 	_cypress_mat = StandardMaterial3D.new()
 	_cypress_mat.albedo_color = Color(0.22, 0.16, 0.11)
@@ -221,7 +260,9 @@ func _build_key_islands() -> void:
 		)
 
 
-func _ellipse_outline(centre: Vector2, size: Vector2, rotation: float, steps: int) -> PackedVector2Array:
+func _ellipse_outline(
+	centre: Vector2, size: Vector2, rotation: float, steps: int
+) -> PackedVector2Array:
 	var points := PackedVector2Array()
 	var basis := Transform2D(rotation, centre)
 	for i in range(steps):
@@ -250,7 +291,11 @@ func _build_routes() -> void:
 		uvs.append_array(geo["uvs"])
 		for i in geo["indices"] as PackedInt32Array:
 			idx.append(offset + i)
-	_add_flat_mesh("StateCauseways", {"vertices": verts, "normals": norms, "indices": idx, "uvs": uvs}, _road_mat)
+	_add_flat_mesh(
+		"StateCauseways",
+		{"vertices": verts, "normals": norms, "indices": idx, "uvs": uvs},
+		_road_mat
+	)
 
 
 func _build_bridges() -> void:
@@ -259,6 +304,142 @@ func _build_bridges() -> void:
 	add_child(root)
 	for path in FloridaMapModel.bridge_paths(map_scale):
 		_add_bridge_span(root, path[0], path[1])
+
+
+func _build_route_details() -> void:
+	var root := Node3D.new()
+	root.name = "OriginalRouteDetails"
+	add_child(root)
+	var samples := FloridaMapModel.route_samples(map_scale, 520.0)
+	for i in range(samples.size()):
+		var sample := samples[i]
+		var pos: Vector2 = sample["position"]
+		var dir: Vector2 = sample["direction"]
+		if i % 4 == 0:
+			_add_route_billboard(root, pos, dir, i)
+		elif i % 4 == 1:
+			_add_route_sign(root, pos, dir, i)
+		else:
+			_add_light_mast(root, pos, dir, i)
+
+
+func _route_yaw(dir: Vector2) -> float:
+	return atan2(dir.x, dir.y)
+
+
+func _add_route_billboard(parent: Node, xz: Vector2, dir: Vector2, index: int) -> void:
+	var board := Node3D.new()
+	board.name = "RouteBillboard"
+	board.position = Vector3(xz.x, land_y + 0.2, xz.y)
+	board.rotation.y = _route_yaw(dir) + PI * 0.5
+	board.translate_object_local(Vector3(36.0, 0.0, 0.0))
+	parent.add_child(board, true)
+
+	for x in [-5.5, 5.5]:
+		var pole := MeshInstance3D.new()
+		var pole_mesh := CylinderMesh.new()
+		pole_mesh.top_radius = 0.32
+		pole_mesh.bottom_radius = 0.42
+		pole_mesh.height = 14.0
+		pole.mesh = pole_mesh
+		pole.material_override = _steel_mat
+		pole.position = Vector3(x, 7.0, 0.0)
+		board.add_child(pole)
+
+	var face := MeshInstance3D.new()
+	var face_mesh := BoxMesh.new()
+	face_mesh.size = Vector3(18.0, 7.0, 0.55)
+	face.mesh = face_mesh
+	face.material_override = _resort_coral_mat if index % 8 == 0 else _resort_aqua_mat
+	face.position = Vector3(0.0, 15.5, 0.0)
+	board.add_child(face)
+
+	var stripe := MeshInstance3D.new()
+	var stripe_mesh := BoxMesh.new()
+	stripe_mesh.size = Vector3(15.5, 0.55, 0.62)
+	stripe.mesh = stripe_mesh
+	stripe.material_override = _neon_mat
+	stripe.position = Vector3(0.0, 17.2, -0.35)
+	board.add_child(stripe)
+
+
+func _add_route_sign(parent: Node, xz: Vector2, dir: Vector2, index: int) -> void:
+	var sign := Node3D.new()
+	sign.name = "RouteSign"
+	sign.position = Vector3(xz.x, land_y + 0.2, xz.y)
+	sign.rotation.y = _route_yaw(dir) + PI * 0.5
+	sign.translate_object_local(Vector3(-24.0, 0.0, 0.0))
+	parent.add_child(sign, true)
+
+	var pole := MeshInstance3D.new()
+	var pole_mesh := CylinderMesh.new()
+	pole_mesh.top_radius = 0.15
+	pole_mesh.bottom_radius = 0.18
+	pole_mesh.height = 5.5
+	pole.mesh = pole_mesh
+	pole.material_override = _steel_mat
+	pole.position = Vector3(0.0, 2.75, 0.0)
+	sign.add_child(pole)
+
+	var panel := MeshInstance3D.new()
+	var panel_mesh := BoxMesh.new()
+	panel_mesh.size = Vector3(5.8, 2.8, 0.3)
+	panel.mesh = panel_mesh
+	panel.material_override = _sign_face_mat
+	panel.position = Vector3(0.0, 6.0, 0.0)
+	sign.add_child(panel)
+
+	var route_bar := MeshInstance3D.new()
+	var bar_mesh := BoxMesh.new()
+	bar_mesh.size = Vector3(4.6, 0.28, 0.34)
+	route_bar.mesh = bar_mesh
+	route_bar.material_override = _resort_white_mat
+	route_bar.position = Vector3(0.0, 6.55, -0.2)
+	sign.add_child(route_bar)
+
+	if index % 3 == 0:
+		var cap := MeshInstance3D.new()
+		var cap_mesh := BoxMesh.new()
+		cap_mesh.size = Vector3(5.8, 0.42, 0.34)
+		cap.mesh = cap_mesh
+		cap.material_override = _amber_light_mat
+		cap.position = Vector3(0.0, 7.6, -0.2)
+		sign.add_child(cap)
+
+
+func _add_light_mast(parent: Node, xz: Vector2, dir: Vector2, index: int) -> void:
+	var mast := Node3D.new()
+	mast.name = "RouteLightMast"
+	mast.position = Vector3(xz.x, land_y + 0.2, xz.y)
+	mast.rotation.y = _route_yaw(dir) + PI * 0.5
+	mast.translate_object_local(Vector3(20.0 if index % 2 == 0 else -20.0, 0.0, 0.0))
+	parent.add_child(mast, true)
+
+	var pole := MeshInstance3D.new()
+	var pole_mesh := CylinderMesh.new()
+	pole_mesh.top_radius = 0.22
+	pole_mesh.bottom_radius = 0.32
+	pole_mesh.height = 12.0
+	pole.mesh = pole_mesh
+	pole.material_override = _steel_mat
+	pole.position = Vector3(0.0, 6.0, 0.0)
+	mast.add_child(pole)
+
+	var arm := MeshInstance3D.new()
+	var arm_mesh := BoxMesh.new()
+	arm_mesh.size = Vector3(7.5, 0.34, 0.34)
+	arm.mesh = arm_mesh
+	arm.material_override = _steel_mat
+	arm.position = Vector3(3.8, 12.0, 0.0)
+	mast.add_child(arm)
+
+	var lamp := MeshInstance3D.new()
+	var lamp_mesh := BoxMesh.new()
+	lamp_mesh.size = Vector3(1.4, 0.5, 0.7)
+	lamp.mesh = lamp_mesh
+	lamp.material_override = _amber_light_mat
+	lamp.position = Vector3(7.8, 11.75, 0.0)
+	mast.add_child(lamp)
 
 
 func _add_bridge_span(parent: Node, a: Vector2, b: Vector2) -> void:
@@ -328,7 +509,7 @@ func _build_beach_resorts() -> void:
 			var side := -1.0 if i % 2 == 0 else 1.0
 			var local := Vector2(along, side * size.y * rng.randf_range(0.16, 0.28))
 			var world := Transform2D(rotation, centre) * local
-			_add_cabana(root, world, rotation + rng.randf_range(-0.18, 0.18), rng)
+			_landmarks.add_cabana(root, world, rotation + rng.randf_range(-0.18, 0.18), rng)
 		for i in range(3):
 			var local := Vector2((float(i) - 1.0) * size.x * 0.22, -size.y * 0.08)
 			var world := Transform2D(rotation, centre) * local
@@ -339,7 +520,7 @@ func _build_beach_resorts() -> void:
 				rng.randf_range(-size.y * 0.28, size.y * 0.28)
 			)
 			var world := Transform2D(rotation, centre) * local
-			_add_beach_umbrella(root, world, rotation + rng.randf_range(-0.3, 0.3), i)
+			_landmarks.add_beach_umbrella(root, world, rotation + rng.randf_range(-0.3, 0.3), i)
 
 
 func _add_key_hotel(
@@ -379,264 +560,190 @@ func _build_landmarks() -> void:
 		var yaw := float(landmark["rotation"])
 		match kind:
 			"lighthouse":
-				_add_lighthouse(root, pos, yaw)
+				_landmarks.add_lighthouse(root, pos, yaw)
 			"wheel":
-				_add_observation_wheel(root, pos, yaw)
+				_landmarks.add_observation_wheel(root, pos, yaw)
 			"launch":
-				_add_launch_tower(root, pos, yaw)
+				_landmarks.add_launch_tower(root, pos, yaw)
 			"arch":
-				_add_resort_arch(root, pos, yaw)
+				_landmarks.add_resort_arch(root, pos, yaw)
 
 
-func _add_lighthouse(parent: Node, xz: Vector2, yaw: float) -> void:
-	var lighthouse := Node3D.new()
-	lighthouse.name = "TorchKeyLight"
-	lighthouse.position = Vector3(xz.x, land_y, xz.y)
-	lighthouse.rotation.y = yaw
-	parent.add_child(lighthouse, true)
+func _build_threejs_models() -> void:
+	var root := Node3D.new()
+	root.name = "ThreeJsFloridaModels"
+	add_child(root)
 
-	var tower := MeshInstance3D.new()
-	var tower_mesh := CylinderMesh.new()
-	tower_mesh.top_radius = 4.0
-	tower_mesh.bottom_radius = 7.0
-	tower_mesh.height = 64.0
-	tower_mesh.radial_segments = 18
-	tower.mesh = tower_mesh
-	tower.material_override = _resort_white_mat
-	tower.position = Vector3(0.0, 32.0, 0.0)
-	lighthouse.add_child(tower)
-
-	for y in [14.0, 30.0, 48.0]:
-		var band := MeshInstance3D.new()
-		var band_mesh := CylinderMesh.new()
-		band_mesh.top_radius = 4.4
-		band_mesh.bottom_radius = 5.4
-		band_mesh.height = 1.2
-		band_mesh.radial_segments = 18
-		band.mesh = band_mesh
-		band.material_override = _resort_coral_mat
-		band.position = Vector3(0.0, y, 0.0)
-		lighthouse.add_child(band)
-
-	var lantern := MeshInstance3D.new()
-	var lantern_mesh := CylinderMesh.new()
-	lantern_mesh.top_radius = 4.6
-	lantern_mesh.bottom_radius = 4.6
-	lantern_mesh.height = 5.0
-	lantern_mesh.radial_segments = 18
-	lantern.mesh = lantern_mesh
-	lantern.material_override = _glass_mat
-	lantern.position = Vector3(0.0, 69.0, 0.0)
-	lighthouse.add_child(lantern)
-
-	var beacon := MeshInstance3D.new()
-	var beacon_mesh := SphereMesh.new()
-	beacon_mesh.radius = 1.4
-	beacon_mesh.height = 2.8
-	beacon.mesh = beacon_mesh
-	beacon.material_override = _warning_light_mat
-	beacon.position = Vector3(0.0, 72.0, 0.0)
-	lighthouse.add_child(beacon)
+	var placements := [
+		{
+			"name": "ThreeJsMiamiResortPack",
+			"position": Vector2(980.0, -1700.0),
+			"yaw": -0.42,
+			"scale": 1.25
+		},
+		{
+			"name": "ThreeJsKeysResortPack",
+			"position": Vector2(-1220.0, -3400.0),
+			"yaw": 0.34,
+			"scale": 1.0
+		},
+		{
+			"name": "ThreeJsGulfRoutePack",
+			"position": Vector2(-1720.0, -760.0),
+			"yaw": 0.78,
+			"scale": 1.15
+		}
+	]
+	for placement in placements:
+		var model := THREE_FLORIDA_LANDMARK_PACK.instantiate() as Node3D
+		if model == null:
+			continue
+		var pos: Vector2 = placement["position"]
+		var s := float(placement["scale"])
+		model.name = String(placement["name"])
+		model.position = Vector3(pos.x, land_y + 0.12, pos.y)
+		model.rotation.y = float(placement["yaw"])
+		model.scale = Vector3(s, s, s)
+		root.add_child(model, true)
 
 
-func _add_observation_wheel(parent: Node, xz: Vector2, yaw: float) -> void:
-	var wheel := Node3D.new()
-	wheel.name = "SunsetWheel"
-	wheel.position = Vector3(xz.x, land_y, xz.y)
-	wheel.rotation.y = yaw
-	parent.add_child(wheel, true)
+func _build_threejs_city_blocks() -> void:
+	var root := Node3D.new()
+	root.name = "ThreeJsFloridaCityBlocks"
+	add_child(root)
 
-	var rim_mesh := TorusMesh.new()
-	rim_mesh.inner_radius = 40.0
-	rim_mesh.outer_radius = 42.0
-	rim_mesh.ring_segments = 64
-	var rim := MeshInstance3D.new()
-	rim.mesh = rim_mesh
-	rim.material_override = _steel_mat
-	rim.position = Vector3(0.0, 48.0, 0.0)
-	rim.rotation.x = PI * 0.5
-	wheel.add_child(rim)
-
-	var spoke_mesh := BoxMesh.new()
-	spoke_mesh.size = Vector3(0.65, 0.65, 82.0)
-	for i in range(12):
-		var spoke := MeshInstance3D.new()
-		spoke.name = "WheelSpoke"
-		spoke.mesh = spoke_mesh
-		spoke.material_override = _steel_mat
-		spoke.position = Vector3(0.0, 48.0, 0.0)
-		spoke.rotation.x = PI * 0.5
-		spoke.rotation.z = TAU * float(i) / 12.0
-		wheel.add_child(spoke)
-
-	var cabin_mesh := BoxMesh.new()
-	cabin_mesh.size = Vector3(5.0, 2.8, 3.0)
-	for i in range(10):
-		var angle := TAU * float(i) / 10.0
-		var cabin := MeshInstance3D.new()
-		cabin.name = "WheelCabin"
-		cabin.mesh = cabin_mesh
-		cabin.material_override = _resort_aqua_mat if i % 2 == 0 else _resort_coral_mat
-		cabin.position = Vector3(cos(angle) * 42.0, 48.0 + sin(angle) * 42.0, 0.0)
-		wheel.add_child(cabin)
-
-	for x in [-16.0, 16.0]:
-		var leg := MeshInstance3D.new()
-		var leg_mesh := BoxMesh.new()
-		leg_mesh.size = Vector3(1.5, 58.0, 1.5)
-		leg.mesh = leg_mesh
-		leg.material_override = _steel_mat
-		leg.position = Vector3(x, 29.0, 0.0)
-		leg.rotation.z = 0.28 * signf(x)
-		wheel.add_child(leg)
+	var placements := [
+		{
+			"name": "ThreeJsBrickellCityBlock",
+			"position": Vector2(720.0, -1320.0),
+			"yaw": -0.18,
+			"scale": 1.8
+		},
+		{
+			"name": "ThreeJsBeachCityBlock",
+			"position": Vector2(1240.0, -2260.0),
+			"yaw": 0.56,
+			"scale": 1.45
+		},
+		{
+			"name": "ThreeJsGulfCityBlock",
+			"position": Vector2(-1480.0, -420.0),
+			"yaw": 0.22,
+			"scale": 1.55
+		},
+		{
+			"name": "ThreeJsNorthCoastCityBlock",
+			"position": Vector2(240.0, 1680.0),
+			"yaw": -0.74,
+			"scale": 1.35
+		}
+	]
+	for placement in placements:
+		var model := THREE_FLORIDA_CITY_BLOCK_PACK.instantiate() as Node3D
+		if model == null:
+			continue
+		var pos: Vector2 = placement["position"]
+		var s := float(placement["scale"])
+		model.name = String(placement["name"])
+		model.position = Vector3(pos.x, land_y + 0.14, pos.y)
+		model.rotation.y = float(placement["yaw"])
+		model.scale = Vector3(s, s, s)
+		root.add_child(model, true)
 
 
-func _add_launch_tower(parent: Node, xz: Vector2, yaw: float) -> void:
-	var launch := Node3D.new()
-	launch.name = "AtlasPointLaunch"
-	launch.position = Vector3(xz.x, land_y, xz.y)
-	launch.rotation.y = yaw
-	parent.add_child(launch, true)
+func _build_threejs_neon_details() -> void:
+	var root := Node3D.new()
+	root.name = "ThreeJsFloridaNeonDetails"
+	add_child(root)
 
-	var tower_mesh := BoxMesh.new()
-	tower_mesh.size = Vector3(8.0, 86.0, 8.0)
-	var tower := MeshInstance3D.new()
-	tower.mesh = tower_mesh
-	tower.material_override = _steel_mat
-	tower.position = Vector3(0.0, 43.0, 0.0)
-	launch.add_child(tower)
-
-	for y in [16.0, 32.0, 48.0, 64.0, 80.0]:
-		var deck := MeshInstance3D.new()
-		var deck_mesh := BoxMesh.new()
-		deck_mesh.size = Vector3(28.0, 1.2, 18.0)
-		deck.mesh = deck_mesh
-		deck.material_override = _concrete_mat
-		deck.position = Vector3(8.0, y, 0.0)
-		launch.add_child(deck)
-
-	var rocket := MeshInstance3D.new()
-	var rocket_mesh := CylinderMesh.new()
-	rocket_mesh.top_radius = 2.0
-	rocket_mesh.bottom_radius = 2.6
-	rocket_mesh.height = 58.0
-	rocket_mesh.radial_segments = 20
-	rocket.mesh = rocket_mesh
-	rocket.material_override = _resort_white_mat
-	rocket.position = Vector3(-18.0, 29.0, 0.0)
-	launch.add_child(rocket)
-
-	var nose := MeshInstance3D.new()
-	var nose_mesh := CylinderMesh.new()
-	nose_mesh.top_radius = 0.0
-	nose_mesh.bottom_radius = 2.1
-	nose_mesh.height = 8.0
-	nose_mesh.radial_segments = 20
-	nose.mesh = nose_mesh
-	nose.material_override = _resort_coral_mat
-	nose.position = Vector3(-18.0, 62.0, 0.0)
-	launch.add_child(nose)
-
-	var flame := MeshInstance3D.new()
-	var flame_mesh := CylinderMesh.new()
-	flame_mesh.top_radius = 1.2
-	flame_mesh.bottom_radius = 4.5
-	flame_mesh.height = 13.0
-	flame_mesh.radial_segments = 16
-	flame.mesh = flame_mesh
-	flame.material_override = _warning_light_mat
-	flame.position = Vector3(-18.0, 0.5, 0.0)
-	launch.add_child(flame)
+	var placements := [
+		{
+			"name": "ThreeJsBeachNeonDetail",
+			"position": Vector2(1120.0, -2050.0),
+			"yaw": 0.42,
+			"scale": 1.4
+		},
+		{
+			"name": "ThreeJsBrickellNeonDetail",
+			"position": Vector2(610.0, -1190.0),
+			"yaw": -0.26,
+			"scale": 1.55
+		},
+		{
+			"name": "ThreeJsKeysNeonDetail",
+			"position": Vector2(-1040.0, -3220.0),
+			"yaw": 0.18,
+			"scale": 1.2
+		},
+		{
+			"name": "ThreeJsGulfNeonDetail",
+			"position": Vector2(-1600.0, -600.0),
+			"yaw": 0.76,
+			"scale": 1.35
+		}
+	]
+	for placement in placements:
+		var model := THREE_FLORIDA_NEON_DETAIL_PACK.instantiate() as Node3D
+		if model == null:
+			continue
+		var pos: Vector2 = placement["position"]
+		var s := float(placement["scale"])
+		model.name = String(placement["name"])
+		model.position = Vector3(pos.x, land_y + 0.16, pos.y)
+		model.rotation.y = float(placement["yaw"])
+		model.scale = Vector3(s, s, s)
+		root.add_child(model, true)
+		_landmarks.add_neon_light_cluster(model, s)
 
 
-func _add_resort_arch(parent: Node, xz: Vector2, yaw: float) -> void:
-	var arch := Node3D.new()
-	arch.name = "GulfGateArch"
-	arch.position = Vector3(xz.x, land_y, xz.y)
-	arch.rotation.y = yaw
-	parent.add_child(arch, true)
+func _build_threejs_regional_destinations() -> void:
+	var root := Node3D.new()
+	root.name = "ThreeJsFloridaRegionalDestinations"
+	add_child(root)
 
-	for x in [-10.0, 10.0]:
-		var column := MeshInstance3D.new()
-		var column_mesh := CylinderMesh.new()
-		column_mesh.top_radius = 2.2
-		column_mesh.bottom_radius = 2.8
-		column_mesh.height = 22.0
-		column_mesh.radial_segments = 16
-		column.mesh = column_mesh
-		column.material_override = _resort_white_mat
-		column.position = Vector3(x, 11.0, 0.0)
-		arch.add_child(column)
-
-	var beam := MeshInstance3D.new()
-	var beam_mesh := BoxMesh.new()
-	beam_mesh.size = Vector3(26.0, 4.0, 5.0)
-	beam.mesh = beam_mesh
-	beam.material_override = _resort_aqua_mat
-	beam.position = Vector3(0.0, 23.0, 0.0)
-	arch.add_child(beam)
-
-	var sign := MeshInstance3D.new()
-	var sign_mesh := BoxMesh.new()
-	sign_mesh.size = Vector3(18.0, 2.2, 0.5)
-	sign.mesh = sign_mesh
-	sign.material_override = _neon_mat
-	sign.position = Vector3(0.0, 25.0, -2.7)
-	arch.add_child(sign)
-
-
-func _add_cabana(parent: Node, xz: Vector2, yaw: float, rng: RandomNumberGenerator) -> void:
-	var cabana := Node3D.new()
-	cabana.name = "BeachCabana"
-	cabana.position = Vector3(xz.x, land_y + 0.35, xz.y)
-	cabana.rotation.y = yaw
-	parent.add_child(cabana, true)
-
-	var base := MeshInstance3D.new()
-	var base_mesh := BoxMesh.new()
-	base_mesh.size = Vector3(10.0, 2.6, 7.0)
-	base.mesh = base_mesh
-	base.material_override = _resort_white_mat
-	base.position = Vector3(0.0, 1.3, 0.0)
-	cabana.add_child(base)
-
-	var roof := MeshInstance3D.new()
-	var roof_mesh := PrismMesh.new()
-	roof_mesh.size = Vector3(11.5, 2.0, 8.2)
-	roof.mesh = roof_mesh
-	roof.material_override = _resort_coral_mat if rng.randf() < 0.5 else _resort_aqua_mat
-	roof.position = Vector3(0.0, 3.55, 0.0)
-	roof.rotation.z = PI * 0.5
-	cabana.add_child(roof)
-
-
-func _add_beach_umbrella(parent: Node, xz: Vector2, yaw: float, index: int) -> void:
-	var umbrella := Node3D.new()
-	umbrella.name = "BeachUmbrella"
-	umbrella.position = Vector3(xz.x, land_y + 0.2, xz.y)
-	umbrella.rotation.y = yaw
-	parent.add_child(umbrella, true)
-
-	var pole := MeshInstance3D.new()
-	var pole_mesh := CylinderMesh.new()
-	pole_mesh.top_radius = 0.08
-	pole_mesh.bottom_radius = 0.08
-	pole_mesh.height = 2.5
-	pole.mesh = pole_mesh
-	pole.material_override = _dock_mat
-	pole.position = Vector3(0.0, 1.25, 0.0)
-	umbrella.add_child(pole)
-
-	var canopy := MeshInstance3D.new()
-	var canopy_mesh := CylinderMesh.new()
-	canopy_mesh.top_radius = 0.0
-	canopy_mesh.bottom_radius = 1.45
-	canopy_mesh.height = 0.65
-	canopy_mesh.radial_segments = 12
-	canopy.mesh = canopy_mesh
-	canopy.material_override = _resort_aqua_mat if index % 2 == 0 else _resort_coral_mat
-	canopy.position = Vector3(0.0, 2.65, 0.0)
-	umbrella.add_child(canopy)
+	var placements := [
+		{
+			"name": "ThreeJsPanhandleRegionalPack",
+			"position": Vector2(80.0, 4100.0),
+			"yaw": -0.38,
+			"scale": 1.75
+		},
+		{
+			"name": "ThreeJsSpaceCoastRegionalPack",
+			"position": Vector2(1390.0, 1250.0),
+			"yaw": 0.48,
+			"scale": 1.45
+		},
+		{
+			"name": "ThreeJsWetlandRegionalPack",
+			"position": Vector2(-690.0, 1150.0),
+			"yaw": -0.72,
+			"scale": 1.65
+		},
+		{
+			"name": "ThreeJsKeysRegionalPack",
+			"position": Vector2(-980.0, -3510.0),
+			"yaw": 0.12,
+			"scale": 1.25
+		},
+		{
+			"name": "ThreeJsGulfRegionalPack",
+			"position": Vector2(-1320.0, -1220.0),
+			"yaw": 0.88,
+			"scale": 1.4
+		}
+	]
+	for placement in placements:
+		var model := THREE_FLORIDA_REGIONAL_PACK.instantiate() as Node3D
+		if model == null:
+			continue
+		var pos: Vector2 = placement["position"]
+		var s := float(placement["scale"])
+		model.name = String(placement["name"])
+		model.position = Vector3(pos.x, land_y + 0.18, pos.y)
+		model.rotation.y = float(placement["yaw"])
+		model.scale = Vector3(s, s, s)
+		root.add_child(model, true)
 
 
 func _add_marina(parent: Node, marina: Dictionary) -> void:
@@ -723,7 +830,12 @@ func _build_city_accents() -> void:
 
 
 func _add_premium_tower(
-	parent: Node, xz: Vector2, footprint: float, height: float, rng: RandomNumberGenerator, index: int
+	parent: Node,
+	xz: Vector2,
+	footprint: float,
+	height: float,
+	rng: RandomNumberGenerator,
+	index: int
 ) -> void:
 	var base := MeshInstance3D.new()
 	base.name = "OriginalPremiumTower"
@@ -827,6 +939,36 @@ func _build_wetlands() -> void:
 	crown_layer.multimesh = crowns
 	crown_layer.material_override = _leaf_mat
 	add_child(crown_layer)
+
+
+func _build_map_markers() -> void:
+	var root := Node3D.new()
+	root.name = "OriginalMapMarkers"
+	add_child(root)
+	for marker in FloridaMapModel.poi_markers(map_scale):
+		var p: Vector2 = marker["position"]
+		var kind := String(marker["kind"])
+		var node := Marker3D.new()
+		node.name = "%sMarker" % String(marker["name"]).replace(" ", "")
+		node.position = Vector3(p.x, land_y + 2.0, p.y)
+		node.set_meta("map_label", marker["name"])
+		node.add_to_group("poi_%s" % kind)
+		root.add_child(node, true)
+		if kind == "city" or kind == "landmark":
+			_add_map_marker_label(root, String(marker["name"]), p, kind)
+
+
+func _add_map_marker_label(parent: Node, text: String, xz: Vector2, kind: String) -> void:
+	var label := Label3D.new()
+	label.name = "%sMapLabel" % text.replace(" ", "")
+	label.text = text
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 30 if kind == "city" else 24
+	label.modulate = Color(0.55, 0.92, 1.0) if kind == "city" else Color(1.0, 0.78, 0.34)
+	label.outline_size = 6
+	label.outline_modulate = Color(0.02, 0.02, 0.025)
+	label.position = Vector3(xz.x, land_y + (86.0 if kind == "city" else 58.0), xz.y)
+	parent.add_child(label, true)
 
 
 func _build_swim_volume() -> void:

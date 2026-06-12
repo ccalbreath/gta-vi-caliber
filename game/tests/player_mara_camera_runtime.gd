@@ -28,7 +28,7 @@ func _initialize() -> void:
 	_imported = _player.get_node_or_null("Rig/Hips/MaraImportedMesh") as Node3D
 
 
-func _process(_delta: float) -> bool:
+func _physics_process(_delta: float) -> bool:
 	_frames += 1
 	var done := false
 	if _frames < 4:

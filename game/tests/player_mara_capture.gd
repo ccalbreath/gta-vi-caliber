@@ -49,25 +49,32 @@ func _setup_capture() -> void:
 	var world := WorldEnvironment.new()
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.035, 0.04, 0.045)
+	env.background_color = Color(0.065, 0.073, 0.078)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.38, 0.42, 0.48)
-	env.ambient_light_energy = 0.9
+	env.ambient_light_color = Color(0.48, 0.5, 0.53)
+	env.ambient_light_energy = 1.15
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.glow_enabled = true
-	env.glow_intensity = 0.12
+	env.glow_intensity = 0.08
 	world.environment = env
 	host.add_child(world)
 
 	var key := DirectionalLight3D.new()
 	key.name = "KeyLight"
-	key.light_energy = 2.4
-	key.rotation_degrees = Vector3(-42.0, -32.0, 0.0)
+	key.light_energy = 1.9
+	key.rotation_degrees = Vector3(-38.0, -24.0, 0.0)
 	host.add_child(key)
+
+	var fill := OmniLight3D.new()
+	fill.name = "FillLight"
+	fill.light_energy = 0.75
+	fill.omni_range = 4.2
+	fill.position = Vector3(1.45, 1.35, -2.4)
+	host.add_child(fill)
 
 	var rim := OmniLight3D.new()
 	rim.name = "RimLight"
-	rim.light_energy = 1.4
+	rim.light_energy = 1.1
 	rim.omni_range = 5.0
 	rim.position = Vector3(-1.5, 1.8, 1.8)
 	host.add_child(rim)
@@ -83,9 +90,9 @@ func _setup_capture() -> void:
 	else:
 		var camera := Camera3D.new()
 		camera.name = "Camera"
-		camera.fov = 34.0
+		camera.fov = 38.0
 		var z := 4.2 if view == "rear" else -4.2
-		camera.look_at_from_position(Vector3(0.0, 1.12, z), Vector3(0.0, 0.98, 0.0), Vector3.UP)
+		camera.look_at_from_position(Vector3(0.0, 1.16, z), Vector3(0.0, 1.0, 0.0), Vector3.UP)
 		host.add_child(camera)
 		camera.make_current()
 	_setup_done = true

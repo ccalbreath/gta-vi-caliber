@@ -114,6 +114,16 @@ func test_secondary_body_motion_tracks_stride_side() -> bool:
 	var left := Locomotion.lateral_sway(PI / 2.0, 0.03)
 	var right := Locomotion.lateral_sway(3.0 * PI / 2.0, 0.03)
 	var phase := PI / 2.0
+	var left_yaw := Locomotion.foot_toe_out(1.0, -1.0, 0.07, 0.04)
+	var right_yaw := Locomotion.foot_toe_out(-1.0, -1.0, 0.07, 0.04)
+	var left_bank := Locomotion.foot_bank(1.0, 0.5, 0.05)
+	var right_bank := Locomotion.foot_bank(-1.0, 0.5, 0.05)
+	var left_turn := Locomotion.turn_lean(8.0, 8.0, 0.08)
+	var right_turn := Locomotion.turn_lean(-8.0, 8.0, 0.08)
+	var landing := Locomotion.landing_compression(-9.0, 12.0, 0.09)
+	var idle_breath := Locomotion.idle_breath(0.75, 0.02)
+	var idle_shift := Locomotion.idle_weight_shift(1.4, 0.015)
+	var idle_head := Locomotion.idle_head_pitch(0.75, 0.014)
 	return (
 		left > 0.0
 		and right < 0.0
@@ -126,6 +136,17 @@ func test_secondary_body_motion_tracks_stride_side() -> bool:
 		)
 		and Locomotion.head_step_pitch(phase, 0.02) < 0.0
 		and Locomotion.head_counter_roll(phase, 0.03) < 0.0
+		and left_yaw > 0.0
+		and right_yaw < 0.0
+		and is_equal_approx(left_yaw, -right_yaw)
+		and is_equal_approx(left_bank, -right_bank)
+		and left_turn > 0.0
+		and is_equal_approx(left_turn, -right_turn)
+		and landing > 0.0
+		and Locomotion.landing_compression(2.0, 12.0, 0.09) == 0.0
+		and not is_zero_approx(idle_breath)
+		and not is_zero_approx(idle_shift)
+		and signf(idle_head) != signf(idle_breath)
 	)
 
 

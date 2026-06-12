@@ -42,16 +42,28 @@ const PHONE_SHOULDER_ROLL: float = 0.55
 @export var head_pitch_amplitude: float = 0.026
 @export var head_roll_amplitude: float = 0.035
 @export var head_lean_compensation: float = 0.28
+## Idle life layered on top of the still pose: breathing, neck compensation,
+## and a slow hip weight shift while grounded.
+@export var idle_breath_amplitude: float = 0.018
+@export var idle_sway_amplitude: float = 0.014
+@export var idle_head_pitch_amplitude: float = 0.014
 ## Maximum forward/back lean (radians) from acceleration.
 @export var max_lean: float = 0.22
 ## Acceleration (m/s²) that produces a full-magnitude lean.
 @export var accel_reference: float = 30.0
 ## Yaw turn rate (rad/s) when reorienting toward the travel direction.
 @export var turn_rate: float = 12.0
+## Roll into sharp facing changes so turning carries body momentum.
+@export var max_turn_lean: float = 0.08
+@export var turn_lean_reference: float = 8.0
 ## How fast swing amplitude and lean ease toward their targets (1/s).
 @export var response_rate: float = 10.0
 ## How fast the air pose crossfades in/out (1/s).
 @export var air_rate: float = 8.0
+## Hip dip on floor contact after a fall, then eased back out.
+@export var max_landing_compression: float = 0.09
+@export var landing_velocity_reference: float = 12.0
+@export var landing_recovery_rate: float = 5.5
 ## How fast the phone-holding pose eases in/out (1/s).
 @export var phone_pose_rate: float = 9.0
 
@@ -61,12 +73,20 @@ var _blend: float = 0.0
 var _lean: float = 0.0
 var _sway: float = 0.0
 var _roll: float = 0.0
+var _turn_lean: float = 0.0
+var _idle_time: float = 0.0
 var _air: float = 0.0
+var _landing_compression: float = 0.0
+var _was_on_floor: bool = true
+var _last_vertical_velocity: float = 0.0
 var _phone: float = 0.0
 var _phone_target: float = 0.0
 var _hips_rest_y: float = 0.0
 var _hips_rest_x: float = 0.0
 var _prev_speed: float = 0.0
+var _proxy_torso_mount: Node3D = null
+var _proxy_pelvis_mount: Node3D = null
+var _proxy_head_mount: Node3D = null
 # When the owner is the player, face where the weapon aims (not where we move)
 # so strafing reads as a third-person shooter. NPCs keep travel-facing.
 var _aim_facing: bool = false
@@ -88,6 +108,10 @@ func _ready() -> void:
 	_facing = rotation.y
 	var owner_body := get_parent()
 	_aim_facing = owner_body != null and owner_body.is_in_group("player")
+	_proxy_torso_mount = _ensure_proxy_mount("MaraTorsoMount")
+	_proxy_pelvis_mount = _ensure_proxy_mount("MaraPelvisMount")
+	_proxy_head_mount = _ensure_proxy_mount("MaraHeadMount")
+	_sync_imported_proxy_mounts()
 
 
 ## Drive the rig for one physics frame from the character's current motion.
@@ -105,7 +129,9 @@ func animate(
 		planar_speed, on_floor, vertical_velocity, is_climbing, walk_speed, run_speed
 	)
 
+	var facing_before := _facing
 	_update_facing(planar_velocity, planar_speed, delta)
+	var turn_velocity := wrapf(_facing - facing_before, -PI, PI) / maxf(delta, 0.0001)
 
 	var accel: float = (planar_speed - _prev_speed) / maxf(delta, 0.0001)
 	_prev_speed = planar_speed
@@ -120,8 +146,25 @@ func animate(
 	_roll = lerpf(
 		_roll, Locomotion.pelvis_roll(_phase, roll_amplitude * grounded_blend), _ease(delta)
 	)
+	_turn_lean = lerpf(
+		_turn_lean,
+		Locomotion.turn_lean(turn_velocity, turn_lean_reference, max_turn_lean) * grounded_blend,
+		_ease(delta)
+	)
+	_landing_compression = move_toward(_landing_compression, 0.0, landing_recovery_rate * delta)
+	if on_floor and not _was_on_floor:
+		_landing_compression = maxf(
+			_landing_compression,
+			Locomotion.landing_compression(
+				_last_vertical_velocity, landing_velocity_reference, max_landing_compression
+			)
+		)
+	_was_on_floor = on_floor
+	_last_vertical_velocity = vertical_velocity
 	_air = move_toward(_air, 1.0 if not on_floor else 0.0, air_rate * delta)
 	_phone = move_toward(_phone, _phone_target, phone_pose_rate * delta)
+	if on_floor:
+		_idle_time += delta
 
 	if planar_speed > Locomotion.IDLE_SPEED_EPSILON:
 		_phase = Locomotion.advance_phase(_phase, planar_speed, delta)
@@ -129,10 +172,19 @@ func animate(
 	_apply_limbs()
 	_apply_secondary_motion()
 	_apply_phone_pose()
-	_hips.position.x = _hips_rest_x + _sway
-	_hips.position.y = _hips_rest_y + Locomotion.vertical_bob(_phase, bob_amplitude * _blend)
+	var idle_strength := (1.0 - _blend) if on_floor else 0.0
+	var idle_breath := Locomotion.idle_breath(_idle_time, idle_breath_amplitude * idle_strength)
+	var idle_sway := Locomotion.idle_weight_shift(_idle_time, idle_sway_amplitude * idle_strength)
+	_hips.position.x = _hips_rest_x + _sway + idle_sway
+	_hips.position.y = (
+		_hips_rest_y
+		+ Locomotion.vertical_bob(_phase, bob_amplitude * _blend)
+		+ idle_breath
+		- _landing_compression
+	)
 	_hips.rotation.x = _lean
-	_hips.rotation.z = _roll
+	_hips.rotation.z = _roll + _turn_lean
+	_sync_imported_proxy_mounts()
 
 
 ## Raise (true) or lower (false) the one-handed phone-holding pose; eased in
@@ -151,17 +203,45 @@ func _apply_phone_pose() -> void:
 func _apply_secondary_motion() -> void:
 	var shoulder_roll := Locomotion.shoulder_counter_roll(_phase, roll_amplitude * 0.65 * _blend)
 	var twist := Locomotion.torso_twist(_phase, torso_twist_amplitude * _blend)
-	_shoulder_l.rotation.z = shoulder_roll
-	_shoulder_r.rotation.z = -shoulder_roll
+	var turn_shoulder_roll := _turn_lean * 0.35
+	_shoulder_l.rotation.z = shoulder_roll + turn_shoulder_roll
+	_shoulder_r.rotation.z = -shoulder_roll + turn_shoulder_roll
+	_shoulder_l.position.y = 0.6 - _landing_compression * 0.18
+	_shoulder_r.position.y = 0.6 - _landing_compression * 0.18
 	_shoulder_l.rotation.y = twist
 	_shoulder_r.rotation.y = twist
 	_torso.rotation.y = twist
 	_pelvis.rotation.y = -twist * pelvis_twist_compensation
 	var head_pitch := Locomotion.head_step_pitch(_phase, head_pitch_amplitude * _blend)
 	var head_roll := Locomotion.head_counter_roll(_phase, head_roll_amplitude * _blend)
-	_head.rotation.x = head_pitch - _lean * head_lean_compensation
+	var idle_strength := 1.0 - _blend
+	var idle_head_pitch := Locomotion.idle_head_pitch(
+		_idle_time, idle_head_pitch_amplitude * idle_strength
+	)
+	_head.rotation.x = head_pitch + idle_head_pitch - _lean * head_lean_compensation
 	_head.rotation.y = -twist * head_twist_compensation
-	_head.rotation.z = head_roll - _roll * 0.45
+	_head.rotation.z = head_roll - (_roll + _turn_lean) * 0.45
+
+
+func _ensure_proxy_mount(node_name: String) -> Node3D:
+	var mount := _hips.get_node_or_null(node_name) as Node3D
+	if mount == null:
+		mount = Node3D.new()
+		mount.name = node_name
+		_hips.add_child(mount)
+	return mount
+
+
+func _sync_imported_proxy_mounts() -> void:
+	if _proxy_torso_mount != null:
+		_proxy_torso_mount.position = _torso.position
+		_proxy_torso_mount.rotation = _torso.rotation
+	if _proxy_pelvis_mount != null:
+		_proxy_pelvis_mount.position = _pelvis.position
+		_proxy_pelvis_mount.rotation = _pelvis.rotation
+	if _proxy_head_mount != null:
+		_proxy_head_mount.position = _head.position
+		_proxy_head_mount.rotation = _head.rotation
 
 
 func _update_facing(planar_velocity: Vector3, planar_speed: float, delta: float) -> void:

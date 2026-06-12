@@ -34,3 +34,17 @@ func test_degenerate_point_outside_empty() -> bool:
 
 func test_star_points_has_ten_vertices() -> bool:
 	return WantedStars.star_points(Vector2.ZERO, 9.0).size() == 10
+
+
+func test_poi_colors_cover_florida_marker_kinds() -> bool:
+	for kind in ["city", "landmark", "marina", "route"]:
+		if not Minimap.POI_COLORS.has(kind):
+			return false
+	return true
+
+
+func test_poi_colors_keep_life_sandbox_kinds() -> bool:
+	for kind in ["office", "diner", "bar", "gym", "home", "park", "restroom", "street"]:
+		if not Minimap.POI_COLORS.has(kind):
+			return false
+	return true

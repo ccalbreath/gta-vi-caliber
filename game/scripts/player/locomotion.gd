@@ -116,6 +116,54 @@ static func head_counter_roll(phase: float, amplitude: float) -> float:
 	return -sin(phase) * amplitude
 
 
+## Slow breathing lift for the idle pose. This keeps a standing character alive
+## without moving the root capsule or fighting the locomotion stride phase.
+static func idle_breath(idle_time: float, amplitude: float) -> float:
+	return sin(idle_time * TAU * 0.33) * amplitude
+
+
+## Tiny idle weight shift across the hips. It is deliberately slower than
+## breathing so the two motions do not line up into a mechanical loop.
+static func idle_weight_shift(idle_time: float, amplitude: float) -> float:
+	return sin(idle_time * TAU * 0.18) * amplitude
+
+
+## Neck compensation during idle breathing: the head eases against the chest
+## lift so the face stays composed instead of bobbing with the torso.
+static func idle_head_pitch(idle_time: float, amplitude: float) -> float:
+	return -sin(idle_time * TAU * 0.33 + PI * 0.18) * amplitude
+
+
+## Foot yaw opens the toe slightly outward and adds a small extra swing-phase
+## turn, so feet do not track like perfectly parallel mechanical skids.
+static func foot_toe_out(side: float, swing_norm: float, base: float, swing: float) -> float:
+	return side * (base + maxf(0.0, -swing_norm) * swing)
+
+
+## Roll the foot subtly as weight moves across it. The sign is per side so the
+## left/right soles mirror each other instead of banking in the same direction.
+static func foot_bank(side: float, swing_norm: float, amplitude: float) -> float:
+	return -side * swing_norm * amplitude
+
+
+## Lean into a change in facing direction. Positive angular velocity rolls one
+## way, negative the other; reference is the yaw rate that reaches max_lean.
+static func turn_lean(angular_velocity: float, reference: float, max_lean: float) -> float:
+	if reference <= 0.0:
+		return 0.0
+	return clampf(angular_velocity / reference, -1.0, 1.0) * max_lean
+
+
+## Landing compression from the downward speed at floor contact. Upward or tiny
+## velocities do not compress; hard falls clamp at max_compression.
+static func landing_compression(
+	previous_vertical_velocity: float, reference: float, max_compression: float
+) -> float:
+	if reference <= 0.0 or previous_vertical_velocity >= 0.0:
+		return 0.0
+	return clampf(absf(previous_vertical_velocity) / reference, 0.0, 1.0) * max_compression
+
+
 ## Forward lean (radians) into acceleration: lean grows with how hard speed is
 ## changing, clamped to max_lean, so the body pitches forward when breaking into
 ## a run and rocks back when braking. accel is signed planar acceleration.
