@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=26 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -25,6 +25,7 @@
 [ext_resource type="PackedScene" path="res://scenes/vehicles/car.tscn" id="19_car"]
 [ext_resource type="Script" path="res://scripts/systems/save_manager.gd" id="20_save"]
 [ext_resource type="Script" path="res://scripts/missions/mission_trigger.gd" id="21_trigger"]
+[ext_resource type="PackedScene" path="res://scenes/vehicles/bike.tscn" id="22_bike"]
 
 [sub_resource type="SphereShape3D" id="trigger_shape"]
 radius = 6.0
@@ -173,15 +174,15 @@ script = ExtResource("14_bark")
 
 [node name="CrowdDirector" type="Node3D" parent="."]
 script = ExtResource("15_crowd")
-target_count = 24
-spawn_max_radius = 46.0
-cull_radius = 60.0
+target_count = 40
+spawn_max_radius = 54.0
+cull_radius = 70.0
 
 [node name="TrafficDirector" type="Node3D" parent="."]
 script = ExtResource("16_traffic")
-target_count = 12
-spawn_max_radius = 52.0
-cull_radius = 72.0
+target_count = 20
+spawn_max_radius = 60.0
+cull_radius = 82.0
 
 [node name="PoliceSpawner" type="Node3D" parent="."]
 script = ExtResource("17_police_spawner")
@@ -189,6 +190,12 @@ police_scene = ExtResource("18_police")
 
 [node name="Car" parent="." instance=ExtResource("19_car")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.6, 5)
+
+[node name="Car2" parent="." instance=ExtResource("19_car")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.6, 9)
+
+[node name="Bike" parent="." instance=ExtResource("22_bike")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.6, 6)
 
 [node name="SaveManager" type="Node" parent="."]
 script = ExtResource("20_save")
