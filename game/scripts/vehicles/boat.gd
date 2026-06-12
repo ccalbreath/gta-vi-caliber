@@ -54,8 +54,19 @@ func _physics_process(_delta: float) -> void:
 
 	if _driver == null:
 		return
-	var throttle := Input.get_axis("move_back", "move_forward")
-	var steer := Input.get_axis("move_right", "move_left")
+	var throttle := VehicleMotion.driving_axis(
+		Input.get_action_strength("move_back"), Input.get_action_strength("move_forward")
+	)
+	var steer := VehicleMotion.driving_axis(
+		Input.get_action_strength("move_left"), Input.get_action_strength("move_right")
+	)
 	var forward := -global_transform.basis.z
 	apply_central_force(forward * BoatMotion.thrust(throttle, max_thrust, submerged))
-	apply_torque(Vector3.UP * BoatMotion.rudder_torque(steer, rudder_torque_max, submerged))
+	apply_torque(
+		(
+			Vector3.UP
+			* BoatMotion.rudder_torque(
+				VehicleMotion.godot_steering(steer), rudder_torque_max, submerged
+			)
+		)
+	)

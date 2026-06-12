@@ -7,6 +7,25 @@ extends RefCounted
 ## tests/unit/test_vehicle_motion.gd.
 
 
+## Convert two opposing input strengths into a signed driving axis.
+## Positive means forward/right; negative means back/left.
+static func driving_axis(negative_strength: float, positive_strength: float) -> float:
+	return clampf(positive_strength - negative_strength, -1.0, 1.0)
+
+
+## Godot VehicleBody3D applies positive engine_force along +Z. This project
+## authors vehicle noses toward -Z, so project-forward wheel force must be
+## inverted at the engine_force boundary.
+static func godot_engine_force(project_forward_force: float) -> float:
+	return -project_forward_force
+
+
+## Positive project steering means turn right. Godot VehicleBody3D positive
+## steering turns left for this vehicle setup, so invert at the boundary.
+static func godot_steering(project_right_steer: float) -> float:
+	return -project_right_steer
+
+
 ## Engine force for a throttle input, tapering linearly to zero as the car
 ## approaches top speed so acceleration feels strong from a standstill and
 ## the car doesn't accelerate forever.
@@ -44,7 +63,7 @@ static func rollover_steer_limit(
 static func steer_target(
 	input: float, speed: float, max_steer: float, falloff_speed: float
 ) -> float:
-	return clampf(input, -1.0, 1.0) * steer_limit(speed, max_steer, falloff_speed)
+	return godot_steering(clampf(input, -1.0, 1.0)) * steer_limit(speed, max_steer, falloff_speed)
 
 
 ## PD-controller torque that rights a two-wheeler: pushes against the tilt
