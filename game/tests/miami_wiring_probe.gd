@@ -42,6 +42,16 @@ func _run_checks() -> void:
 	_expect_one("wanted")
 	_expect_one("mission")
 	_expect_one("bark_director")
+	_expect_one("weather")
+
+	# The weather front must actually be wired to the scene: fog driven through
+	# the WorldEnvironment and a Rain volume to switch on inside rain bands.
+	var weather := get_first_node_in_group("weather") as WeatherController
+	if weather != null:
+		if weather.get_node_or_null(weather.environment_path) == null:
+			_failures.append("weather: environment_path is not wired")
+		if weather.get_node_or_null(weather.rain_path) as Rain == null:
+			_failures.append("weather: rain_path is not a Rain volume")
 
 	for director_name in ["CrowdDirector", "TrafficDirector", "PoliceSpawner"]:
 		if _scene.find_child(director_name, true, false) == null:

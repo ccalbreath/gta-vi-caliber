@@ -16,6 +16,9 @@ uniform float panel_len = 1.5;
 uniform float joint_w = 0.06;
 // U fraction occupied by the vertical curb face (curb_h / (curb_h + walk_width)).
 uniform float curb_frac = 0.06;
+// Rain wetness published by the WeatherController (0 dry .. 1 soaked): wet
+// concrete darkens and gleams, a touch less mirror-like than asphalt.
+global uniform float world_wetness;
 
 varying vec2 v_uv;
 
@@ -53,7 +56,8 @@ void fragment() {
 	float curb = 1.0 - smoothstep(curb_frac, curb_frac + 0.01, u);
 	col = mix(col, curb_color + vec3(patch), curb);
 
-	ALBEDO = col;
-	ROUGHNESS = 0.93;
+	float wet = clamp(world_wetness, 0.0, 1.0);
+	ALBEDO = col * mix(1.0, 0.7, wet);
+	ROUGHNESS = mix(0.93, 0.24, wet);
 	METALLIC = 0.0;
 }

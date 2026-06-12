@@ -66,3 +66,23 @@ func test_labels_track_conditions() -> bool:
 	var grey := WeatherState.new()
 	grey.cloudiness = 0.8
 	return clear.label() == "clear" and storm.label() == "rain" and grey.label() == "overcast"
+
+
+func test_sky_cloud_coverage_spans_clear_to_storm() -> bool:
+	# Clear keeps a few fair-weather clouds; a storm never becomes a solid slab.
+	var clear := WeatherState.sky_cloud_coverage(0.0)
+	var storm := WeatherState.sky_cloud_coverage(1.0)
+	return clear > 0.05 and clear < 0.35 and storm > 0.85 and storm < 1.0
+
+
+func test_sky_cloud_coverage_is_monotonic_and_clamped() -> bool:
+	var low := WeatherState.sky_cloud_coverage(0.2)
+	var high := WeatherState.sky_cloud_coverage(0.8)
+	var below := WeatherState.sky_cloud_coverage(-5.0)
+	var above := WeatherState.sky_cloud_coverage(5.0)
+	var monotonic := high > low
+	var clamped := (
+		absf(below - WeatherState.sky_cloud_coverage(0.0)) < 0.001
+		and absf(above - WeatherState.sky_cloud_coverage(1.0)) < 0.001
+	)
+	return monotonic and clamped

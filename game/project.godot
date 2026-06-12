@@ -122,6 +122,10 @@ world_night_amount={
 "type": "float",
 "value": 0.0
 }
+world_wetness={
+"type": "float",
+"value": 0.0
+}
 
 [rendering]
 

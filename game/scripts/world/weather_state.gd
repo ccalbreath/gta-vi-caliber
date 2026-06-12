@@ -41,6 +41,13 @@ static func front_targets(cycle_pos: float) -> Dictionary:
 	return {"cloud": clampf(cloud, 0.0, 1.0), "rain": clampf(rn, 0.0, 1.0)}
 
 
+## Sky-shader cloud coverage for a given cloudiness: a clear day keeps a few
+## fair-weather clouds (so the sky never reads sterile) and a storm stops just
+## short of a solid slab (so sun glow still breaks the edges).
+static func sky_cloud_coverage(cloud_amount: float) -> float:
+	return lerpf(0.22, 0.95, clampf(cloud_amount, 0.0, 1.0))
+
+
 ## Ease toward a target sky and integrate surface wetness for `dt` seconds.
 func step(dt: float, cloud_target: float, rain_target: float) -> void:
 	cloudiness = move_toward(cloudiness, clampf(cloud_target, 0.0, 1.0), EASE_RATE * dt)

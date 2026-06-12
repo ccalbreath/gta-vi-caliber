@@ -13,6 +13,9 @@ uniform float sidewalk_frac : hint_range(0.0, 0.4) = 0.14;
 // Photoreal tileable asphalt albedo (Codex-generated) — modulates the procedural
 // base so long straights gain real aggregate/oil grain. White default = neutral.
 uniform sampler2D detail_tex : source_color, hint_default_white, filter_linear_mipmap, repeat_enable;
+// Rain wetness published by the WeatherController (0 dry .. 1 soaked): wet
+// asphalt darkens and turns glossy so streets gleam after a front passes.
+global uniform float world_wetness;
 
 varying vec2 v_uv;
 
@@ -74,7 +77,9 @@ void fragment() {
 	col = mix(col, paint_color, paint * 0.7);
 	col *= 1.0 - 0.30 * curb;
 
-	ALBEDO = col;
-	ROUGHNESS = 0.92 - 0.25 * paint;
+	float wet = clamp(world_wetness, 0.0, 1.0);
+	ALBEDO = col * mix(1.0, 0.62, wet);
+	ROUGHNESS = mix(0.92 - 0.25 * paint, 0.16, wet);
 	METALLIC = 0.0;
+	SPECULAR = mix(0.5, 0.72, wet);
 }

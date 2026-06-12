@@ -1,4 +1,4 @@
-[gd_scene load_steps=44 format=3]
+[gd_scene load_steps=45 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -42,6 +42,7 @@
 [ext_resource type="Script" path="res://scripts/world/armor_shop.gd" id="37_armorshop"]
 [ext_resource type="Shader" path="res://assets/shaders/sky.gdshader" id="38_sky"]
 [ext_resource type="Script" path="res://scripts/world/sky_controller.gd" id="39_skyctl"]
+[ext_resource type="Script" path="res://scripts/world/rain.gd" id="40_rain"]
 
 [sub_resource type="BoxShape3D" id="payspray_shape"]
 size = Vector3(12, 6, 12)
@@ -157,10 +158,23 @@ script = ExtResource("3_streamer")
 load_radius = 8500.0
 unload_radius = 9500.0
 
+; Live weather: a rolling front (clear -> overcast -> rain -> clearing) that
+; thickens the fog, darkens the sky-shader clouds, rains over the player, and
+; wets the streets (world_wetness shader global). Fog densities stay near the
+; authored Vice City air so clear weather keeps the warm golden-hour grade.
 [node name="Weather" type="Node3D" parent="."]
 script = ExtResource("5_weather")
-auto_cycle = false
-start_condition = 0
+front_length_sec = 360.0
+start_cycle = 0.1
+environment_path = NodePath("../WorldEnvironment")
+rain_path = NodePath("Rain")
+clear_fog_density = 8e-05
+storm_fog_density = 0.006
+rain_fog_boost = 0.004
+
+[node name="Rain" type="Node3D" parent="Weather"]
+script = ExtResource("40_rain")
+intensity = 0.0
 
 [node name="SpawnPoint" type="Marker3D" parent="." groups=["spawn_points"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
