@@ -21,6 +21,10 @@ signal foot_planted(is_left: bool)
 ## imported animations resolve against our Model without retargeting.
 const ANIM_LIBRARY_SCENE := "res://assets/characters/universal_animations/UAL1_Standard.glb"
 
+## Hairstyle from the same pack, skinned to the same skeleton; its mesh is
+## grafted onto the body's Skeleton3D at runtime and binds by bone name.
+const HAIR_SCENE := "res://assets/characters/player_male_01/Hair_SimpleParted.gltf"
+
 ## Blend-space positions for the Move state, matching Locomotion.move_blend's
 ## axis: 0.0 standing, 0.5 at walk_speed, 1.0 at run_speed.
 const BLEND_IDLE := 0.0
@@ -87,6 +91,7 @@ func _ready() -> void:
 	var owner_body := get_parent()
 	_aim_facing = owner_body != null and owner_body.is_in_group("player")
 	_install_animations()
+	_install_hair()
 	_tree.tree_root = _build_state_machine()
 	_tree.active = true
 	_playback = _tree.get("parameters/playback")
@@ -180,6 +185,29 @@ func _install_animations() -> void:
 		_add_plant_keys(clip, spec)
 		library.add_animation(clip_name, clip)
 	_anim_player.add_animation_library(&"", library)
+	source.free()
+
+
+## Graft the hairstyle's skinned mesh onto the body skeleton. The hair scene
+## carries the same 65-joint rig, so its Skin resource binds to our bones by
+## name once the mesh hangs under our Skeleton3D. Hair is cosmetic — a
+## missing file logs and degrades to the bald base mesh.
+func _install_hair() -> void:
+	var packed: PackedScene = load(HAIR_SCENE)
+	if packed == null:
+		push_warning("AnimatedRig: cannot load hairstyle " + HAIR_SCENE)
+		return
+	var skeletons := find_children("*", "Skeleton3D", true, false)
+	if skeletons.is_empty():
+		push_warning("AnimatedRig: no Skeleton3D to graft hair onto")
+		return
+	var skeleton: Skeleton3D = skeletons[0]
+	var source := packed.instantiate()
+	for mesh in source.find_children("*", "MeshInstance3D", true, false):
+		mesh.get_parent().remove_child(mesh)
+		mesh.owner = null
+		skeleton.add_child(mesh)
+		(mesh as MeshInstance3D).skeleton = NodePath("..")
 	source.free()
 
 
