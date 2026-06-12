@@ -79,7 +79,7 @@ var _was_on_floor: bool = true
 var _oxygen: float = 1.0
 
 @onready var _camera_rig: OrbitCamera = $CameraRig
-@onready var _rig: CharacterAnimator = $Rig
+@onready var _rig: AnimatedRig = $Rig
 
 
 func _ready() -> void:
