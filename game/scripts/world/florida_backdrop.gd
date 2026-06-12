@@ -72,6 +72,7 @@ func _ready() -> void:
 	_build_bay_boats()
 	_build_seabirds()
 	_build_air_banner()
+	_build_billboards()
 	_build_swim_volume()
 
 
@@ -736,6 +737,15 @@ func _build_coastal_palms() -> void:
 	palms.map_scale = map_scale
 	palms.ground_y = land_y + 0.05
 	add_child(palms)
+
+
+func _build_billboards() -> void:
+	# Satirical roadside hoardings along the bay-facing shore — the humor/tone
+	# axis plus set-dressing the player drives past.
+	var boards := Billboards.new()
+	boards.name = "Billboards"
+	boards.ground_y = land_y
+	add_child(boards)
 
 
 func _build_air_banner() -> void:

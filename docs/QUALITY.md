@@ -5,6 +5,21 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 9) — satirical billboards: the city gets an opinion
+
+Track Q (humor/tone + detail/density), extending the satire axis the banner
+plane opened. Added `Billboards`: a row of posted, framed roadside hoardings
+along the bay-facing shore, each a real billboard structure (two posts + frame +
+a faintly self-illuminated panel so it reads lit day or night) carrying original
+parody copy ("LIBERTY LOANS / 0% APR* (*NOT REAL)", "COUGAR ENERGY DRINK /
+LEGALLY A BEVERAGE", "VICE BEACH CONDOS / NOW WITH FLOORS", …). Reads exactly as
+a GTA hoarding (`/tmp/billboard.png` — structure + legible two-line ad). 9
+boards, alternating facing so both bay and shore sides get ads; added via
+FloridaBackdrop, verified in isolation + 4 unit tests (count, every-board-has-an-
+ad, spread, idempotent). Honest limit: a fixed 8-ad pool on a curated shore line
+— a full tone pass (Track N) would scatter ads across districts and tie copy to
+the economy/news.
+
 ## 2026-06-12 (cont. 8) — the beach banner plane (life + the first joke)
 
 Track Q on TWO axes at once — ambient life *and* humor/tone (the satire axis,
