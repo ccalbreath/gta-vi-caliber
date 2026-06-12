@@ -119,5 +119,7 @@ step "miami helicopter probe"
 # --- 7. systems wiring probes (scene-free: self-wiring nodes in a mock tree) --
 step "market event probe"
 "$GODOT_BIN" --headless --path game --script res://tests/market_event_probe.gd
+step "crime reaction probe"
+"$GODOT_BIN" --headless --path game --script res://tests/crime_reaction_probe.gd
 
 printf '\nAll checks passed ✔\n'

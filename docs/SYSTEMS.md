@@ -123,3 +123,9 @@ rally defense stocks on a crime spree, and applies `HitContract` effects via
 `apply_hit_effect`. Its node-level wiring is CI-gated headless by
 `tests/market_event_probe.gd` (a mock tree, no scene file). Adding it to
 `miami.tscn` is the remaining step to make the stock-market loop live in play.
+
+`CrimeReactionDirector` is its sibling on the same `wanted` hook: it owns a
+`NewsBulletin` + `DistrictEconomy` and, on a wanted spike, files a severity-scaled
+headline and heats the active district (which cools over time via `_process`). The
+two directors split the signal cleanly — market vs news+real-estate — so both can
+sit in the scene. CI-gated headless by `tests/crime_reaction_probe.gd`.
