@@ -38,18 +38,7 @@ extends Node3D
 @export var ground_probe_down: float = 60.0
 @export var max_walkable_rise: float = 2.5
 @export_flags_3d_physics var ground_mask: int = 1
-## Palette for body paint variety across the fleet.
-@export var car_colors: PackedColorArray = PackedColorArray(
-	[
-		Color(0.72, 0.20, 0.20),
-		Color(0.16, 0.18, 0.22),
-		Color(0.85, 0.85, 0.88),
-		Color(0.20, 0.34, 0.58),
-		Color(0.55, 0.56, 0.60),
-		Color(0.80, 0.66, 0.20)
-	]
-)
-
+@export var road_surface_y: float = 0.32
 var nav: NavGrid = null
 
 var _cars: Array[TrafficCar] = []
@@ -148,7 +137,7 @@ func _spawn(center: Vector3) -> void:
 			continue
 		var car := _make_car()
 		add_child(car)
-		car.global_position = Vector3(pos.x, center.y, pos.z)
+		car.global_position = Vector3(pos.x, road_surface_y, pos.z)
 		_assign_route(car, center)
 		_cars.append(car)
 
@@ -159,8 +148,7 @@ func _make_car() -> TrafficCar:
 		car = car_scene.instantiate() as TrafficCar
 	if car == null:
 		car = TrafficCar.new()
-	if car_colors.size() > 0:
-		car.body_color = car_colors[_rng.randi() % car_colors.size()]
+	car.model_variant = _rng.randi() % VehicleVisualLibrary.variant_count()
 	return car
 
 
