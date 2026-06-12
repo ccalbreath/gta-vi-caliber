@@ -5,6 +5,21 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 13) — Ocean Drive: the neon strip
+
+Track Q (lighting/atmosphere — night), extending the neon vein. Added
+`NeonStrip`: a row of small pastel Art-Deco hotels along the beachfront, each
+with a white parapet cap, a neon roofline tube, a warm 3×3 lit-window grid, and
+a vertical marquee carrying an original parody name (FLAMINGO, STARFISH,
+NEPTUNE, …). Reads as pastel Deco by day (`/tmp/strip_day.png`) and a glowing
+Ocean Drive neon strip by night (`/tmp/strip_front.png` — rooflines, marquees
+and lit windows all bloom). Pure emissive trim, no shared-env dependency. Added
+just inland of the boardwalk via FloridaBackdrop; verified day + night in
+isolation + 4 unit tests. Honest limit: box-built Deco (no curved corners or
+eyebrow ledges), and the night glow relies on env glow being on in the live
+scene — the bloom is the env owner's lever, but the emissive geometry itself
+carries the look regardless.
+
 ## 2026-06-12 (cont. 12) — neon: the Vice City night signature
 
 Track Q (lighting/atmosphere — finally a *night* pass, reached without touching

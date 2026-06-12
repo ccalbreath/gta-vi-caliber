@@ -76,6 +76,7 @@ func _ready() -> void:
 	_build_pier()
 	_build_lifeguard_towers()
 	_build_neon_sign()
+	_build_neon_strip()
 	_build_swim_volume()
 
 
@@ -740,6 +741,16 @@ func _build_coastal_palms() -> void:
 	palms.map_scale = map_scale
 	palms.ground_y = land_y + 0.05
 	add_child(palms)
+
+
+func _build_neon_strip() -> void:
+	# Ocean-Drive Art-Deco strip: pastel hotels by day, glowing neon by night.
+	# A back row just inland of the boardwalk so it doesn't fight the billboards.
+	var strip := NeonStrip.new()
+	strip.name = "NeonStrip"
+	strip.ground_y = land_y
+	strip.line_x = 1280.0
+	add_child(strip)
 
 
 func _build_neon_sign() -> void:
