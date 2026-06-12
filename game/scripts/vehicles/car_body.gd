@@ -24,9 +24,23 @@ const HEADLIGHT: Vector3 = Vector3(0.36, 0.58, 0.0)
 const TAILLIGHT: Vector3 = Vector3(0.34, 0.66, 0.0)
 ## Spoke count for the alloy wheel face (diameter bars → 2x visible spoke ends).
 const SPOKES: int = 5
+## Curated automotive paints; traffic picks one at random so the city reads as a
+## real mix of cars instead of a fleet of identical clones.
+const PAINT_PALETTE: Array[Color] = [
+	Color(0.74, 0.18, 0.15),  # signal red
+	Color(0.09, 0.11, 0.16),  # midnight blue-black
+	Color(0.84, 0.85, 0.87),  # pearl white
+	Color(0.12, 0.13, 0.14),  # graphite
+	Color(0.15, 0.42, 0.52),  # ocean teal
+	Color(0.82, 0.63, 0.18),  # sand gold
+	Color(0.48, 0.12, 0.2),  # maroon
+	Color(0.2, 0.44, 0.3),  # racing green
+]
 
 ## Body paint; metallic flake by default. Swap per-vehicle for colour variety.
 @export var paint_color: Color = Color(0.74, 0.18, 0.15)
+## Pick a random palette colour at spawn (traffic variety). Off = use paint_color.
+@export var randomize_paint: bool = true
 ## Silhouette: 0 sedan, 1 SUV, 2 van. -1 = pick at random so traffic varies.
 @export var body_style: int = -1
 
@@ -36,16 +50,19 @@ func _ready() -> void:
 	if car == null:
 		return
 
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
 	var style := body_style
 	if style < 0:
-		var srng := RandomNumberGenerator.new()
-		srng.randomize()
-		style = srng.randi() % 3
+		style = rng.randi() % 3
+	var color := paint_color
+	if randomize_paint:
+		color = PAINT_PALETTE[rng.randi() % PAINT_PALETTE.size()]
 	var chassis: MeshInstance3D = car.get_node_or_null("Chassis") as MeshInstance3D
 	if chassis != null:
 		var mesh := CarMesh.to_mesh_glazed(CarMesh.body(4.2, 1.9, 28, 24, style))
 		chassis.mesh = mesh
-		chassis.set_surface_override_material(0, paint_material(paint_color))
+		chassis.set_surface_override_material(0, paint_material(color))
 		if mesh != null and mesh.get_surface_count() > 1:
 			chassis.set_surface_override_material(1, glass_material())
 		chassis.position = Vector3.ZERO  # body is authored in car space already

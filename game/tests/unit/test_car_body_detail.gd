@@ -74,6 +74,18 @@ func test_wheel_has_spokes() -> bool:
 	return CarBodyScript.SPOKES >= 4
 
 
+func test_paint_palette_offers_variety() -> bool:
+	# Traffic needs a real spread of distinct colours, not near-duplicates.
+	var palette := CarBodyScript.PAINT_PALETTE
+	if palette.size() < 5:
+		return false
+	for i in palette.size():
+		for j in range(i + 1, palette.size()):
+			if (palette[i] as Color).is_equal_approx(palette[j]):
+				return false
+	return true
+
+
 func test_lights_sit_at_correct_ends() -> bool:
 	# Headlights at the nose (-Z), taillights at the tail (+Z), each mirrored on X.
 	return (
