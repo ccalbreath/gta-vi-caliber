@@ -5,6 +5,21 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 16) — searchlights: drama in the night sky
+
+Track Q (lighting/atmosphere — night). The night sky had clouds but no drama;
+`Searchlights` adds sweeping club/premiere beams. Each lamp casts a
+fake-volumetric shaft (a cone + `searchlight_beam.gdshader`: additive blend +
+fresnel-rim alpha so the cone reads as a translucent light volume, not a solid
+cone, fading up its length) and sweeps in yaw with a little tilt breathing,
+staggered per lamp so the beams cross. No volumetric-fog dependency. Reads as
+four pale beams raking and crossing the dark sky (`/tmp/searchlights.png`).
+Added over the boardwalk via FloridaBackdrop; verified in a NIGHT capture + 4
+unit tests (lamp count, beams sweep over time, beams tilt off vertical,
+idempotent). Honest limit: it's a billboarded-cone fake (no true light
+scattering / god-rays — that needs volumetrics from the env owner), but the
+additive shafts carry the look on their own.
+
 ## 2026-06-12 (cont. 15) — the neon comes alive: animated motel pylon
 
 Track Q (lighting/atmosphere — night + the first ANIMATED neon). The static

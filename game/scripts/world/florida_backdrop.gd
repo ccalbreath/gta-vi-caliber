@@ -78,6 +78,7 @@ func _ready() -> void:
 	_build_neon_sign()
 	_build_neon_strip()
 	_build_neon_pylon()
+	_build_searchlights()
 	_build_causeway_traffic()
 	_build_swim_volume()
 
@@ -752,6 +753,14 @@ func _build_causeway_traffic() -> void:
 	var traffic := CausewayTraffic.new()
 	traffic.name = "CausewayTraffic"
 	add_child(traffic)
+
+
+func _build_searchlights() -> void:
+	# Sweeping club searchlight beams over the boardwalk — night-sky drama.
+	var lights := Searchlights.new()
+	lights.name = "Searchlights"
+	lights.position = Vector3(1300.0, land_y + 0.5, 560.0)
+	add_child(lights)
 
 
 func _build_neon_pylon() -> void:
