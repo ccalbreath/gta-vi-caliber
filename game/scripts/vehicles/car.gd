@@ -137,8 +137,12 @@ func _physics_process(delta: float) -> void:
 
 
 func _drive(delta: float) -> void:
-	var throttle := Input.get_axis("move_back", "move_forward")
-	var steer_input := Input.get_axis("move_right", "move_left")
+	var throttle := VehicleMotion.driving_axis(
+		Input.get_action_strength("move_back"), Input.get_action_strength("move_forward")
+	)
+	var steer_input := VehicleMotion.driving_axis(
+		Input.get_action_strength("move_left"), Input.get_action_strength("move_right")
+	)
 	var speed := linear_velocity.length()
 	var forward_speed := linear_velocity.dot(-global_transform.basis.z)
 
@@ -160,7 +164,9 @@ func _drive(delta: float) -> void:
 		torque, pedal, ratio, final_drive, wheel_radius, drivetrain_efficiency
 	)
 	force *= _traction_scale(speed, force)
-	engine_force = force * VehicleDamage.engine_multiplier(health, max_health, limp_floor)
+	engine_force = VehicleMotion.godot_engine_force(
+		force * VehicleDamage.engine_multiplier(health, max_health, limp_floor)
+	)
 
 	var target := VehicleMotion.steer_target(steer_input, speed, max_steer, steer_falloff_speed)
 	var safe_steer := VehicleMotion.rollover_steer_limit(

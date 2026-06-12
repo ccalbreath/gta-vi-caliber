@@ -2,6 +2,33 @@ extends RefCounted
 ## Unit tests for VehicleMotion (runner contract: test_* methods return true).
 
 
+func test_driving_axis_forward_or_right_is_positive() -> bool:
+	return VehicleMotion.driving_axis(0.0, 1.0) == 1.0
+
+
+func test_driving_axis_back_or_left_is_negative() -> bool:
+	return VehicleMotion.driving_axis(1.0, 0.0) == -1.0
+
+
+func test_driving_axis_opposed_inputs_cancel() -> bool:
+	return VehicleMotion.driving_axis(1.0, 1.0) == 0.0
+
+
+func test_driving_axis_clamps_to_unit_range() -> bool:
+	return (
+		VehicleMotion.driving_axis(0.0, 4.0) == 1.0 and VehicleMotion.driving_axis(4.0, 0.0) == -1.0
+	)
+
+
+func test_project_controls_invert_for_godot_vehicle_body() -> bool:
+	return (
+		VehicleMotion.godot_engine_force(1200.0) == -1200.0
+		and VehicleMotion.godot_engine_force(-800.0) == 800.0
+		and VehicleMotion.godot_steering(0.5) == -0.5
+		and VehicleMotion.godot_steering(-0.25) == 0.25
+	)
+
+
 func test_full_throttle_at_standstill_gives_max_force() -> bool:
 	return absf(VehicleMotion.engine_force(1.0, 2600.0, 0.0, 38.0) - 2600.0) < 0.0001
 
@@ -35,11 +62,11 @@ func test_steer_limit_halves_at_falloff_speed() -> bool:
 
 
 func test_steer_target_scales_input() -> bool:
-	return absf(VehicleMotion.steer_target(0.5, 0.0, 0.55, 12.0) - 0.275) < 0.0001
+	return absf(VehicleMotion.steer_target(0.5, 0.0, 0.55, 12.0) + 0.275) < 0.0001
 
 
 func test_steer_target_clamps_input() -> bool:
-	return absf(VehicleMotion.steer_target(3.0, 0.0, 0.55, 12.0) - 0.55) < 0.0001
+	return absf(VehicleMotion.steer_target(3.0, 0.0, 0.55, 12.0) + 0.55) < 0.0001
 
 
 func test_upright_torque_opposes_tilt() -> bool:
