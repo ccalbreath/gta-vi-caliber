@@ -42,6 +42,10 @@ const PHONE_SHOULDER_ROLL: float = 0.55
 @export var head_pitch_amplitude: float = 0.026
 @export var head_roll_amplitude: float = 0.035
 @export var head_lean_compensation: float = 0.28
+## Extra stride detail for a premium third-person read: shoulders rise
+## asymmetrically with arm drive and the chest compresses on foot load.
+@export var shoulder_lift_amplitude: float = 0.035
+@export var chest_stride_compression: float = 0.032
 ## Idle life layered on top of the still pose: breathing, neck compensation,
 ## and a slow hip weight shift while grounded.
 @export var idle_breath_amplitude: float = 0.018
@@ -204,10 +208,15 @@ func _apply_secondary_motion() -> void:
 	var shoulder_roll := Locomotion.shoulder_counter_roll(_phase, roll_amplitude * 0.65 * _blend)
 	var twist := Locomotion.torso_twist(_phase, torso_twist_amplitude * _blend)
 	var turn_shoulder_roll := _turn_lean * 0.35
+	var lift := shoulder_lift_amplitude * _blend
+	var left_lift := maxf(0.0, sin(_phase + PI)) * lift
+	var right_lift := maxf(0.0, sin(_phase)) * lift
+	var chest_load := absf(sin(_phase)) * chest_stride_compression * _blend
 	_shoulder_l.rotation.z = shoulder_roll + turn_shoulder_roll
 	_shoulder_r.rotation.z = -shoulder_roll + turn_shoulder_roll
-	_shoulder_l.position.y = 0.6 - _landing_compression * 0.18
-	_shoulder_r.position.y = 0.6 - _landing_compression * 0.18
+	_shoulder_l.position.y = 0.6 - _landing_compression * 0.18 + left_lift
+	_shoulder_r.position.y = 0.6 - _landing_compression * 0.18 + right_lift
+	_torso.rotation.x = -chest_load
 	_shoulder_l.rotation.y = twist
 	_shoulder_r.rotation.y = twist
 	_torso.rotation.y = twist
@@ -254,7 +263,11 @@ func _update_facing(planar_velocity: Vector3, planar_speed: float, delta: float)
 			target = aim
 			has_target = true
 	if not has_target and planar_speed > Locomotion.IDLE_SPEED_EPSILON:
-		target = atan2(planar_velocity.x, planar_velocity.z)
+		# Face the travel direction. The rig's forward (its face/chest) is local -Z
+		# (Godot/Blender convention), so point -Z along velocity — negating both
+		# components, NOT atan2(x, z), which would aim the back of the head forward
+		# and make the character moonwalk.
+		target = atan2(-planar_velocity.x, -planar_velocity.z)
 		has_target = true
 	if has_target:
 		_facing = _rotate_toward_angle(_facing, target, turn_rate * delta)

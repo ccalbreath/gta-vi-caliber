@@ -70,7 +70,9 @@ func facing_override() -> float:
 	if not _armed or _camera == null:
 		return NAN
 	var fwd := -_camera.global_transform.basis.z
-	return atan2(fwd.x, fwd.z)
+	# The rig's forward (face) is local -Z, so point -Z along the camera forward
+	# by negating both components — matching CharacterAnimator's travel-facing.
+	return atan2(-fwd.x, -fwd.z)
 
 
 func is_armed() -> bool:
