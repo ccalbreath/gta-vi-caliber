@@ -21,6 +21,15 @@ const BLEND_WALK := 0.5
 const BLEND_JOG := 0.8
 const BLEND_SPRINT := 1.0
 
+## Trim windows for the jump one-shots (probed from the clips' pelvis
+## curves): Jump_Start spends its first 0.30 s in an anticipation crouch the
+## physics jump doesn't wait for, then extends into the air pose; Jump_Land's
+## absorb is over by 0.60 s, the rest is a slow recovery the Move crossfade
+## covers better.
+const JUMP_START_OFFSET := 0.30
+const JUMP_START_LENGTH := 0.45
+const LAND_LENGTH := 0.60
+
 ## Speeds must mirror the Player export values so blend thresholds agree.
 @export var walk_speed: float = 5.0
 @export var run_speed: float = 8.5
@@ -30,6 +39,9 @@ const BLEND_SPRINT := 1.0
 @export var response_rate: float = 10.0
 ## Crossfade (s) between ground locomotion and the airborne state.
 @export var air_xfade: float = 0.2
+## Landing at or above this planar speed (m/s) skips the landing absorb and
+## rolls straight back into locomotion, so moving landings don't foot-slide.
+@export var land_skip_speed: float = 2.0
 
 var _facing: float = 0.0
 var _blend: float = 0.0
@@ -79,8 +91,9 @@ func animate(
 
 	_update_facing(planar_velocity, delta)
 
-	var target := AnimRouter.travel_target(state)
-	if _playback.get_current_node() != target:
+	var current := _playback.get_current_node()
+	var target := AnimRouter.travel_target(state, current, planar_speed, land_skip_speed)
+	if current != target:
 		_playback.travel(target)
 
 
@@ -137,8 +150,9 @@ func _install_animations() -> void:
 
 
 ## Build the locomotion state machine: a Move blend space (idle → walk → jog
-## → sprint along Locomotion.move_blend's axis) and an airborne loop, with a
-## short crossfade both ways.
+## → sprint along Locomotion.move_blend's axis) plus the three-phase jump
+## chain — JumpStart one-shot → Air loop → Land one-shot — with the
+## one-shots trimmed to their useful windows and auto-advancing when done.
 func _build_state_machine() -> AnimationNodeStateMachine:
 	var machine := AnimationNodeStateMachine.new()
 
@@ -149,10 +163,27 @@ func _build_state_machine() -> AnimationNodeStateMachine:
 	move.add_blend_point(_clip(&"Sprint"), BLEND_SPRINT)
 	machine.add_node(AnimRouter.STATE_MOVE, move)
 
+	machine.add_node(
+		AnimRouter.STATE_JUMP_START, _one_shot(&"Jump_Start", JUMP_START_OFFSET, JUMP_START_LENGTH)
+	)
 	machine.add_node(AnimRouter.STATE_AIR, _clip(&"Jump"))
+	machine.add_node(AnimRouter.STATE_LAND, _one_shot(&"Jump_Land", 0.0, LAND_LENGTH))
 
+	# Launch: quick cut into the start one-shot, which flows into the loop.
+	machine.add_transition(AnimRouter.STATE_MOVE, AnimRouter.STATE_JUMP_START, _transition(0.1))
+	machine.add_transition(AnimRouter.STATE_JUMP_START, AnimRouter.STATE_AIR, _auto_at_end(0.25))
+	# Walking off a ledge skips the launch pose.
 	machine.add_transition(AnimRouter.STATE_MOVE, AnimRouter.STATE_AIR, _transition(air_xfade))
+
+	# Touchdown: absorb when slow (auto-recovers into Move), straight back
+	# into locomotion when moving; short hops can land out of the start.
+	machine.add_transition(AnimRouter.STATE_AIR, AnimRouter.STATE_LAND, _transition(0.1))
 	machine.add_transition(AnimRouter.STATE_AIR, AnimRouter.STATE_MOVE, _transition(air_xfade))
+	machine.add_transition(AnimRouter.STATE_JUMP_START, AnimRouter.STATE_LAND, _transition(0.1))
+	machine.add_transition(AnimRouter.STATE_JUMP_START, AnimRouter.STATE_MOVE, _transition(0.15))
+	machine.add_transition(AnimRouter.STATE_LAND, AnimRouter.STATE_MOVE, _auto_at_end(0.25))
+	# Bunny hop: jumping during the absorb restarts the arc.
+	machine.add_transition(AnimRouter.STATE_LAND, AnimRouter.STATE_JUMP_START, _transition(0.1))
 	return machine
 
 
@@ -162,7 +193,27 @@ func _clip(animation_name: StringName) -> AnimationNodeAnimation:
 	return node
 
 
+## A clip trimmed to [offset, offset + length] at natural speed, so the
+## state machine sees a one-shot exactly as long as its useful window.
+func _one_shot(animation_name: StringName, offset: float, length: float) -> AnimationNodeAnimation:
+	var node := _clip(animation_name)
+	node.use_custom_timeline = true
+	node.start_offset = offset
+	node.timeline_length = length
+	node.stretch_time_scale = false
+	return node
+
+
 func _transition(xfade: float) -> AnimationNodeStateMachineTransition:
 	var transition := AnimationNodeStateMachineTransition.new()
 	transition.xfade_time = xfade
+	return transition
+
+
+## Fires by itself when the source one-shot reaches its end, crossfading
+## into the destination over xfade seconds.
+func _auto_at_end(xfade: float) -> AnimationNodeStateMachineTransition:
+	var transition := _transition(xfade)
+	transition.switch_mode = AnimationNodeStateMachineTransition.SWITCH_MODE_AT_END
+	transition.advance_mode = AnimationNodeStateMachineTransition.ADVANCE_MODE_AUTO
 	return transition

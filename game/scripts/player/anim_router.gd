@@ -9,18 +9,35 @@ extends RefCounted
 
 ## State-machine node names built by AnimatedRig.
 const STATE_MOVE := &"Move"
+const STATE_JUMP_START := &"JumpStart"
 const STATE_AIR := &"Air"
+const STATE_LAND := &"Land"
 
 
-## The state-machine node that should be playing for a locomotion state.
-## CLIMB maps to the move cycle as a documented placeholder — the animation
-## library ships no ladder clip yet, and cycling limbs read better than a
-## frozen pose while the player scales a ladder.
-static func travel_target(state: Locomotion.State) -> StringName:
+## The state-machine node that should be playing, given the locomotion state
+## and the node currently active. The jump arc is a three-phase chain
+## (JumpStart one-shot → Air loop → Land one-shot); one-shots are left to
+## finish (the machine auto-advances them) instead of being re-travelled
+## every frame. Landing at speed skips the absorb so the legs don't slide
+## through a planted pose, and CLIMB maps to the move cycle as a documented
+## placeholder — the animation library ships no ladder clip yet.
+static func travel_target(
+	state: Locomotion.State, current: StringName, planar_speed: float, land_skip_speed: float
+) -> StringName:
 	match state:
-		Locomotion.State.JUMP, Locomotion.State.FALL:
-			return STATE_AIR
+		Locomotion.State.JUMP:
+			if current == STATE_AIR or current == STATE_JUMP_START:
+				return current
+			return STATE_JUMP_START
+		Locomotion.State.FALL:
+			return STATE_JUMP_START if current == STATE_JUMP_START else STATE_AIR
+		Locomotion.State.CLIMB:
+			return STATE_MOVE
 		_:
+			if current == STATE_AIR or current == STATE_JUMP_START:
+				return STATE_MOVE if planar_speed >= land_skip_speed else STATE_LAND
+			if current == STATE_LAND:
+				return STATE_LAND
 			return STATE_MOVE
 
 

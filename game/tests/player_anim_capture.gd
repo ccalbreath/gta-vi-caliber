@@ -14,6 +14,7 @@ const SPRINT_FRAMES := 100
 var _frame := 0
 var _phase := "boot"
 var _phase_started_frame := 0
+var _observed: Array[StringName] = []
 var _failures: PackedStringArray = []
 
 
@@ -31,8 +32,12 @@ func _process(_delta: float) -> bool:
 			_phase_walk()
 		"sprint":
 			_phase_sprint()
+		"settle":
+			_phase_settle()
 		"jump":
 			_phase_jump()
+		"run_jump":
+			_phase_run_jump()
 		"front":
 			_phase_front()
 	return _phase == "done"
@@ -65,31 +70,86 @@ func _phase_sprint() -> void:
 		return
 	_shot("03_sprint")
 	_expect_state(AnimRouter.STATE_MOVE, 1.0, 0.1, "sprint")
+	Input.action_release("move_forward")
+	Input.action_release("sprint")
+	_next("settle")
+
+
+func _phase_settle() -> void:
+	# Let the character brake to idle so the next jump is a standing jump.
+	if _frame < 45:
+		return
 	Input.action_press("jump")
+	_observed.clear()
 	_next("jump")
 
 
+## Standing jump: the full three-phase chain must play — JumpStart one-shot,
+## Air loop, then the Land absorb (planar speed ~0 is under land_skip_speed).
 func _phase_jump() -> void:
 	if _frame == 5:
 		Input.action_release("jump")
-	# Capture near the top of the arc: wait until the body is actually
-	# airborne, then a short beat more, so the shot isn't the launch frame.
-	if _phase_started_frame == 0:
-		if not (_player() as CharacterBody3D).is_on_floor():
-			_phase_started_frame = _frame
-		elif _frame > 300:
-			_failures.append("player never left the ground after jump press")
-			_finish()
+	_record_states("04_jump")
+	if _frame > 600:
+		_failures.append("standing jump never returned to Move (saw %s)" % str(_observed))
+		_finish()
 		return
-	if _frame < _phase_started_frame + 25:
+	if _frame < 30 or not _grounded_in_move():
 		return
-	_shot("04_airborne")
-	var current := _current_state()
-	if current != AnimRouter.STATE_AIR:
-		_failures.append("expected Air state mid-jump, got '%s'" % current)
+	for expected: StringName in [
+		AnimRouter.STATE_JUMP_START, AnimRouter.STATE_AIR, AnimRouter.STATE_LAND
+	]:
+		if not _observed.has(expected):
+			_failures.append("standing jump skipped '%s' (saw %s)" % [expected, str(_observed)])
+	print("capture: standing jump chain = %s" % str(_observed))
+	Input.action_press("move_forward")
+	Input.action_press("sprint")
+	_observed.clear()
+	_next("run_jump")
+
+
+## Sprinting jump: landing above land_skip_speed must skip the Land absorb
+## and roll straight back into locomotion.
+func _phase_run_jump() -> void:
+	if _frame == 60:
+		Input.action_press("jump")
+	if _frame == 65:
+		Input.action_release("jump")
+	if _frame <= 60:
+		return
+	_record_states("")
+	if _frame > 600:
+		_failures.append("running jump never returned to Move (saw %s)" % str(_observed))
+		_finish()
+		return
+	if not _grounded_in_move() or _observed.is_empty():
+		return
+	if not _observed.has(AnimRouter.STATE_AIR):
+		_failures.append("running jump never reached Air (saw %s)" % str(_observed))
+	if _observed.has(AnimRouter.STATE_LAND):
+		_failures.append("running landing should skip Land (saw %s)" % str(_observed))
+	print("capture: running jump chain = %s" % str(_observed))
 	Input.action_release("move_forward")
 	Input.action_release("sprint")
 	_next("front")
+
+
+## Append each state-machine node as it becomes current; screenshot the
+## airborne phases of the standing jump the first time each appears.
+func _record_states(shot_prefix: String) -> void:
+	var current := _current_state()
+	if current == AnimRouter.STATE_MOVE:
+		return
+	if _observed.is_empty() or _observed[_observed.size() - 1] != current:
+		_observed.append(current)
+		if not shot_prefix.is_empty():
+			_shot("%s_%s" % [shot_prefix, current])
+
+
+func _grounded_in_move() -> bool:
+	return (
+		(_player() as CharacterBody3D).is_on_floor() and _current_state() == AnimRouter.STATE_MOVE
+	)
 
 
 func _phase_front() -> void:

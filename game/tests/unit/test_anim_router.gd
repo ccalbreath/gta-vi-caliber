@@ -5,31 +5,76 @@ extends RefCounted
 const WALK := 5.0
 const RUN := 8.5
 
+const LAND_SKIP := 2.0
+
+
+func _route(state: Locomotion.State, current: StringName, planar_speed: float = 0.0) -> StringName:
+	return AnimRouter.travel_target(state, current, planar_speed, LAND_SKIP)
+
 
 func test_idle_routes_to_move() -> bool:
-	return AnimRouter.travel_target(Locomotion.State.IDLE) == AnimRouter.STATE_MOVE
+	return _route(Locomotion.State.IDLE, AnimRouter.STATE_MOVE) == AnimRouter.STATE_MOVE
 
 
 func test_walk_routes_to_move() -> bool:
-	return AnimRouter.travel_target(Locomotion.State.WALK) == AnimRouter.STATE_MOVE
+	return _route(Locomotion.State.WALK, AnimRouter.STATE_MOVE, WALK) == AnimRouter.STATE_MOVE
 
 
 func test_run_routes_to_move() -> bool:
-	return AnimRouter.travel_target(Locomotion.State.RUN) == AnimRouter.STATE_MOVE
-
-
-func test_jump_routes_to_air() -> bool:
-	return AnimRouter.travel_target(Locomotion.State.JUMP) == AnimRouter.STATE_AIR
-
-
-func test_fall_routes_to_air() -> bool:
-	return AnimRouter.travel_target(Locomotion.State.FALL) == AnimRouter.STATE_AIR
+	return _route(Locomotion.State.RUN, AnimRouter.STATE_MOVE, RUN) == AnimRouter.STATE_MOVE
 
 
 func test_climb_routes_to_move() -> bool:
 	# No climb clip in the animation library yet; the move cycle is the
 	# documented placeholder so limbs keep working on ladders.
-	return AnimRouter.travel_target(Locomotion.State.CLIMB) == AnimRouter.STATE_MOVE
+	return _route(Locomotion.State.CLIMB, AnimRouter.STATE_MOVE) == AnimRouter.STATE_MOVE
+
+
+func test_jump_from_ground_starts_jump() -> bool:
+	return _route(Locomotion.State.JUMP, AnimRouter.STATE_MOVE) == AnimRouter.STATE_JUMP_START
+
+
+func test_jump_during_land_starts_jump() -> bool:
+	# Bunny hop: a jump pressed during the landing absorb restarts the arc.
+	return _route(Locomotion.State.JUMP, AnimRouter.STATE_LAND) == AnimRouter.STATE_JUMP_START
+
+
+func test_rising_keeps_jump_start_playing() -> bool:
+	return _route(Locomotion.State.JUMP, AnimRouter.STATE_JUMP_START) == AnimRouter.STATE_JUMP_START
+
+
+func test_rising_keeps_air_loop() -> bool:
+	return _route(Locomotion.State.JUMP, AnimRouter.STATE_AIR) == AnimRouter.STATE_AIR
+
+
+func test_fall_lets_jump_start_finish() -> bool:
+	# Past the apex the start one-shot keeps playing; the state machine
+	# auto-advances it into the Air loop at its end.
+	return _route(Locomotion.State.FALL, AnimRouter.STATE_JUMP_START) == AnimRouter.STATE_JUMP_START
+
+
+func test_fall_off_ledge_routes_to_air() -> bool:
+	# Walking off an edge without jumping skips the launch anim entirely.
+	return _route(Locomotion.State.FALL, AnimRouter.STATE_MOVE) == AnimRouter.STATE_AIR
+
+
+func test_slow_landing_plays_land() -> bool:
+	return _route(Locomotion.State.IDLE, AnimRouter.STATE_AIR, 0.5) == AnimRouter.STATE_LAND
+
+
+func test_fast_landing_skips_land() -> bool:
+	# Landing while moving rolls straight back into locomotion so the legs
+	# don't slide through a planted absorb pose.
+	return _route(Locomotion.State.RUN, AnimRouter.STATE_AIR, RUN) == AnimRouter.STATE_MOVE
+
+
+func test_short_hop_lands_from_jump_start() -> bool:
+	return _route(Locomotion.State.IDLE, AnimRouter.STATE_JUMP_START, 0.0) == AnimRouter.STATE_LAND
+
+
+func test_grounded_during_land_stays_in_land() -> bool:
+	# The one-shot finishes on its own; the machine auto-advances to Move.
+	return _route(Locomotion.State.IDLE, AnimRouter.STATE_LAND) == AnimRouter.STATE_LAND
 
 
 func test_move_blend_uses_planar_speed_on_ground() -> bool:
