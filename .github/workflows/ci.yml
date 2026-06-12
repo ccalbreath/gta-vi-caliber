@@ -52,6 +52,8 @@ jobs:
         run: ~/godot-bin/godot --headless --path game --script res://tests/smoke_test.gd
       - name: gdUnit4 unit tests
         run: ~/godot-bin/godot --headless --path game --script res://tests/run_tests.gd
+      - name: Legacy unit tests
+        run: ~/godot-bin/godot --headless --path game --script res://tests/run_legacy_tests.gd
 
   engine:
     name: Engine modules (${{ matrix.platform }})

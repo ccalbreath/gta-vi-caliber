@@ -69,6 +69,12 @@ step "smoke test"
 step "gdUnit4 unit tests"
 "$GODOT_BIN" --headless --path game --script res://tests/run_tests.gd
 
+# --- 5b. legacy unit tests (RefCounted suites, func test_*() -> bool) ---------
+# gdUnit4 only discovers GdUnitTestSuite scripts; the pre-port suites are the
+# bulk of the project's tests and must keep gating until issue #3 finishes.
+step "legacy unit tests"
+"$GODOT_BIN" --headless --path game --script res://tests/run_legacy_tests.gd
+
 # --- 6. playable-map integration probes --------------------------------------
 # Frame-stepped runtime checks the one-frame smoke test cannot make: the main
 # map's gameplay stack is wired (self-wiring system nodes registered) and the
