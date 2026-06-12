@@ -37,6 +37,7 @@
 [ext_resource type="Script" path="res://scripts/world/pay_spray_shop.gd" id="31_payspray"]
 [ext_resource type="Script" path="res://scripts/systems/arrest_controller.gd" id="32_arrest"]
 [ext_resource type="Script" path="res://scripts/npc/police_helicopter.gd" id="33_heli"]
+[ext_resource type="Script" path="res://scripts/world/causeways.gd" id="34_causeways"]
 
 [sub_resource type="BoxShape3D" id="payspray_shape"]
 size = Vector3(12, 6, 12)
@@ -110,6 +111,11 @@ directional_shadow_max_distance = 900.0
 
 [node name="FloridaBackdrop" type="Node3D" parent="."]
 script = ExtResource("4_florida")
+
+; Drivable bay crossings (MacArthur / Julia Tuttle / Venetian) that connect the
+; mainland districts to the beaches into one continuous Florida landmass.
+[node name="Causeways" type="Node3D" parent="."]
+script = ExtResource("34_causeways")
 
 [node name="Streamer" type="Node3D" parent="."]
 script = ExtResource("3_streamer")
