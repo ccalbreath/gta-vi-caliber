@@ -69,5 +69,7 @@ step "miami wiring probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_wiring_probe.gd
 step "miami loop probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_loop_probe.gd
+step "miami mission probe"
+"$GODOT_BIN" --headless --path game --script res://tests/miami_mission_probe.gd
 
 printf '\nAll checks passed ✔\n'

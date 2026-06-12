@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3]
+[gd_scene load_steps=25 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -16,7 +16,7 @@
 [ext_resource type="Script" path="res://scripts/systems/player_health.gd" id="10_health"]
 [ext_resource type="Script" path="res://scripts/player/player_stats.gd" id="11_stats"]
 [ext_resource type="Script" path="res://scripts/systems/wanted_tracker.gd" id="12_wanted"]
-[ext_resource type="Script" path="res://scripts/missions/mission_director.gd" id="13_mission"]
+[ext_resource type="Script" path="res://scripts/missions/mission_controller.gd" id="13_mission"]
 [ext_resource type="Script" path="res://scripts/npc/bark_director.gd" id="14_bark"]
 [ext_resource type="Script" path="res://scripts/npc/crowd_director.gd" id="15_crowd"]
 [ext_resource type="Script" path="res://scripts/ai/traffic_director.gd" id="16_traffic"]
@@ -24,6 +24,10 @@
 [ext_resource type="PackedScene" path="res://scenes/npc/police.tscn" id="18_police"]
 [ext_resource type="PackedScene" path="res://scenes/vehicles/car.tscn" id="19_car"]
 [ext_resource type="Script" path="res://scripts/systems/save_manager.gd" id="20_save"]
+[ext_resource type="Script" path="res://scripts/missions/mission_trigger.gd" id="21_trigger"]
+
+[sub_resource type="SphereShape3D" id="trigger_shape"]
+radius = 6.0
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_top_color = Color(0.14, 0.24, 0.52, 1)
@@ -120,8 +124,49 @@ script = ExtResource("11_stats")
 [node name="WantedTracker" type="Node" parent="."]
 script = ExtResource("12_wanted")
 
-[node name="MissionDirector" type="Node" parent="."]
+[node name="Mission" type="Node" parent="."]
 script = ExtResource("13_mission")
+title = "WELCOME TO VICE CITY"
+objective_defs = [{
+"id": "reach_car",
+"text": "Get in your car"
+}, {
+"id": "drive_strip",
+"text": "Drive down to the strip"
+}, {
+"id": "return_home",
+"text": "Head back to the start"
+}]
+waypoints = {
+"drive_strip": Vector3(72, 1, -48),
+"reach_car": Vector3(7, 1, 5),
+"return_home": Vector3(0, 1, 0)
+}
+time_limit = 0.0
+
+[node name="ReachCarTrigger" type="Area3D" parent="Mission"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 1, 5)
+script = ExtResource("21_trigger")
+objective_id = "reach_car"
+
+[node name="ReachCarShape" type="CollisionShape3D" parent="Mission/ReachCarTrigger"]
+shape = SubResource("trigger_shape")
+
+[node name="DriveStripTrigger" type="Area3D" parent="Mission"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 72, 1, -48)
+script = ExtResource("21_trigger")
+objective_id = "drive_strip"
+
+[node name="DriveStripShape" type="CollisionShape3D" parent="Mission/DriveStripTrigger"]
+shape = SubResource("trigger_shape")
+
+[node name="ReturnHomeTrigger" type="Area3D" parent="Mission"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+script = ExtResource("21_trigger")
+objective_id = "return_home"
+
+[node name="ReturnHomeShape" type="CollisionShape3D" parent="Mission/ReturnHomeTrigger"]
+shape = SubResource("trigger_shape")
 
 [node name="BarkDirector" type="Node" parent="."]
 script = ExtResource("14_bark")
