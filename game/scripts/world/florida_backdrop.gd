@@ -73,6 +73,7 @@ func _ready() -> void:
 	_build_seabirds()
 	_build_air_banner()
 	_build_billboards()
+	_build_pier()
 	_build_swim_volume()
 
 
@@ -737,6 +738,17 @@ func _build_coastal_palms() -> void:
 	palms.map_scale = map_scale
 	palms.ground_y = land_y + 0.05
 	add_child(palms)
+
+
+func _build_pier() -> void:
+	# A fishing pier reaching off the bay-facing shore into the water — the
+	# "pier" half of the ledger's palms/pier postcard note. Yawed so the deck
+	# extends from the mainland shore out over the bay.
+	var pier := Pier.new()
+	pier.name = "Pier"
+	pier.position = Vector3(1380.0, 0.0, 500.0)
+	pier.rotation.y = -PI * 0.5
+	add_child(pier)
 
 
 func _build_billboards() -> void:

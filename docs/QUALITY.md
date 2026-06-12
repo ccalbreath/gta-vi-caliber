@@ -5,6 +5,22 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 10) — the fishing pier: the postcard's other half
+
+Track Q (detail/landmark) — closes the rest of the ledger's "palms/pier" note
+(palms shipped in cont. 6). Added `Pier`: a recreational fishing pier reaching
+off the bay-facing shore over the water — weathered boardwalk deck on regular
+pilings (which drop below the waterline), railings with posts down both sides,
+warm self-lit lamp posts, and a widened observation platform at the sea end.
+A *built landmark*, distinct from all the scattered ambient work, and the
+strongest single coastal foreground yet (`/tmp/pier.png`). Added via
+FloridaBackdrop; verified in isolation over the real Ocean + 4 unit tests.
+Process note: detached duplicate-named nodes auto-rename to the `@Name@N` form
+(not `Name2`), so `==`/`begins_with` name-matching in tests is unreliable —
+grouped pilings/lamps under container nodes instead (cleaner tree too). Honest
+limit: one curated pier; a denser coast would want a few marinas/docks tied to
+the road graph.
+
 ## 2026-06-12 (cont. 9) — satirical billboards: the city gets an opinion
 
 Track Q (humor/tone + detail/density), extending the satire axis the banner
