@@ -5,6 +5,31 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 17) — QA: do the shipped elements land in the LIVE map?
+
+Not a feature — an honest verification pass (added `coast_scene_capture.gd`,
+which boots the real miami map and frames a FloridaBackdrop element by its
+runtime world position). Findings, straight:
+
+- **All 17 elements build + place correctly in the live scene** (diagnostic:
+  Pier 62 children @ (1380,0,500); NeonStrip 7 buildings; LifeguardTowers 8;
+  Billboards 9; CoastalPalms 2 layers; Searchlights, etc. all present). The
+  clouds and a searchlight beam are clearly visible in-scene — the work lands.
+- **BUT miami.tscn is locked to a fixed warm-dusk grade — there is no day/night
+  clock in the scene** (no SkyController/GameClock node; the env is static). So
+  the dark-night DRAMA of the neon/searchlight work (gateway, strip, pylon,
+  beams) only exists in my isolation captures; in-game they read as emissive
+  accents against dusk, not the full Vice City night. The night look is
+  genuinely GATED behind the env owner adding a time-of-day to miami.tscn —
+  exactly the blocker flagged since the start.
+- The coastal cluster sits around x≈1280–1380; placement is functional but I
+  can't perfectly confirm water-edge vs inland through the FloatingOrigin +
+  HUD clutter, and didn't want to "fix" placement blind and make it worse.
+
+Net: the in-lane work is real and verified, but its in-GAME ceiling is capped by
+the locked env until the integration blocker is resolved. Recording this so the
+ledger reflects the honest in-scene state, not just the pretty isolation shots.
+
 ## 2026-06-12 (cont. 16) — searchlights: drama in the night sky
 
 Track Q (lighting/atmosphere — night). The night sky had clouds but no drama;
