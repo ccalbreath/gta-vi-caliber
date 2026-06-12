@@ -1,4 +1,4 @@
-[gd_scene load_steps=34 format=3]
+[gd_scene load_steps=36 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -34,6 +34,10 @@
 [ext_resource type="Script" path="res://scripts/systems/progression_tracker.gd" id="28_progress"]
 [ext_resource type="Script" path="res://scripts/systems/stats_coordinator.gd" id="29_stats"]
 [ext_resource type="Script" path="res://scripts/missions/mission_campaign.gd" id="30_campaign"]
+[ext_resource type="Script" path="res://scripts/world/pay_spray_shop.gd" id="31_payspray"]
+
+[sub_resource type="BoxShape3D" id="payspray_shape"]
+size = Vector3(12, 6, 12)
 
 [sub_resource type="SphereShape3D" id="trigger_shape"]
 radius = 6.0
@@ -230,6 +234,13 @@ script = ExtResource("29_stats")
 
 [node name="MissionCampaign" type="Node" parent="."]
 script = ExtResource("30_campaign")
+
+[node name="PaySprayShop" type="Area3D" parent="." groups=["pay_spray"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46, 1, 28)
+script = ExtResource("31_payspray")
+
+[node name="PaySprayShape" type="CollisionShape3D" parent="PaySprayShop"]
+shape = SubResource("payspray_shape")
 
 [node name="WantedEvasion" type="Node" parent="."]
 script = ExtResource("25_evade")
