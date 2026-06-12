@@ -46,21 +46,23 @@ func _run() -> bool:
 					break
 
 	var final := _mean_goal_dist(demo, goal)
-	# Routed to the goal, never clipped a wall, and separation kept some spacing
-	# (a pure flow-only crowd would stack right on the goal point).
-	if final >= initial * 0.6 or not path_clean:
+	# Now actually assert "separated": a flow-ONLY crowd stacks onto the goal
+	# point (spread -> ~0); separation must keep a real spread (Codex review).
+	var spread := _spread(demo)
+	# Routed to the goal, never clipped a wall, and stayed separated.
+	if final >= initial * 0.6 or not path_clean or spread < 2.0:
 		print(
 			(
-				"  FAIL: routed crowd weak (mean goal-dist %.1f -> %.1f, path_clean=%s)"
-				% [initial, final, str(path_clean)]
+				"  FAIL: routed crowd weak (goal-dist %.1f -> %.1f, spread %.1f, clean=%s)"
+				% [initial, final, spread, str(path_clean)]
 			)
 		)
 		return false
 
 	print(
 		(
-			"  OK: %d agents routed to goal (mean dist %.1f -> %.1f), 0 wall hits, separated"
-			% [demo.agent_count, initial, final]
+			"  OK: %d agents routed (mean dist %.1f -> %.1f), 0 wall hits, spread %.1f"
+			% [demo.agent_count, initial, final, spread]
 		)
 	)
 	return true
@@ -70,4 +72,17 @@ func _mean_goal_dist(demo: CrowdRoutedDemo, goal: Vector2) -> float:
 	var sum := 0.0
 	for i in demo.agent_count:
 		sum += demo.positions[i].distance_to(goal)
+	return sum / float(demo.agent_count)
+
+
+## Mean distance of the agents from their centroid — proves the crowd stayed
+## spread (separation working), not collapsed onto a single point.
+func _spread(demo: CrowdRoutedDemo) -> float:
+	var centroid := Vector2.ZERO
+	for i in demo.agent_count:
+		centroid += demo.positions[i]
+	centroid /= float(demo.agent_count)
+	var sum := 0.0
+	for i in demo.agent_count:
+		sum += demo.positions[i].distance_to(centroid)
 	return sum / float(demo.agent_count)
