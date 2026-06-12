@@ -73,5 +73,7 @@ step "miami mission probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_mission_probe.gd
 step "miami payspray probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_payspray_probe.gd
+step "miami arrest probe"
+"$GODOT_BIN" --headless --path game --script res://tests/miami_arrest_probe.gd
 
 printf '\nAll checks passed ✔\n'
