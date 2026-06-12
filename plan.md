@@ -3,13 +3,13 @@
 **This is an experiment, framed as a plan.** The real question underneath all
 the milestones below is a research question:
 
-> **Can a branching swarm of Claude / Fable coding agents, working continuously
+> **Can a branching swarm of Claude / Codex coding agents, working continuously
 > under one shared contract, build a GTA-VI-caliber open-world game — and how
 > far can they get before the real GTA VI actually releases?**
 
 The deadline is the experiment's clock: **GTA VI itself.** Whatever this repo
 looks like the day Rockstar ships is the result. We are not racing them to
-*win* — they have ~1000 people and a decade. We are measuring **how close an
+*win* — they have ~1000 people and a decade (probably also have whole branch clade /codex running). We are measuring **how close an
 autonomous AI agent fleet gets**, on an open engine, with original assets, from
 a standing start. That number — and everything we learn making it as high as
 possible — is the actual deliverable.
@@ -174,6 +174,7 @@ B. Streaming world at scale ─┼─→ D. Content volume ─────→ F.
 C. Wire the parts bin ───────┘    E. Life & atmosphere ─┘                          ├─→ G. Polish ──→ H. Ship 1.0
                                                                                     │
    Track N. Narrative/voice/audio ─── slow production track, fills F's skeleton ────┤
+   Track Q. Fidelity fine-tuning ───── continuous: detail/texture/movement/tone ────┤
    Engine track (worldcore) ───────────── runs throughout ──────────────────────────┘
 ```
 
@@ -367,6 +368,65 @@ reads as *a story*, not a sequence of objectives.
 > Reality note: if voice/writing capacity is the constraint (it usually is),
 > **cut mission count before cutting quality** — 12 great authored missions beat
 > 30 hollow ones. Scale the arc to the writing you can actually produce.
+
+---
+
+## Track Q — Fidelity fine-tuning  *(every axis, pushed toward GTA VI)*
+
+*Goal: not "does the feature exist" but "does it feel like GTA VI" — tuned, by
+eye and by ear, on every sensory and qualitative axis.*
+
+The phases above make the game **exist**. This track makes it **close the gap**.
+It is **continuous, not a phase** — it runs the whole way and never fully
+"completes"; it is the refinement loop every other phase feeds into. The method
+is the same on every axis: **put our output next to GTA VI reference, name the
+specific delta, fix the highest-value one, re-capture, repeat.** Reference study
+only — we study the *look and feel*, never copy assets ([[trailer-gap-roadmap]],
+[[visual-realism-pipeline]]).
+
+Per-axis target and how to push it:
+
+- [ ] **Detail / set dressing.** GTA reads dense because every surface has
+      intent — grime, signage, trash, wear, props with history. Push: per-
+      district detail passes; kill flat untextured surfaces; add small-prop
+      density and decals. Gate: no placeholder/flat geometry on the critical path.
+- [ ] **Texture / material.** PBR with real roughness/normal/AO variation, wet
+      vs dry, day vs night response. Push: a material-quality bar per surface
+      class (road, facade, skin, car paint, water); upgrade the worst-scoring
+      first. Use the texture pipeline in [[codex-asset-generation]]. Gate: side-
+      by-side material capture rated ≥ GTA-adjacent on the hero surfaces.
+- [ ] **Movement / animation feel.** This is where "AAA" lives — weight,
+      momentum, foot-plant, transitions, ragdoll, camera that breathes. Push:
+      locomotion blend tuning, IK foot-planting, vehicle weight/suspension feel,
+      hit/impact reactions, no foot-sliding or pops. Gate: a movement-capture
+      reel (walk/sprint/turn/enter-vehicle/combat) with no visible snap.
+- [ ] **Humor / tone.** GTA's voice is satire — billboards, radio ads, NPC
+      barks, mission writing that's funny and mean. This is a *writing* axis,
+      owned with Track N. Push: a tone guide; satirical signage/ads/bark library;
+      mission dialogue that lands jokes. Gate: a playtester laughs at least once
+      unprompted.
+- [ ] **Story / character.** Beyond "a plot exists" — characters with want and
+      voice, pacing, set-piece missions, a memorable finale. Owned with Track N.
+      Push: table-reads of mission scripts; cut beats that don't earn their time.
+      Gate: a fresh player can name and describe the protagonist's arc afterward.
+- [ ] **Audio feel.** Punchy weapons, throaty engines, a city that sounds alive,
+      music that scores the moment. Push: layered SFX, spatialization, dynamic
+      mix. Gate: eyes-closed, the soundscape reads as "a GTA city."
+- [ ] **Lighting / atmosphere.** The single biggest perceived-fidelity lever
+      (see Phase E/G). Push: golden-hour and neon-night grade per district,
+      volumetrics, reflections. Gate: a night-and-dusk capture set that survives
+      a side-by-side with the trailer's mood.
+
+**Scoring loop (the engine of this track).** Keep the
+trailer-gap score current ([[trailer-gap-roadmap]] starts it at ~2.3/10):
+re-score after every meaningful pass, log the biggest remaining gap per axis,
+and let the agent loop pull the top gap next. The score going up *is* the
+experiment's primary metric.
+
+**Honest ceiling (do not forget):** the asymptote is ~6–7/10 vs the real
+trailer without hardware ray-tracing ([[godot-fidelity-ceiling]]). Fine-tuning
+chases that ceiling on every axis; it does not break it. Diminishing returns are
+real — when an axis stops moving the score, bank it and move to the next.
 
 ---
 
