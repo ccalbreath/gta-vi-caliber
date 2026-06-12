@@ -1,5 +1,9 @@
 # Roadmap
 
+> See [`../plan.md`](../plan.md) for the end-to-end strategy (Phases A–H, scope,
+> and the cut line). This file is the live task board (M0–M6); `plan.md` sits
+> above it. When the two disagree, fix one of them in the same PR.
+
 The path from empty repo to trailer-grade open world, as shippable milestones.
 **Every unchecked box is an invitation** — comment on or open an issue before
 starting so work isn't duplicated. Boxes only get checked when the feature is
