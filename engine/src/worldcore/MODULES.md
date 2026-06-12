@@ -36,6 +36,11 @@ plus per-class GDScript smoke tests under `game/tests/unit/`.
 - `game/scenes/world/flow_field_demo.tscn` — a crowd routing around wall barriers
   to a goal via `FlowField`. Headless probe: `game/tests/flow_field_demo_probe.gd`
   (asserts the crowd reaches the goal and never enters a wall).
+- `game/scenes/world/crowd_routed_demo.tscn` — **the combined production crowd**:
+  `FlowField` global routing + `SpatialHash`/`CrowdSteering` local separation, so
+  agents reach the goal around walls *without* piling up. Headless probe:
+  `game/tests/crowd_routed_demo_probe.gd` (routes to goal, 0 wall hits, stays
+  separated). This is the realistic three-module integration.
 
 ## Benchmarks & CI
 
