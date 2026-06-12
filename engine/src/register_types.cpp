@@ -6,6 +6,7 @@
 
 #include "native_bench/native_bench.h"
 #include "worldcore/crowd_steering.h"
+#include "worldcore/flow_field.h"
 #include "worldcore/impostor.h"
 #include "worldcore/spatial_hash.h"
 #include "worldcore/tile_streamer.h"
@@ -26,6 +27,7 @@ void initialize_worldcore_module(ModuleInitializationLevel p_level) {
     ClassDB::register_class<SpatialHash>();
     ClassDB::register_class<CrowdSteering>();
     ClassDB::register_class<TrafficModel>();
+    ClassDB::register_class<FlowField>();
 }
 
 void uninitialize_worldcore_module(ModuleInitializationLevel p_level) {

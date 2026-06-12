@@ -7,6 +7,7 @@
 
 #include "../src/native_bench/bench_kernels.h"
 #include "../src/worldcore/crowd_steering_core.h"
+#include "../src/worldcore/flow_field_core.h"
 #include "../src/worldcore/impostor_core.h"
 #include "../src/worldcore/spatial_hash_core.h"
 #include "../src/worldcore/tile_streamer_core.h"
@@ -330,6 +331,41 @@ static void test_idm_negative_param_stays_finite() {
     CHECK(std::isfinite(a));
 }
 
+static void test_flow_open_points_to_goal() {
+    using namespace worldcore_flow;
+    Grid g{5, 5};
+    std::vector<double> costs(25, 1.0);
+    const int goal = g.index(2, 2);
+    const std::vector<double> dist = integrate(g, costs, goal);
+    const std::vector<Vec2> flow = flow_from(g, dist);
+    const Vec2 f = flow[g.index(0, 0)]; // corner steers toward the centre (+x,+z)
+    CHECK(f.x > 0.0 && f.z > 0.0);
+    CHECK(flow[goal].x == 0.0 && flow[goal].z == 0.0); // goal cell has no flow
+}
+
+static void test_flow_wall_blocks_unreachable() {
+    using namespace worldcore_flow;
+    Grid g{3, 1};
+    std::vector<double> costs = {1.0, -1.0, 1.0}; // wall in the middle
+    const std::vector<double> dist = integrate(g, costs, 2);
+    const std::vector<Vec2> flow = flow_from(g, dist);
+    CHECK(!std::isfinite(dist[0])); // left cell cannot reach the goal past the wall
+    CHECK(flow[0].x == 0.0 && flow[0].z == 0.0);
+}
+
+static void test_flow_routes_around_wall() {
+    using namespace worldcore_flow;
+    Grid g{3, 3};
+    std::vector<double> costs(9, 1.0);
+    costs[g.index(1, 0)] = -1.0; // wall
+    costs[g.index(1, 1)] = -1.0; // wall — blocks the straight path to the goal
+    const int goal = g.index(2, 1);
+    const std::vector<double> dist = integrate(g, costs, goal);
+    const std::vector<Vec2> flow = flow_from(g, dist);
+    const Vec2 f = flow[g.index(0, 1)]; // left-middle must route down around the wall
+    CHECK(f.z > 0.0); // heads +z (down) instead of straight into the wall
+}
+
 int main() {
     test_version_is_consistent();
     test_sum_of_squares();
@@ -361,6 +397,9 @@ int main() {
     test_idm_brakes_for_close_slow_leader();
     test_idm_brakes_hard_on_overlap();
     test_idm_negative_param_stays_finite();
+    test_flow_open_points_to_goal();
+    test_flow_wall_blocks_unreachable();
+    test_flow_routes_around_wall();
     if (failures > 0) {
         std::fprintf(stderr, "engine tests: %d failure(s)\n", failures);
         return 1;
