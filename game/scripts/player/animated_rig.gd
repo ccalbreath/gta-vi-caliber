@@ -5,10 +5,17 @@ extends Node3D
 ## The player's replacement for the procedural CharacterAnimator (issue #1):
 ## same animate() input contract fed by Player after move_and_slide, but the
 ## pose comes from imported CC0 clips (Quaternius Universal Animation
-## Library) playing on the Universal Base Character skeleton. Routing from
+## Library) playing on the Universal Base Character skeleton. This script
+## sits on the imported model's root (see character_rig.tscn), so animation
+## method tracks reach it at path "." for foot-plant events. Routing from
 ## locomotion state to state-machine target is pure logic in AnimRouter;
 ## state classification stays in Locomotion, so both are unit-tested without
 ## this scene.
+
+## Fired when a locomotion clip plants a foot on the ground. Player listens
+## and re-emits its surface-typed `footstep` signal, so step audio is locked
+## to the animation's actual foot strikes instead of a parallel stride clock.
+signal foot_planted(is_left: bool)
 
 ## The shared clip library; its skeleton matches the base character's, so the
 ## imported animations resolve against our Model without retargeting.
@@ -30,6 +37,24 @@ const JUMP_START_OFFSET := 0.30
 const JUMP_START_LENGTH := 0.45
 const LAND_LENGTH := 0.60
 
+## Foot-strike timestamps (s) per locomotion clip, probed from each clip's
+## foot-bone height curves (the moment the foot reaches ground height and
+## starts its stance sweep). Injected as method-track keys that call
+## _on_foot_plant; the left-foot key at the Walk cycle's exact start is
+## nudged to 0.01 s so it can't double-fire on loop wrap.
+const FOOT_PLANT_KEYS := {
+	&"Walk": {"blend_point": BLEND_WALK, "left": [0.01], "right": [0.667]},
+	&"Jog_Fwd": {"blend_point": BLEND_JOG, "left": [0.023], "right": [0.49]},
+	&"Sprint": {"blend_point": BLEND_SPRINT, "left": [0.017], "right": [0.35]},
+}
+
+## Blend points whose clips can claim a footstep; Idle has no plant keys.
+const MOVING_BLEND_POINTS: PackedFloat32Array = [BLEND_WALK, BLEND_JOG, BLEND_SPRINT]
+
+## Below this move blend the character is effectively stationary — plant
+## events from residual low-weight clips are ignored.
+const MIN_STEP_BLEND := 0.1
+
 ## Speeds must mirror the Player export values so blend thresholds agree.
 @export var walk_speed: float = 5.0
 @export var run_speed: float = 8.5
@@ -45,6 +70,7 @@ const LAND_LENGTH := 0.60
 
 var _facing: float = 0.0
 var _blend: float = 0.0
+var _on_floor: bool = true
 var _playback: AnimationNodeStateMachinePlayback = null
 # When the owner is the player, face where the weapon aims (not where we
 # move) so strafing reads as a third-person shooter. Mirrors CharacterAnimator.
@@ -52,7 +78,7 @@ var _aim_facing: bool = false
 var _weapon_controller: Node = null
 var _phone_raised: bool = false
 
-@onready var _anim_player: AnimationPlayer = $Model/AnimationPlayer
+@onready var _anim_player: AnimationPlayer = $AnimationPlayer
 @onready var _tree: AnimationTree = $AnimationTree
 
 
@@ -78,6 +104,7 @@ func animate(
 	delta: float
 ) -> void:
 	var planar_speed := planar_velocity.length()
+	_on_floor = on_floor
 	var state := Locomotion.state_for(
 		planar_speed, on_floor, vertical_velocity, is_climbing, walk_speed, run_speed
 	)
@@ -131,7 +158,9 @@ func _aim_yaw() -> float:
 
 ## Copy the clip library out of the imported animation-library scene into our
 ## AnimationPlayer. Both scenes share the Armature/Skeleton3D structure and
-## bone names, so the tracks drive our skeleton without retargeting.
+## bone names, so the tracks drive our skeleton without retargeting. The
+## locomotion clips get foot-plant method-track keys injected into private
+## duplicates, leaving the imported library untouched for other users.
 func _install_animations() -> void:
 	var packed: PackedScene = load(ANIM_LIBRARY_SCENE)
 	if packed == null:
@@ -144,9 +173,45 @@ func _install_animations() -> void:
 		source.free()
 		return
 	var source_player: AnimationPlayer = players[0]
-	var library := source_player.get_animation_library(&"")
+	var library: AnimationLibrary = source_player.get_animation_library(&"").duplicate()
+	for clip_name: StringName in FOOT_PLANT_KEYS:
+		var spec: Dictionary = FOOT_PLANT_KEYS[clip_name]
+		var clip: Animation = library.get_animation(clip_name).duplicate(true)
+		_add_plant_keys(clip, spec)
+		library.add_animation(clip_name, clip)
 	_anim_player.add_animation_library(&"", library)
 	source.free()
+
+
+## Append one method track per clip whose keys call _on_foot_plant (this
+## script sits on the animation root, so path "." reaches it).
+func _add_plant_keys(clip: Animation, spec: Dictionary) -> void:
+	var track := clip.add_track(Animation.TYPE_METHOD)
+	clip.track_set_path(track, NodePath("."))
+	var blend_point: float = spec["blend_point"]
+	for time: float in spec["left"]:
+		clip.track_insert_key(
+			track, time, {"method": &"_on_foot_plant", "args": [true, blend_point]}
+		)
+	for time: float in spec["right"]:
+		clip.track_insert_key(
+			track, time, {"method": &"_on_foot_plant", "args": [false, blend_point]}
+		)
+
+
+## Called by the injected method-track keys whenever a locomotion clip plants
+## a foot. Every clip near the current blend position fires its own keys, so
+## only the dominant clip's events pass, and only while actually moving on
+## the ground in the Move state.
+func _on_foot_plant(is_left: bool, blend_point: float) -> void:
+	if not _on_floor or _blend < MIN_STEP_BLEND:
+		return
+	if _playback == null or _playback.get_current_node() != AnimRouter.STATE_MOVE:
+		return
+	var dominant := AnimRouter.dominant_blend_point(_blend, MOVING_BLEND_POINTS)
+	if not is_equal_approx(dominant, blend_point):
+		return
+	foot_planted.emit(is_left)
 
 
 ## Build the locomotion state machine: a Move blend space (idle → walk → jog

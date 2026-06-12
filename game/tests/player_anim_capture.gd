@@ -15,6 +15,8 @@ var _frame := 0
 var _phase := "boot"
 var _phase_started_frame := 0
 var _observed: Array[StringName] = []
+var _steps := 0
+var _steps_at_takeoff := -1
 var _failures: PackedStringArray = []
 
 
@@ -44,6 +46,10 @@ func _process(_delta: float) -> bool:
 
 
 func _phase_boot() -> void:
+	# Listen for footsteps from the first frame the player exists, so the
+	# idle phase proves silence and the moving phases prove cadence.
+	if _player() != null and not _player().is_connected("footstep", _count_step):
+		_player().connect("footstep", _count_step)
 	if _frame < SETTLE_FRAMES:
 		return
 	if _player() == null:
@@ -52,8 +58,14 @@ func _phase_boot() -> void:
 		return
 	_shot("01_idle")
 	_expect_state(AnimRouter.STATE_MOVE, 0.0, 0.1, "idle")
+	if _steps > 0:
+		_failures.append("footsteps fired while standing idle (%d)" % _steps)
 	Input.action_press("move_forward")
 	_next("walk")
+
+
+func _count_step(_surface: String, _is_left: bool) -> void:
+	_steps += 1
 
 
 func _phase_walk() -> void:
@@ -61,6 +73,9 @@ func _phase_walk() -> void:
 		return
 	_shot("02_walk")
 	_expect_state(AnimRouter.STATE_MOVE, 0.5, 0.1, "walk")
+	if _steps == 0:
+		_failures.append("no footsteps while walking")
+	print("capture: %d footsteps during walk phase" % _steps)
 	Input.action_press("sprint")
 	_next("sprint")
 
@@ -135,8 +150,17 @@ func _phase_run_jump() -> void:
 
 
 ## Append each state-machine node as it becomes current; screenshot the
-## airborne phases of the standing jump the first time each appears.
+## airborne phases of the standing jump the first time each appears. Also
+## police that no footstep fires while the body is off the ground.
 func _record_states(shot_prefix: String) -> void:
+	if not (_player() as CharacterBody3D).is_on_floor():
+		if _steps_at_takeoff < 0:
+			_steps_at_takeoff = _steps
+		elif _steps != _steps_at_takeoff:
+			_failures.append("footsteps fired mid-air")
+			_steps_at_takeoff = _steps
+	else:
+		_steps_at_takeoff = -1
 	var current := _current_state()
 	if current == AnimRouter.STATE_MOVE:
 		return

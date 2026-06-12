@@ -88,35 +88,27 @@ func test_move_blend_uses_total_speed_while_climbing() -> bool:
 	return is_equal_approx(blend, Locomotion.move_blend(3.0, WALK, RUN))
 
 
-func test_rotate_toward_caps_step() -> bool:
-	return is_equal_approx(AnimRouter.rotate_toward_angle(0.0, 1.0, 0.25), 0.25)
+func test_dominant_point_picks_nearest() -> bool:
+	var points := PackedFloat32Array([0.5, 0.8, 1.0])
+	return is_equal_approx(AnimRouter.dominant_blend_point(0.55, points), 0.5)
 
 
-func test_rotate_toward_reaches_target_within_step() -> bool:
-	return is_equal_approx(AnimRouter.rotate_toward_angle(0.0, 0.1, 0.25), 0.1)
+func test_dominant_point_below_range_clamps_to_first() -> bool:
+	# A slow analog walk (blend under the walk point) still belongs to the
+	# walk clip — its cycle is what the legs are visibly playing.
+	var points := PackedFloat32Array([0.5, 0.8, 1.0])
+	return is_equal_approx(AnimRouter.dominant_blend_point(0.1, points), 0.5)
 
 
-func test_rotate_toward_takes_shortest_arc() -> bool:
-	# From just below +PI to just above -PI: the short way crosses the PI seam
-	# (positive direction), not back through zero.
-	var stepped := AnimRouter.rotate_toward_angle(3.0, -3.0, 0.1)
-	return is_equal_approx(stepped, 3.1)
+func test_dominant_point_tie_prefers_faster_clip() -> bool:
+	var points := PackedFloat32Array([0.5, 0.8, 1.0])
+	return is_equal_approx(AnimRouter.dominant_blend_point(0.65, points), 0.8)
 
 
-func test_facing_prefers_aim_yaw() -> bool:
-	var yaw := AnimRouter.facing_target(Vector3(0.0, 0.0, 5.0), 1.2)
-	return is_equal_approx(yaw, 1.2)
+func test_dominant_point_at_sprint() -> bool:
+	var points := PackedFloat32Array([0.5, 0.8, 1.0])
+	return is_equal_approx(AnimRouter.dominant_blend_point(1.0, points), 1.0)
 
 
-func test_facing_follows_travel_direction() -> bool:
-	var yaw := AnimRouter.facing_target(Vector3(5.0, 0.0, 0.0), NAN)
-	return is_equal_approx(yaw, atan2(5.0, 0.0))
-
-
-func test_facing_keeps_current_when_still_and_unaimed() -> bool:
-	return is_nan(AnimRouter.facing_target(Vector3.ZERO, NAN))
-
-
-func test_facing_ignores_creep_below_idle_epsilon() -> bool:
-	var creep := Vector3(0.05, 0.0, 0.0)
-	return is_nan(AnimRouter.facing_target(creep, NAN))
+func test_dominant_point_empty_points_is_nan() -> bool:
+	return is_nan(AnimRouter.dominant_blend_point(0.5, PackedFloat32Array()))

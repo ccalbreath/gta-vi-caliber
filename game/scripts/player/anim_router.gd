@@ -51,6 +51,22 @@ static func move_blend_value(
 	return Locomotion.move_blend(speed, walk_speed, run_speed)
 
 
+## The blend point whose clip dominates a 1D blend space at `blend` — the
+## nearest point, ties going to the faster clip. Footstep events are only
+## accepted from the dominant clip, since every neighbouring clip in the
+## space fires its plant markers and the others would double-trigger steps.
+## NAN when there are no points.
+static func dominant_blend_point(blend: float, points: PackedFloat32Array) -> float:
+	var best := NAN
+	var best_distance := INF
+	for point in points:
+		var distance := absf(blend - point)
+		if distance < best_distance or is_equal_approx(distance, best_distance):
+			best = point
+			best_distance = distance
+	return best
+
+
 ## Step an angle toward a target along the shortest arc, capped at max_step.
 static func rotate_toward_angle(current: float, target: float, max_step: float) -> float:
 	var diff := wrapf(target - current, -PI, PI)
