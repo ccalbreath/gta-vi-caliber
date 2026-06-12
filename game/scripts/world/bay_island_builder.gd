@@ -11,10 +11,13 @@ extends Node3D
 var _land_mat: StandardMaterial3D
 var _sand_mat: StandardMaterial3D
 var _villa_mat: StandardMaterial3D
+var _palm_trunk_mesh: ArrayMesh
+var _palm_crown_mesh: ArrayMesh
 
 
 func _ready() -> void:
 	_make_materials()
+	_make_palm_meshes()
 	for isle in BayIslands.islands():
 		_build_island(isle)
 
@@ -31,6 +34,25 @@ func _make_materials() -> void:
 	_villa_mat = StandardMaterial3D.new()
 	_villa_mat.albedo_color = Color(0.93, 0.91, 0.85)  # cream stucco mansions
 	_villa_mat.roughness = 0.6
+
+
+## Shared palm trunk + frond meshes (built once, instanced per island) — reusing
+## the same TreeMesh generator the districts use so palms read consistently.
+func _make_palm_meshes() -> void:
+	var bark := StandardMaterial3D.new()
+	bark.albedo_color = Color(0.55, 0.47, 0.36)
+	bark.roughness = 0.9
+	var frond := StandardMaterial3D.new()
+	frond.albedo_color = Color(0.30, 0.49, 0.22)
+	frond.roughness = 0.85
+	frond.cull_mode = BaseMaterial3D.CULL_DISABLED
+	frond.backlight = Color(0.10, 0.16, 0.07)
+	_palm_trunk_mesh = TreeMesh.to_mesh(TreeMesh.palm_trunk(8.5))
+	_palm_crown_mesh = TreeMesh.to_mesh(TreeMesh.palm_crown(11, 3.0, 8.5))
+	if _palm_trunk_mesh != null:
+		_palm_trunk_mesh.surface_set_material(0, bark)
+	if _palm_crown_mesh != null:
+		_palm_crown_mesh.surface_set_material(0, frond)
 
 
 func _build_island(isle: Dictionary) -> void:
@@ -87,6 +109,42 @@ func _build_island(isle: Dictionary) -> void:
 	holder.add_child(body)
 
 	_build_villas(holder, radius, kind)
+	_build_palms(holder, radius)
+
+
+## A ring of palms fringing the island just inside the beach — the Florida
+## signature, instanced as one trunk + one crown MultiMesh.
+func _build_palms(holder: Node3D, radius: float) -> void:
+	if _palm_trunk_mesh == null or _palm_crown_mesh == null:
+		return
+	var count: int = int(clampf(radius / 11.0, 8.0, 26.0))
+	var trunk_mm := MultiMesh.new()
+	trunk_mm.transform_format = MultiMesh.TRANSFORM_3D
+	trunk_mm.mesh = _palm_trunk_mesh
+	trunk_mm.instance_count = count
+	var crown_mm := MultiMesh.new()
+	crown_mm.transform_format = MultiMesh.TRANSFORM_3D
+	crown_mm.mesh = _palm_crown_mesh
+	crown_mm.instance_count = count
+
+	var seed := int(radius) * 7
+	for i in count:
+		var a := TAU * float(i) / float(count) + float(seed) * 0.05
+		var rr := radius * (0.86 + 0.06 * sin(a * 2.0 + float(seed)))
+		var pos := Vector3(cos(a) * rr, BayIslands.LAND_Y, sin(a) * rr)
+		var lean := Basis.IDENTITY.rotated(Vector3.UP, a * 1.7)
+		var xform := Transform3D(lean, pos)
+		trunk_mm.set_instance_transform(i, xform)
+		crown_mm.set_instance_transform(i, xform)
+
+	var tmi := MultiMeshInstance3D.new()
+	tmi.name = "PalmTrunks"
+	tmi.multimesh = trunk_mm
+	holder.add_child(tmi)
+	var cmi := MultiMeshInstance3D.new()
+	cmi.name = "PalmCrowns"
+	cmi.multimesh = crown_mm
+	holder.add_child(cmi)
 
 
 ## A deterministic cluster of villa blocks ringing the island interior.
