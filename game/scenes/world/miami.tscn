@@ -1,4 +1,4 @@
-[gd_scene load_steps=31 format=3]
+[gd_scene load_steps=32 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -31,6 +31,7 @@
 [ext_resource type="Script" path="res://scripts/systems/wanted_evasion_controller.gd" id="25_evade"]
 [ext_resource type="PackedScene" path="res://scenes/props/medkit.tscn" id="26_medkit"]
 [ext_resource type="PackedScene" path="res://scenes/props/armor.tscn" id="27_armor"]
+[ext_resource type="Script" path="res://scripts/systems/progression_tracker.gd" id="28_progress"]
 
 [sub_resource type="SphereShape3D" id="trigger_shape"]
 radius = 6.0
@@ -214,6 +215,9 @@ night_amount = 0.58
 
 [node name="MissionReward" type="Node" parent="."]
 script = ExtResource("24_reward")
+
+[node name="ProgressionTracker" type="Node" parent="."]
+script = ExtResource("28_progress")
 
 [node name="WantedEvasion" type="Node" parent="."]
 script = ExtResource("25_evade")

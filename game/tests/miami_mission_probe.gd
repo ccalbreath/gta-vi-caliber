@@ -85,12 +85,14 @@ func _finish() -> bool:
 			print("miami mission probe: FAIL — money unchanged at %d" % int(_stats.money))
 			quit(1)
 			return true
-		print(
-			(
-				"miami mission probe: OK (mission complete across %d objectives, earned $%d)"
-				% [WAYPOINTS.size(), earned]
-			)
-		)
+		var progression := get_first_node_in_group("progression")
+		var xp := int(progression.total_xp()) if progression != null else 0
+		if xp <= 0:
+			push_error("miami mission probe FAIL :: mission complete but no respect/XP awarded")
+			print("miami mission probe: FAIL — progression xp is %d" % xp)
+			quit(1)
+			return true
+		print("miami mission probe: OK (mission complete, earned $%d + %d respect)" % [earned, xp])
 		quit(0)
 	else:
 		push_error("miami mission probe FAIL :: mission not complete after visiting all triggers")
