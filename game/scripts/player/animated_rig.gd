@@ -277,6 +277,9 @@ func _build_state_machine() -> AnimationNodeStateMachine:
 	machine.add_transition(AnimRouter.STATE_LAND, AnimRouter.STATE_MOVE, _auto_at_end(0.25))
 	# Bunny hop: jumping during the absorb restarts the arc.
 	machine.add_transition(AnimRouter.STATE_LAND, AnimRouter.STATE_JUMP_START, _transition(0.1))
+	# Walking off a ledge mid-absorb: without this edge, a travel to Air has
+	# to wait out the absorb and crossfade through Move while already airborne.
+	machine.add_transition(AnimRouter.STATE_LAND, AnimRouter.STATE_AIR, _transition(0.15))
 	return machine
 
 

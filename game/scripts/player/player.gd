@@ -136,6 +136,11 @@ func _nearest_pedestrian(max_range: float) -> Node3D:
 func _physics_process(delta: float) -> void:
 	if _vehicle != null:
 		global_position = _vehicle.global_position
+		# Keep feeding the rig (grounded, no motion) while driving: its
+		# AnimationTree stays active even hidden, and a frozen mid-run blend
+		# would keep firing foot plants from inside the car. Grounded-idle
+		# also means stepping out resumes from a clean standing pose.
+		_rig.animate(Vector3.ZERO, true, 0.0, false, delta)
 		return
 
 	_update_jump_timers(delta)

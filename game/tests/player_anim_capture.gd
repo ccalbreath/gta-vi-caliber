@@ -17,6 +17,7 @@ var _phase_started_frame := 0
 var _observed: Array[StringName] = []
 var _steps := 0
 var _steps_at_takeoff := -1
+var _steps_at_enter := 0
 var _failures: PackedStringArray = []
 
 
@@ -42,6 +43,10 @@ func _process(_delta: float) -> bool:
 			_phase_run_jump()
 		"front":
 			_phase_front()
+		"drive":
+			_phase_drive()
+		"exit_car":
+			_phase_exit_car()
 	return _phase == "done"
 
 
@@ -193,7 +198,66 @@ func _phase_front() -> void:
 		return
 	_shot("05_front_idle")
 	_expect_state(AnimRouter.STATE_MOVE, 0.0, 0.15, "front idle")
+	var camera_rig := _player().get_node("CameraRig") as Node3D
+	camera_rig.rotation.y = 0.0
+	_next("drive")
+
+
+## Driving regression check: the rig's AnimationTree stays active while the
+## hidden player rides a vehicle, so no foot plants may leak through as
+## footstep audio for the whole drive.
+func _phase_drive() -> void:
+	if _frame == 1:
+		var car := _car()
+		if car == null:
+			_failures.append("no Car in sandbox for the drive check")
+			_finish()
+			return
+		_player().global_position = car.global_position + Vector3(2.0, 0.2, 0.0)
+	if _frame == 5:
+		# Approach in motion: entering with a non-zero move blend is exactly
+		# the case where a frozen rig would keep firing plants from the car.
+		Input.action_press("move_forward")
+	if _frame == 20:
+		_press_action_event("interact")
+	if _frame == 60:
+		if _player().get("_vehicle") == null:
+			_failures.append("interact near the car did not enter it")
+			_finish()
+			return
+		# Baseline after entry: the move blend needs a beat to decay to idle.
+		_steps_at_enter = _steps
+	if _frame < 240:
+		return
+	Input.action_release("move_forward")
+	if _steps != _steps_at_enter:
+		_failures.append("footsteps fired while driving (%d)" % (_steps - _steps_at_enter))
+	print("capture: drive phase silent (%d steps before, %d after)" % [_steps_at_enter, _steps])
+	_press_action_event("interact")
+	_next("exit_car")
+
+
+func _phase_exit_car() -> void:
+	if _frame < 30:
+		return
+	if _player().get("_vehicle") != null:
+		_failures.append("interact while driving did not exit the car")
 	_finish()
+
+
+func _car() -> Node3D:
+	for node in get_nodes_in_group("vehicles"):
+		if node is VehicleBody3D and node.name == "Car":
+			return node
+	return null
+
+
+## Route a press through the event pipeline so _unhandled_input handlers see it.
+func _press_action_event(action: String) -> void:
+	var ev := InputEventAction.new()
+	ev.action = action
+	ev.pressed = true
+	Input.parse_input_event(ev)
 
 
 func _expect_state(node: StringName, blend: float, tolerance: float, label: String) -> void:
