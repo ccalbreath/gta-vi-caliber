@@ -65,9 +65,15 @@ func _run() -> bool:
 		)
 	)
 
-	# Fairness: both must find the same neighbour count (each includes self).
+	# Fairness 1: same total neighbour COUNT across all queries (cheap aggregate).
 	if native_count != gd_count:
 		print("  FAIL: counts differ — native %d vs gdscript %d" % [native_count, gd_count])
+		return false
+	# Fairness 2 (untimed, rigorous): the native query returns the exact same
+	# neighbour SET as the GDScript scan for a sample agent — not just the same
+	# count (Codex review: matching totals alone could mask wrong ids).
+	if not _sets_match(hash, pos, 0):
+		print("  FAIL: native neighbour SET differs from GDScript for the sample agent")
 		return false
 	# The whole point of the port: native must beat the naive GDScript search.
 	if native_us >= gd_us:
@@ -75,4 +81,23 @@ func _run() -> bool:
 		return false
 
 	print("  OK: native neighbour query is %.1fx faster than naive GDScript" % speedup)
+	return true
+
+
+## True when the native query for `sample` returns exactly the GDScript set.
+func _sets_match(hash: Object, pos: PackedVector2Array, sample: int) -> bool:
+	var native_set := {}
+	for id in hash.call("query_radius", pos[sample], RADIUS):
+		native_set[id] = true
+	var gd_set := {}
+	var ps := pos[sample]
+	var r2 := RADIUS * RADIUS
+	for j in pos.size():
+		if ps.distance_squared_to(pos[j]) <= r2:
+			gd_set[j] = true
+	if native_set.size() != gd_set.size():
+		return false
+	for k in native_set:
+		if not gd_set.has(k):
+			return false
 	return true
