@@ -11,6 +11,7 @@ const DWELL_FRAMES: int = 14
 const ACCRUE_FRAMES: int = 260
 const BUY_POS := Vector3(-30, 1, 40)
 const COLLECT_POS := Vector3(-30, 1, 56)
+const ARMOR_POS := Vector3(-14, 1, 44)
 
 var _scene: Node = null
 var _player: Node3D = null
@@ -18,6 +19,7 @@ var _stats: Node = null
 var _hub: Node = null
 var _money_start: int = 0
 var _money_after_buy: int = -1
+var _money_pre_armor: int = 0
 var _frames: int = 0
 var _t: int = 0
 var _phase: String = "warmup"
@@ -40,29 +42,61 @@ func _process(_delta: float) -> bool:
 			if _frames >= WARMUP_FRAMES:
 				return _resolve()
 		"buy":
-			_player.global_position = BUY_POS
-			_t += 1
-			if _hub.owns_property() and _money_after_buy < 0:
-				_money_after_buy = int(_stats.money)
-			if _t >= DWELL_FRAMES:
-				if _money_after_buy < 0:
-					return _fail("entered BuyZone but the property was not purchased")
-				if _money_after_buy >= _money_start:
-					return _fail("property bought but money was not charged")
-				_t = 0
-				_phase = "accrue"
+			return _phase_buy()
 		"accrue":
-			_t += 1
-			if _t >= ACCRUE_FRAMES:
-				_t = 0
-				_phase = "collect"
+			_phase_accrue()
 		"collect":
-			_player.global_position = COLLECT_POS
-			_t += 1
-			if int(_stats.money) > _money_after_buy:
-				return _pass()
-			if _t >= DWELL_FRAMES * 3:
-				return _fail("entered CollectZone but no income was banked")
+			return _phase_collect()
+		"armor":
+			return _phase_armor()
+	return false
+
+
+func _phase_buy() -> bool:
+	_player.global_position = BUY_POS
+	_t += 1
+	if _hub.owns_property() and _money_after_buy < 0:
+		_money_after_buy = int(_stats.money)
+	if _t < DWELL_FRAMES:
+		return false
+	if _money_after_buy < 0:
+		return _fail("entered BuyZone but the property was not purchased")
+	if _money_after_buy >= _money_start:
+		return _fail("property bought but money was not charged")
+	_t = 0
+	_phase = "accrue"
+	return false
+
+
+func _phase_accrue() -> void:
+	_t += 1
+	if _t >= ACCRUE_FRAMES:
+		_t = 0
+		_phase = "collect"
+
+
+func _phase_collect() -> bool:
+	_player.global_position = COLLECT_POS
+	_t += 1
+	if int(_stats.money) > _money_after_buy:
+		_money_pre_armor = int(_stats.money)
+		_t = 0
+		_phase = "armor"
+		return false
+	if _t >= DWELL_FRAMES * 3:
+		return _fail("entered CollectZone but no income was banked")
+	return false
+
+
+func _phase_armor() -> bool:
+	_player.global_position = ARMOR_POS
+	_t += 1
+	if float(_stats.armor) > 0.0:
+		if int(_stats.money) >= _money_pre_armor:
+			return _fail("armor granted but not charged")
+		return _pass()
+	if _t >= DWELL_FRAMES * 3:
+		return _fail("entered ArmorShop but no armor was bought")
 	return false
 
 
@@ -87,8 +121,12 @@ func _resolve() -> bool:
 
 func _pass() -> bool:
 	var spent := _money_start - _money_after_buy
-	var earned := int(_stats.money) - _money_after_buy
-	print("miami property probe: OK (bought for $%d, banked $%d income)" % [spent, earned])
+	print(
+		(
+			"miami property probe: OK (property $%d, income banked, armor bought to %d)"
+			% [spent, int(_stats.armor)]
+		)
+	)
 	quit(0)
 	return true
 

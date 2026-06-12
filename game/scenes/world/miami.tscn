@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=3]
+[gd_scene load_steps=41 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -38,6 +38,7 @@
 [ext_resource type="Script" path="res://scripts/systems/arrest_controller.gd" id="32_arrest"]
 [ext_resource type="Script" path="res://scripts/npc/police_helicopter.gd" id="33_heli"]
 [ext_resource type="Script" path="res://scripts/world/property_hub.gd" id="34_property"]
+[ext_resource type="Script" path="res://scripts/world/armor_shop.gd" id="35_armorshop"]
 
 [sub_resource type="BoxShape3D" id="payspray_shape"]
 size = Vector3(12, 6, 12)
@@ -271,6 +272,13 @@ shape = SubResource("property_zone_shape")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 1, 56)
 
 [node name="CollectShape" type="CollisionShape3D" parent="PropertyHub/CollectZone"]
+shape = SubResource("property_zone_shape")
+
+[node name="ArmorShop" type="Area3D" parent="." groups=["armor_shop"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1, 44)
+script = ExtResource("35_armorshop")
+
+[node name="ArmorShopShape" type="CollisionShape3D" parent="ArmorShop"]
 shape = SubResource("property_zone_shape")
 
 [node name="WantedEvasion" type="Node" parent="."]
