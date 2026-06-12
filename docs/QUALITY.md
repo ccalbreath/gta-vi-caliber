@@ -5,6 +5,26 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 6) — the shore gets its palms (named ledger gap)
+
+Track Q (detail/set-dressing) — closes a gap the ledger named outright back in
+the postcard work: "needs boardwalk-scale foreground props (palms/pier)." The
+miami coastline was bare tan sand; the only palm row (`BeachProps`) belonged to
+the unused Venice scene. Added `CoastalPalms`: walks FloridaMapModel's coast
+outline at 27 m spacing, offsets each palm inland of the waterline, and renders
+trunk + frond MultiMeshes (reusing the proven `PalmMesh`). 444 palms now fringe
+the playable bay/beach span — the iconic Vice City shore silhouette that frames
+the establishing shots (`/tmp/palms.png`). 2 draw calls; added via FloridaBackdrop.
+
+Verified in isolation + 4 unit tests. Method note: backdrop children CANNOT be
+framed in the live map by raw coords — FloatingOrigin recentres the world on
+spawn, so the bay_capture camera's world coords don't match the pre-recentre
+local placement (point-blank shots showed nothing). Isolation capture (no
+recentre) is the reliable way to review them. Also: MultiMesh
+`get_instance_transform` reads back identity for a detached (non-rendered)
+MultiMesh in headless — verify placement via the source positions, not the
+read-back.
+
 ## 2026-06-12 (cont. 5) — boat hulls get a prow; capture myth busted
 
 Two small things. (1) The BayBoats hulls were blunt boxes; added a pointed bow

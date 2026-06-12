@@ -67,6 +67,7 @@ func _ready() -> void:
 	_build_city_accents()
 	_build_map_markers()
 	_build_wetlands()
+	_build_coastal_palms()
 	_build_clouds()
 	_build_bay_boats()
 	_build_swim_volume()
@@ -722,6 +723,17 @@ func _add_city_label(parent: Node, text: String, centre: Vector2, height: float)
 	label.outline_modulate = Color(0.02, 0.02, 0.025)
 	label.position = Vector3(centre.x, land_y + height + 18.0, centre.y)
 	parent.add_child(label)
+
+
+func _build_coastal_palms() -> void:
+	# Iconic palm fringe along the shore — frames the establishing shots that the
+	# bare sand left empty. CoastalPalms walks the same coast outline as
+	# _build_coastline, so the palms line the waterline the player sees.
+	var palms := CoastalPalms.new()
+	palms.name = "CoastalPalms"
+	palms.map_scale = map_scale
+	palms.ground_y = land_y + 0.05
+	add_child(palms)
 
 
 func _build_bay_boats() -> void:
