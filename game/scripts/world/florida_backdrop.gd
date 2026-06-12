@@ -77,6 +77,7 @@ func _ready() -> void:
 	_build_lifeguard_towers()
 	_build_neon_sign()
 	_build_neon_strip()
+	_build_causeway_traffic()
 	_build_swim_volume()
 
 
@@ -741,6 +742,15 @@ func _build_coastal_palms() -> void:
 	palms.map_scale = map_scale
 	palms.ground_y = land_y + 0.05
 	add_child(palms)
+
+
+func _build_causeway_traffic() -> void:
+	# Ambient cars driving the bay causeways (with night head/tail lights) — the
+	# bridges the player drives shouldn't be empty. Density is bounded for perf;
+	# these are long spans, so it reads as light traffic, not a jam.
+	var traffic := CausewayTraffic.new()
+	traffic.name = "CausewayTraffic"
+	add_child(traffic)
 
 
 func _build_neon_strip() -> void:

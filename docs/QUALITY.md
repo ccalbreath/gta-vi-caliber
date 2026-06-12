@@ -5,6 +5,26 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 14) — traffic on the bay bridges
+
+Track Q (detail/life), and the first GROUND-level moving content (vs ambient
+sky/water): `CausewayTraffic` streams cars across the bay causeways. Each rides
+its causeway's arched deck (via CausewayNetwork.sample + deck_height), keeps to
+a lane, faces travel direction, and carries emissive head/tail lights for night
+driving. Cars sit correctly on the real deck (`/tmp/traffic_day.png` — a car on
+the MacArthur span). Verified day + night in isolation (deck builder + traffic)
++ 4 unit tests (built-per-causeway, on-deck height envelope, drives, idempotent).
+
+HONEST TRADE — flagged for the human/integrator: the causeways are ~4.5 km
+spans, so at a perf-bounded ~10 cars/causeway the bridges read as LIGHT traffic,
+not a jam; true density would need hundreds of cars with player-proximity
+streaming/LOD (the district traffic already streams around the player — the
+right long-term home for this). And the cars are individual multi-mesh nodes
+(~10 each), so ~50 cars adds a few hundred dynamic draw calls; `cars_per_causeway`
+is an @export to tune down if the live-scene FPS budget is tight. Shipped as
+genuine player-facing bridge life, not distant decoration, but it's a modest,
+tunable feature — not a headline.
+
 ## 2026-06-12 (cont. 13) — Ocean Drive: the neon strip
 
 Track Q (lighting/atmosphere — night), extending the neon vein. Added
