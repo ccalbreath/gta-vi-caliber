@@ -58,7 +58,7 @@ func _ready() -> void:
 
 	if spawn_ground:
 		_build_ground(data, proj)
-	var built_buildings := _build_buildings(data.get("buildings", []), proj)
+	_build_buildings(data.get("buildings", []), proj)
 	DistrictFacadePanels.build(self, data.get("buildings", []), proj)
 	_build_rooftops(data.get("buildings", []), proj)
 	_build_roads(data.get("roads", []), proj)
@@ -76,12 +76,6 @@ func _ready() -> void:
 
 	var nb: int = (data.get("buildings", []) as Array).size()
 	var nr: int = (data.get("roads", []) as Array).size()
-	print(
-		(
-			"district_loader: built %s — %d buildings (%d meshed), %d roads"
-			% [data.get("name", "district"), nb, built_buildings, nr]
-		)
-	)
 	district_built.emit(nb, nr)
 
 

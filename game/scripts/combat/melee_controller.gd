@@ -2,15 +2,14 @@ class_name MeleeController
 extends Node
 ## Unarmed melee: a short forward strike on the melee key.
 ##
-## Swing/combo timing is MeleeAttack (pure, tested); this node reads the attack
-## key, runs the hit query from the player's chest along the camera's heading
-## during the active window, and damages whatever person or prop is in reach
-## (duck-typed take_damage). Hitting a person is a crime, so it raises the
-## wanted level just like gunfire. Self-contained: finds the player/camera by
-## group/viewport, uses a raw key so it adds no input actions, and only triggers
-## while unarmed so it never fights the gun.
+## Swing/combo timing is MeleeAttack (pure, tested); this node reads the
+## "melee" input action, runs the hit query from the player's chest along the
+## camera's heading during the active window, and damages whatever person or
+## prop is in reach (duck-typed take_damage). Hitting a person is a crime, so
+## it raises the wanted level just like gunfire. Self-contained: finds the
+## player/camera by group/viewport, and only triggers while unarmed so it
+## never fights the gun.
 
-@export var melee_key: int = KEY_V
 @export var base_damage: float = 16.0
 @export var reach: float = 2.2
 @export var chest_height: float = 1.1
@@ -24,8 +23,7 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	var key := event as InputEventKey
-	if key == null or not key.pressed or key.echo or key.keycode != melee_key:
+	if not event.is_action_pressed("melee"):
 		return
 	if not _armed():
 		_attack.start()

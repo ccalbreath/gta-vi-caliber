@@ -1,14 +1,14 @@
 class_name SaveManager
 extends Node
-## Quick-save (F5) / quick-load (F9) of game state.
+## Quick-save ("quick_save", F5) / quick-load ("quick_load", F9) of game state.
 ##
 ## Gathers a snapshot from the player and the systems that own state (health,
 ## wanted) by group, serialises it via SaveData (pure, tested), and writes it to
-## user://savegame.json. Uses raw key input so it adds no input actions, and
-## finds everything by group so it needs no edits to the player scene. Player
-## position, health, wanted level, and every vehicle's transform + health
-## persist. Vehicles are found through the "vehicles" group and matched by node
-## name (unique within a scene), so this stays streaming-ready.
+## user://savegame.json. Finds everything by group so it needs no edits to the
+## player scene. Player position, health, wanted level, and every vehicle's
+## transform + health persist. Vehicles are found through the "vehicles" group
+## and matched by node name (unique within a scene), so this stays
+## streaming-ready.
 
 signal saved
 signal loaded
@@ -17,12 +17,9 @@ const SAVE_PATH: String = "user://savegame.json"
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	var key := event as InputEventKey
-	if key == null or not key.pressed or key.echo:
-		return
-	if key.keycode == KEY_F5:
+	if event.is_action_pressed("quick_save"):
 		save_game()
-	elif key.keycode == KEY_F9:
+	elif event.is_action_pressed("quick_load"):
 		load_game()
 
 
