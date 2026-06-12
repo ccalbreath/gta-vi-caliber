@@ -30,7 +30,7 @@ Goal: every clone runs instantly; contribution pipeline works end to end.
 
 Goal: moving around is *fun* before there is anything to do.
 
-- [ ] Character model + run/walk/idle/jump animations (original or CC0; see `art` issues)
+- [x] Character model + run/walk/idle/jump animations (original or CC0; see `art` issues)
 - [x] Acceleration/deceleration curves, air control, coyote time (+ jump buffering)
 - [x] Camera: collision probe, shoulder offset, FOV kick on sprint
 - [x] Footstep audio hooked to surface type

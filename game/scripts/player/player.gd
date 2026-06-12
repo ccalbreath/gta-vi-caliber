@@ -6,9 +6,10 @@ extends CharacterBody3D
 ## is owned by the CameraRig child (OrbitCamera); we only read its yaw so
 ## input is camera-relative.
 
-## Fired on each footfall while running on the ground. `surface` is a key from
-## Footsteps (e.g. "grass") and `is_left` alternates feet. Surface-typed audio
-## listens here once step samples land; cadence/surface logic is in Footsteps.
+## Fired on each footfall while moving on the ground. `surface` is a key from
+## Footsteps (e.g. "grass") and `is_left` tells which foot landed. Cadence
+## comes from the rig's animation foot plants (AnimatedRig.foot_planted), so
+## audio stays locked to the visible steps; surface logic is in Footsteps.
 signal footstep(surface: String, is_left: bool)
 
 @export var walk_speed: float = 5.0
@@ -41,10 +42,6 @@ signal footstep(surface: String, is_left: bool)
 ## move vector via StickInput.movement (the harder-pushed source wins).
 @export_range(0.0, 0.9) var move_stick_deadzone: float = 0.2
 @export_range(1.0, 4.0) var move_stick_exponent: float = 1.6
-## Ground distance (m) between footfalls at walk and at sprint; the gait
-## stretches between them with speed so a sprint doesn't machine-gun steps.
-@export var walk_stride: float = 1.4
-@export var run_stride: float = 2.2
 ## Steep-slope slide: floors whose up-normal y falls below slide_max_walk_normal_y
 ## (cos of the steepest stable angle, ~0.82 ≈ 35°) push the player down the fall
 ## line at up to slide_accel (m/s²), so steep ground can't be casually walked up.
@@ -71,15 +68,13 @@ var _time_since_grounded: float = 0.0
 var _time_since_jump_pressed: float = 1.0
 var _jump_spent: bool = false
 var _vehicle: Node3D = null
-var _stride_accum: float = 0.0
-var _step_is_left: bool = false
 var _swimming: bool = false
 var _phone_ui: Phone = null
 var _was_on_floor: bool = true
 var _oxygen: float = 1.0
 
 @onready var _camera_rig: OrbitCamera = $CameraRig
-@onready var _rig: CharacterAnimator = $Rig
+@onready var _rig: AnimatedRig = $Rig
 
 
 func _ready() -> void:
@@ -89,6 +84,7 @@ func _ready() -> void:
 	var footstep_audio := FootstepAudio.new()
 	add_child(footstep_audio)
 	footstep.connect(footstep_audio.on_footstep)
+	_rig.foot_planted.connect(_on_foot_planted)
 	# The phone (UI + its own input + holding pose) is likewise code-spawned so
 	# the feature is self-contained and doesn't touch player.tscn.
 	_phone_ui = Phone.new()
@@ -140,6 +136,11 @@ func _nearest_pedestrian(max_range: float) -> Node3D:
 func _physics_process(delta: float) -> void:
 	if _vehicle != null:
 		global_position = _vehicle.global_position
+		# Keep feeding the rig (grounded, no motion) while driving: its
+		# AnimationTree stays active even hidden, and a frozen mid-run blend
+		# would keep firing foot plants from inside the car. Grounded-idle
+		# also means stepping out resumes from a clean standing pose.
+		_rig.animate(Vector3.ZERO, true, 0.0, false, delta)
 		return
 
 	_update_jump_timers(delta)
@@ -179,7 +180,6 @@ func _physics_process(delta: float) -> void:
 	var impact_speed := maxf(-velocity.y, 0.0)
 	move_and_slide()
 	_drive_rig(delta, false)
-	_update_footsteps(delta)
 	_update_landing(impact_speed)
 
 
@@ -236,8 +236,8 @@ func _current_water() -> WaterVolume:
 	return null
 
 
-## Feed the procedural animator this frame's motion. Called after move_and_slide
-## so velocity reflects collisions; the planar component drives swing and facing.
+## Feed the rig this frame's motion. Called after move_and_slide so velocity
+## reflects collisions; the planar component drives the anim blend and facing.
 func _drive_rig(delta: float, is_climbing: bool) -> void:
 	var planar := Vector3(velocity.x, 0.0, velocity.z)
 	_rig.animate(planar, is_on_floor(), velocity.y, is_climbing, delta)
@@ -280,18 +280,11 @@ func _update_breath(submersion: float, delta: float) -> void:
 		_hurt(drown_damage_per_second * delta)
 
 
-## Bank ground distance and emit `footstep` each time a full stride is covered,
-## tagging the surface under the foot. Pure cadence math lives in Footsteps.
-func _update_footsteps(delta: float) -> void:
-	var planar_speed := Vector2(velocity.x, velocity.z).length()
-	var stride := Footsteps.stride_length(
-		planar_speed, walk_speed, sprint_speed, walk_stride, run_stride
-	)
-	_stride_accum = Footsteps.accumulate(_stride_accum, planar_speed, is_on_floor(), delta)
-	if Footsteps.should_step(_stride_accum, stride):
-		_stride_accum = Footsteps.consume(_stride_accum, stride)
-		_step_is_left = not _step_is_left
-		footstep.emit(_floor_surface(), _step_is_left)
+## A locomotion clip planted a foot: tag the surface under us and re-emit as
+## the public `footstep` signal that audio listens on.
+func _on_foot_planted(is_left: bool) -> void:
+	if is_on_floor():
+		footstep.emit(_floor_surface(), is_left)
 
 
 ## Surface key under the player, read from the floor collider's groups. Falls

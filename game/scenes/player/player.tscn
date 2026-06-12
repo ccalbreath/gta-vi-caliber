@@ -1,55 +1,9 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera/orbit_camera.gd" id="2_camera"]
-[ext_resource type="Script" path="res://scripts/player/character_animator.gd" id="3_anim"]
-[ext_resource type="Script" path="res://scripts/player/humanoid_body.gd" id="4_body"]
+[ext_resource type="PackedScene" path="res://scenes/player/character_rig.tscn" id="3_rig"]
 [ext_resource type="Script" path="res://scripts/weapons/weapon_controller.gd" id="5_weapon"]
-[ext_resource type="PackedScene" path="res://assets/characters/mara_three_rigged_proxy.glb" id="6_mara_mesh"]
-
-[sub_resource type="StandardMaterial3D" id="shirt_mat"]
-albedo_color = Color(0.25, 0.45, 0.8, 1)
-roughness = 0.7
-
-[sub_resource type="StandardMaterial3D" id="pants_mat"]
-albedo_color = Color(0.15, 0.17, 0.26, 1)
-roughness = 0.8
-
-[sub_resource type="StandardMaterial3D" id="skin_mat"]
-albedo_color = Color(0.82, 0.62, 0.5, 1)
-roughness = 0.6
-
-[sub_resource type="StandardMaterial3D" id="shoe_mat"]
-albedo_color = Color(0.09, 0.09, 0.11, 1)
-roughness = 0.9
-
-[sub_resource type="BoxMesh" id="torso_mesh"]
-material = SubResource("shirt_mat")
-size = Vector3(0.5, 0.6, 0.27)
-
-[sub_resource type="BoxMesh" id="pelvis_mesh"]
-material = SubResource("pants_mat")
-size = Vector3(0.42, 0.22, 0.25)
-
-[sub_resource type="BoxMesh" id="head_mesh"]
-material = SubResource("skin_mat")
-size = Vector3(0.26, 0.28, 0.26)
-
-[sub_resource type="BoxMesh" id="arm_mesh"]
-material = SubResource("shirt_mat")
-size = Vector3(0.13, 0.6, 0.14)
-
-[sub_resource type="BoxMesh" id="hand_mesh"]
-material = SubResource("skin_mat")
-size = Vector3(0.13, 0.12, 0.14)
-
-[sub_resource type="BoxMesh" id="leg_mesh"]
-material = SubResource("pants_mat")
-size = Vector3(0.18, 0.82, 0.2)
-
-[sub_resource type="BoxMesh" id="foot_mesh"]
-material = SubResource("shoe_mat")
-size = Vector3(0.18, 0.12, 0.3)
 
 [sub_resource type="CapsuleShape3D" id="body_shape"]
 radius = 0.4
@@ -77,90 +31,20 @@ script = ExtResource("1_player")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("body_shape")
 
-[node name="Rig" type="Node3D" parent="."]
-script = ExtResource("3_anim")
+[node name="Rig" parent="." instance=ExtResource("3_rig")]
 
-[node name="Body" type="Node3D" parent="Rig"]
-script = ExtResource("4_body")
-use_mara_hero_profile = true
-imported_mara_scene = ExtResource("6_mara_mesh")
-imported_mara_offset = Vector3(0, -0.82, 0)
-hide_procedural_when_imported = true
-switch_imported_mara_by_camera = true
-
-[node name="Hips" type="Node3D" parent="Rig"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.92, 0)
-
-[node name="Pelvis" type="MeshInstance3D" parent="Rig/Hips"]
-mesh = SubResource("pelvis_mesh")
-
-[node name="Torso" type="MeshInstance3D" parent="Rig/Hips"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.42, 0)
-mesh = SubResource("torso_mesh")
-
-[node name="Neck" type="MeshInstance3D" parent="Rig/Hips"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
-
-[node name="Head" type="MeshInstance3D" parent="Rig/Hips"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.84, 0)
-mesh = SubResource("head_mesh")
-
-[node name="ShoulderL" type="Node3D" parent="Rig/Hips"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32, 0.6, 0)
-
-[node name="ArmL" type="MeshInstance3D" parent="Rig/Hips/ShoulderL"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
-mesh = SubResource("arm_mesh")
-
-[node name="HandL" type="MeshInstance3D" parent="Rig/Hips/ShoulderL"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.66, 0)
-mesh = SubResource("hand_mesh")
-
-[node name="ShoulderR" type="Node3D" parent="Rig/Hips"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 0.6, 0)
-
-[node name="ArmR" type="MeshInstance3D" parent="Rig/Hips/ShoulderR"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
-mesh = SubResource("arm_mesh")
-
-[node name="HandR" type="MeshInstance3D" parent="Rig/Hips/ShoulderR"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.66, 0)
-mesh = SubResource("hand_mesh")
-
-[node name="HipL" type="Node3D" parent="Rig/Hips"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.11, 0, 0)
-
-[node name="LegL" type="MeshInstance3D" parent="Rig/Hips/HipL"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.41, 0)
-mesh = SubResource("leg_mesh")
-
-[node name="FootL" type="MeshInstance3D" parent="Rig/Hips/HipL"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.82, 0.06)
-mesh = SubResource("foot_mesh")
-
-[node name="HipR" type="Node3D" parent="Rig/Hips"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.11, 0, 0)
-
-[node name="LegR" type="MeshInstance3D" parent="Rig/Hips/HipR"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.41, 0)
-mesh = SubResource("leg_mesh")
-
-[node name="FootR" type="MeshInstance3D" parent="Rig/Hips/HipR"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.82, 0.06)
-mesh = SubResource("foot_mesh")
-
-[node name="GunMount" type="Node3D" parent="Rig/Hips"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22, 0.15, -0.28)
+[node name="GunMount" type="Node3D" parent="Rig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22, 1.07, -0.28)
 visible = false
 
-[node name="GunBody" type="MeshInstance3D" parent="Rig/Hips/GunMount"]
+[node name="GunBody" type="MeshInstance3D" parent="Rig/GunMount"]
 mesh = SubResource("gun_body_mesh")
 
-[node name="Barrel" type="MeshInstance3D" parent="Rig/Hips/GunMount"]
+[node name="Barrel" type="MeshInstance3D" parent="Rig/GunMount"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -0.28)
 mesh = SubResource("gun_barrel_mesh")
 
-[node name="Muzzle" type="Marker3D" parent="Rig/Hips/GunMount"]
+[node name="Muzzle" type="Marker3D" parent="Rig/GunMount"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -0.45)
 
 [node name="CameraRig" type="Node3D" parent="."]
@@ -178,5 +62,5 @@ current = true
 [node name="WeaponController" type="Node3D" parent="."]
 script = ExtResource("5_weapon")
 camera_path = NodePath("../CameraRig/SpringArm/Camera")
-muzzle_path = NodePath("../Rig/Hips/GunMount/Muzzle")
-gun_mount_path = NodePath("../Rig/Hips/GunMount")
+muzzle_path = NodePath("../Rig/GunMount/Muzzle")
+gun_mount_path = NodePath("../Rig/GunMount")

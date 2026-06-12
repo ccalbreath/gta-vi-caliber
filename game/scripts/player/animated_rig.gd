@@ -1,0 +1,315 @@
+class_name AnimatedRig
+extends Node3D
+## Skeletal character rig driven by an AnimationTree state machine.
+##
+## The player's replacement for the procedural CharacterAnimator (issue #1):
+## same animate() input contract fed by Player after move_and_slide, but the
+## pose comes from imported CC0 clips (Quaternius Universal Animation
+## Library) playing on the Universal Base Character skeleton. This script
+## sits on the imported model's root (see character_rig.tscn), so animation
+## method tracks reach it at path "." for foot-plant events. Routing from
+## locomotion state to state-machine target is pure logic in AnimRouter;
+## state classification stays in Locomotion, so both are unit-tested without
+## this scene.
+
+## Fired when a locomotion clip plants a foot on the ground. Player listens
+## and re-emits its surface-typed `footstep` signal, so step audio is locked
+## to the animation's actual foot strikes instead of a parallel stride clock.
+signal foot_planted(is_left: bool)
+
+## The shared clip library; its skeleton matches the base character's, so the
+## imported animations resolve against our Model without retargeting.
+const ANIM_LIBRARY_SCENE := "res://assets/characters/universal_animations/UAL1_Standard.glb"
+
+## Hairstyle from the same pack, skinned to the same skeleton; its mesh is
+## grafted onto the body's Skeleton3D at runtime and binds by bone name.
+const HAIR_SCENE := "res://assets/characters/player_male_01/Hair_SimpleParted.gltf"
+
+## Blend-space positions for the Move state, matching Locomotion.move_blend's
+## axis: 0.0 standing, 0.5 at walk_speed, 1.0 at run_speed.
+const BLEND_IDLE := 0.0
+const BLEND_WALK := 0.5
+const BLEND_JOG := 0.8
+const BLEND_SPRINT := 1.0
+
+## Trim windows for the jump one-shots (probed from the clips' pelvis
+## curves): Jump_Start spends its first 0.30 s in an anticipation crouch the
+## physics jump doesn't wait for, then extends into the air pose; Jump_Land's
+## absorb is over by 0.60 s, the rest is a slow recovery the Move crossfade
+## covers better.
+const JUMP_START_OFFSET := 0.30
+const JUMP_START_LENGTH := 0.45
+const LAND_LENGTH := 0.60
+
+## Foot-strike timestamps (s) per locomotion clip, probed from each clip's
+## foot-bone height curves (the moment the foot reaches ground height and
+## starts its stance sweep). Injected as method-track keys that call
+## _on_foot_plant; the left-foot key at the Walk cycle's exact start is
+## nudged to 0.01 s so it can't double-fire on loop wrap.
+const FOOT_PLANT_KEYS := {
+	&"Walk": {"blend_point": BLEND_WALK, "left": [0.01], "right": [0.667]},
+	&"Jog_Fwd": {"blend_point": BLEND_JOG, "left": [0.023], "right": [0.49]},
+	&"Sprint": {"blend_point": BLEND_SPRINT, "left": [0.017], "right": [0.35]},
+}
+
+## Blend points whose clips can claim a footstep; Idle has no plant keys.
+const MOVING_BLEND_POINTS: PackedFloat32Array = [BLEND_WALK, BLEND_JOG, BLEND_SPRINT]
+
+## Below this move blend the character is effectively stationary — plant
+## events from residual low-weight clips are ignored.
+const MIN_STEP_BLEND := 0.1
+
+## Speeds must mirror the Player export values so blend thresholds agree.
+@export var walk_speed: float = 5.0
+@export var run_speed: float = 8.5
+## Yaw turn rate (rad/s) when reorienting toward travel/aim direction.
+@export var turn_rate: float = 12.0
+## How fast the move blend eases toward its target (1/s).
+@export var response_rate: float = 10.0
+## Crossfade (s) between ground locomotion and the airborne state.
+@export var air_xfade: float = 0.2
+## Landing at or above this planar speed (m/s) skips the landing absorb and
+## rolls straight back into locomotion, so moving landings don't foot-slide.
+@export var land_skip_speed: float = 2.0
+
+var _facing: float = 0.0
+var _blend: float = 0.0
+var _on_floor: bool = true
+var _playback: AnimationNodeStateMachinePlayback = null
+# When the owner is the player, face where the weapon aims (not where we
+# move) so strafing reads as a third-person shooter. Mirrors CharacterAnimator.
+var _aim_facing: bool = false
+var _weapon_controller: Node = null
+var _phone_raised: bool = false
+
+@onready var _anim_player: AnimationPlayer = $AnimationPlayer
+@onready var _tree: AnimationTree = $AnimationTree
+
+
+func _ready() -> void:
+	_facing = rotation.y
+	var owner_body := get_parent()
+	_aim_facing = owner_body != null and owner_body.is_in_group("player")
+	_install_animations()
+	_install_hair()
+	_tree.tree_root = _build_state_machine()
+	_tree.active = true
+	_playback = _tree.get("parameters/playback")
+	_playback.start(AnimRouter.STATE_MOVE)
+
+
+## Drive the rig for one physics frame from the character's current motion.
+## Same contract as CharacterAnimator.animate: planar_velocity is world-space
+## with y ignored; vertical_velocity tells a rising jump from a fall.
+func animate(
+	planar_velocity: Vector3,
+	on_floor: bool,
+	vertical_velocity: float,
+	is_climbing: bool,
+	delta: float
+) -> void:
+	var planar_speed := planar_velocity.length()
+	_on_floor = on_floor
+	var state := Locomotion.state_for(
+		planar_speed, on_floor, vertical_velocity, is_climbing, walk_speed, run_speed
+	)
+
+	var total_speed := Vector3(planar_velocity.x, vertical_velocity, planar_velocity.z).length()
+	var target_blend := AnimRouter.move_blend_value(
+		planar_speed, total_speed, is_climbing, walk_speed, run_speed
+	)
+	_blend = move_toward(_blend, target_blend, response_rate * delta)
+	_tree.set("parameters/Move/blend_position", _blend)
+
+	_update_facing(planar_velocity, delta)
+
+	var current := _playback.get_current_node()
+	var target := AnimRouter.travel_target(state, current, planar_speed, land_skip_speed)
+	if current != target:
+		_playback.travel(target)
+
+
+## Same contract as CharacterAnimator.set_phone: Player mirrors the raised /
+## pocketed phone here. The UAL Standard tier has no phone-hold clip, so the
+## flag is state-only for now — the phone's gameplay rules (sprint and vehicle
+## gating) live in Player and keep working; a one-handed holding pose can slot
+## in when a suitable clip exists.
+func set_phone(raised: bool) -> void:
+	_phone_raised = raised
+
+
+func _update_facing(planar_velocity: Vector3, delta: float) -> void:
+	var target := AnimRouter.facing_target(planar_velocity, _aim_yaw())
+	if is_nan(target):
+		return
+	_facing = AnimRouter.rotate_toward_angle(_facing, target, turn_rate * delta)
+	rotation.y = _facing
+
+
+# Aim yaw from the player's WeaponController (NAN while holstered or for
+# non-player owners, meaning travel-facing). Mirrors CharacterAnimator.
+func _aim_yaw() -> float:
+	if not _aim_facing:
+		return NAN
+	if _weapon_controller == null:
+		var found := get_tree().get_nodes_in_group("weapon_controller")
+		if found.is_empty():
+			return NAN
+		_weapon_controller = found[0]
+	if _weapon_controller.has_method("facing_override"):
+		return _weapon_controller.facing_override()
+	return NAN
+
+
+## Copy the clip library out of the imported animation-library scene into our
+## AnimationPlayer. Both scenes share the Armature/Skeleton3D structure and
+## bone names, so the tracks drive our skeleton without retargeting. The
+## locomotion clips get foot-plant method-track keys injected into private
+## duplicates, leaving the imported library untouched for other users.
+func _install_animations() -> void:
+	var packed: PackedScene = load(ANIM_LIBRARY_SCENE)
+	if packed == null:
+		push_error("AnimatedRig: cannot load animation library " + ANIM_LIBRARY_SCENE)
+		return
+	var source := packed.instantiate()
+	var players := source.find_children("*", "AnimationPlayer", true, false)
+	if players.is_empty():
+		push_error("AnimatedRig: no AnimationPlayer inside " + ANIM_LIBRARY_SCENE)
+		source.free()
+		return
+	var source_player: AnimationPlayer = players[0]
+	var library: AnimationLibrary = source_player.get_animation_library(&"").duplicate()
+	for clip_name: StringName in FOOT_PLANT_KEYS:
+		var spec: Dictionary = FOOT_PLANT_KEYS[clip_name]
+		var clip: Animation = library.get_animation(clip_name).duplicate(true)
+		_add_plant_keys(clip, spec)
+		library.add_animation(clip_name, clip)
+	_anim_player.add_animation_library(&"", library)
+	source.free()
+
+
+## Graft the hairstyle's skinned mesh onto the body skeleton. The hair scene
+## carries the same 65-joint rig, so its Skin resource binds to our bones by
+## name once the mesh hangs under our Skeleton3D. Hair is cosmetic — a
+## missing file logs and degrades to the bald base mesh.
+func _install_hair() -> void:
+	var packed: PackedScene = load(HAIR_SCENE)
+	if packed == null:
+		push_warning("AnimatedRig: cannot load hairstyle " + HAIR_SCENE)
+		return
+	var skeletons := find_children("*", "Skeleton3D", true, false)
+	if skeletons.is_empty():
+		push_warning("AnimatedRig: no Skeleton3D to graft hair onto")
+		return
+	var skeleton: Skeleton3D = skeletons[0]
+	var source := packed.instantiate()
+	for mesh in source.find_children("*", "MeshInstance3D", true, false):
+		mesh.get_parent().remove_child(mesh)
+		mesh.owner = null
+		skeleton.add_child(mesh)
+		(mesh as MeshInstance3D).skeleton = NodePath("..")
+	source.free()
+
+
+## Append one method track per clip whose keys call _on_foot_plant (this
+## script sits on the animation root, so path "." reaches it).
+func _add_plant_keys(clip: Animation, spec: Dictionary) -> void:
+	var track := clip.add_track(Animation.TYPE_METHOD)
+	clip.track_set_path(track, NodePath("."))
+	var blend_point: float = spec["blend_point"]
+	for time: float in spec["left"]:
+		clip.track_insert_key(
+			track, time, {"method": &"_on_foot_plant", "args": [true, blend_point]}
+		)
+	for time: float in spec["right"]:
+		clip.track_insert_key(
+			track, time, {"method": &"_on_foot_plant", "args": [false, blend_point]}
+		)
+
+
+## Called by the injected method-track keys whenever a locomotion clip plants
+## a foot. Every clip near the current blend position fires its own keys, so
+## only the dominant clip's events pass, and only while actually moving on
+## the ground in the Move state.
+func _on_foot_plant(is_left: bool, blend_point: float) -> void:
+	if not _on_floor or _blend < MIN_STEP_BLEND:
+		return
+	if _playback == null or _playback.get_current_node() != AnimRouter.STATE_MOVE:
+		return
+	var dominant := AnimRouter.dominant_blend_point(_blend, MOVING_BLEND_POINTS)
+	if not is_equal_approx(dominant, blend_point):
+		return
+	foot_planted.emit(is_left)
+
+
+## Build the locomotion state machine: a Move blend space (idle → walk → jog
+## → sprint along Locomotion.move_blend's axis) plus the three-phase jump
+## chain — JumpStart one-shot → Air loop → Land one-shot — with the
+## one-shots trimmed to their useful windows and auto-advancing when done.
+func _build_state_machine() -> AnimationNodeStateMachine:
+	var machine := AnimationNodeStateMachine.new()
+
+	var move := AnimationNodeBlendSpace1D.new()
+	move.add_blend_point(_clip(&"Idle"), BLEND_IDLE)
+	move.add_blend_point(_clip(&"Walk"), BLEND_WALK)
+	move.add_blend_point(_clip(&"Jog_Fwd"), BLEND_JOG)
+	move.add_blend_point(_clip(&"Sprint"), BLEND_SPRINT)
+	machine.add_node(AnimRouter.STATE_MOVE, move)
+
+	machine.add_node(
+		AnimRouter.STATE_JUMP_START, _one_shot(&"Jump_Start", JUMP_START_OFFSET, JUMP_START_LENGTH)
+	)
+	machine.add_node(AnimRouter.STATE_AIR, _clip(&"Jump"))
+	machine.add_node(AnimRouter.STATE_LAND, _one_shot(&"Jump_Land", 0.0, LAND_LENGTH))
+
+	# Launch: quick cut into the start one-shot, which flows into the loop.
+	machine.add_transition(AnimRouter.STATE_MOVE, AnimRouter.STATE_JUMP_START, _transition(0.1))
+	machine.add_transition(AnimRouter.STATE_JUMP_START, AnimRouter.STATE_AIR, _auto_at_end(0.25))
+	# Walking off a ledge skips the launch pose.
+	machine.add_transition(AnimRouter.STATE_MOVE, AnimRouter.STATE_AIR, _transition(air_xfade))
+
+	# Touchdown: absorb when slow (auto-recovers into Move), straight back
+	# into locomotion when moving; short hops can land out of the start.
+	machine.add_transition(AnimRouter.STATE_AIR, AnimRouter.STATE_LAND, _transition(0.1))
+	machine.add_transition(AnimRouter.STATE_AIR, AnimRouter.STATE_MOVE, _transition(air_xfade))
+	machine.add_transition(AnimRouter.STATE_JUMP_START, AnimRouter.STATE_LAND, _transition(0.1))
+	machine.add_transition(AnimRouter.STATE_JUMP_START, AnimRouter.STATE_MOVE, _transition(0.15))
+	machine.add_transition(AnimRouter.STATE_LAND, AnimRouter.STATE_MOVE, _auto_at_end(0.25))
+	# Bunny hop: jumping during the absorb restarts the arc.
+	machine.add_transition(AnimRouter.STATE_LAND, AnimRouter.STATE_JUMP_START, _transition(0.1))
+	# Walking off a ledge mid-absorb: without this edge, a travel to Air has
+	# to wait out the absorb and crossfade through Move while already airborne.
+	machine.add_transition(AnimRouter.STATE_LAND, AnimRouter.STATE_AIR, _transition(0.15))
+	return machine
+
+
+func _clip(animation_name: StringName) -> AnimationNodeAnimation:
+	var node := AnimationNodeAnimation.new()
+	node.animation = animation_name
+	return node
+
+
+## A clip trimmed to [offset, offset + length] at natural speed, so the
+## state machine sees a one-shot exactly as long as its useful window.
+func _one_shot(animation_name: StringName, offset: float, length: float) -> AnimationNodeAnimation:
+	var node := _clip(animation_name)
+	node.use_custom_timeline = true
+	node.start_offset = offset
+	node.timeline_length = length
+	node.stretch_time_scale = false
+	return node
+
+
+func _transition(xfade: float) -> AnimationNodeStateMachineTransition:
+	var transition := AnimationNodeStateMachineTransition.new()
+	transition.xfade_time = xfade
+	return transition
+
+
+## Fires by itself when the source one-shot reaches its end, crossfading
+## into the destination over xfade seconds.
+func _auto_at_end(xfade: float) -> AnimationNodeStateMachineTransition:
+	var transition := _transition(xfade)
+	transition.switch_mode = AnimationNodeStateMachineTransition.SWITCH_MODE_AT_END
+	transition.advance_mode = AnimationNodeStateMachineTransition.ADVANCE_MODE_AUTO
+	return transition
