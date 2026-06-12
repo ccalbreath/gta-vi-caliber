@@ -38,6 +38,13 @@ extends CharacterBody3D
 ## Seconds spent reloading (the officer repositions/retreats meanwhile).
 @export var reload_time: float = 2.2
 
+@export_group("Pursuit")
+## How far the officer can spot the player, with a clear line of sight.
+@export var sight_range: float = 45.0
+## Seconds out of sight before the officer abandons the chase and resumes patrol —
+## the window the player must stay hidden to "go cold".
+@export var give_up_time: float = 8.0
+
 var _target: Vector3 = Vector3.ZERO
 var _home: Vector3 = Vector3.ZERO
 var _idle_left: float = 0.0
@@ -49,6 +56,10 @@ var _reload_left: float = 0.0
 var _ammo: int = 12
 var _strafe_sign: float = 1.0
 var _facing: Vector3 = Vector3.FORWARD
+var _last_known: Vector3 = Vector3.ZERO
+var _time_unseen: float = 0.0
+var _engaged: bool = false
+var _gave_up: bool = false
 
 @onready var _rig: CharacterAnimator = $Rig
 
@@ -59,6 +70,7 @@ func _ready() -> void:
 	_hp = Damageable.new(max_health)
 	_ammo = clip_size
 	_strafe_sign = 1.0 if _rng.randf() < 0.5 else -1.0
+	_last_known = global_position
 	add_to_group("police")
 	_pick_patrol()
 
@@ -69,20 +81,17 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_fire_cd = maxf(0.0, _fire_cd - delta)
-	var dir := Vector3.ZERO
-	var speed := 0.0
 	var player := _nearest_player()
+	var move: Dictionary
 	if player != null and _is_wanted():
-		var move := _combat_step(player, delta) if fires_weapon else _melee_step(player, delta)
-		dir = move["dir"]
-		speed = move["speed"]
-	elif NpcBrain.arrived(global_position, _target, arrive_tolerance):
-		_idle_left -= delta
-		if _idle_left <= 0.0:
-			_pick_patrol()
+		move = _pursue(player, delta)
 	else:
-		dir = NpcBrain.planar_dir(global_position, _target)
-		speed = patrol_speed
+		# Heat's off — forget the chase so the next spree gets a fresh response.
+		_engaged = false
+		_gave_up = false
+		move = _wander_step(delta)
+	var dir: Vector3 = move["dir"]
+	var speed: float = move["speed"]
 
 	if not is_on_floor():
 		velocity += get_gravity() * delta
@@ -105,11 +114,70 @@ func is_dead() -> bool:
 	return _dead
 
 
-## Gun engagement: run the pure PoliceCombat brain, then execute the plan —
-## turn toward the player, fire if told to, and return the movement intent.
-func _combat_step(player: Node3D, delta: float) -> Dictionary:
-	var to_target := CombatAi.planar_dir(global_position, player.global_position)
-	var distance := NpcBrain.planar_distance(global_position, player.global_position)
+## Chase in three phases while wanted:
+##   APPROACH — not yet seen: home in on the player's position from dispatch intel
+##     (so cops spawned beyond sight range still converge).
+##   ENGAGED  — has sight or recently had it: fight; when sight breaks, steer to
+##     the last spot they were seen (not the live position, so they can't track
+##     through walls) and search there.
+##   GAVE_UP  — out of sight past give_up_time: this officer peels off to patrol
+##     and won't re-approach until it actually re-sights the player. Other and
+##     newly dispatched officers keep coming, so the player shakes the heat by
+##     surviving the wanted level (which decays), not by juking one cop.
+func _pursue(player: Node3D, delta: float) -> Dictionary:
+	var shot := _ray_to(player)
+	var seen := _sees(player, shot)
+	if seen:
+		_engaged = true
+		_gave_up = false
+		_time_unseen = 0.0
+		_last_known = player.global_position
+	elif _engaged:
+		_time_unseen += delta
+		if PursuitMemory.should_give_up(_time_unseen, give_up_time):
+			_engaged = false
+			_gave_up = true
+			_pick_patrol()
+
+	if _gave_up:
+		return _wander_step(delta)
+	# ENGAGED steers to the last-known point when blind; APPROACH uses live intel.
+	var aim := (
+		PursuitMemory.target(seen, player.global_position, _last_known)
+		if _engaged
+		else player.global_position
+	)
+	if fires_weapon:
+		return _combat_step(player, delta, aim, seen, shot)
+	return _melee_step(player, delta)
+
+
+## A clear line of sight to the player within spotting range.
+func _sees(player: Node3D, shot: Dictionary) -> bool:
+	if NpcBrain.planar_distance(global_position, player.global_position) > sight_range:
+		return false
+	return _los_clear(shot)
+
+
+## Idle patrol wander around the post.
+func _wander_step(delta: float) -> Dictionary:
+	if NpcBrain.arrived(global_position, _target, arrive_tolerance):
+		_idle_left -= delta
+		if _idle_left <= 0.0:
+			_pick_patrol()
+		return {"dir": Vector3.ZERO, "speed": 0.0}
+	return {"dir": NpcBrain.planar_dir(global_position, _target), "speed": patrol_speed}
+
+
+## Run the pure PoliceCombat brain and execute the plan — turn toward the aim
+## point, fire if told to, and return the movement intent. `aim` is the live
+## player while seen, else the last-known spot; `seen` gates engaging/firing so a
+## blind officer advances on the memory instead of shooting through cover.
+func _combat_step(
+	player: Node3D, delta: float, aim: Vector3, seen: bool, shot: Dictionary
+) -> Dictionary:
+	var to_target := CombatAi.planar_dir(global_position, aim)
+	var distance := NpcBrain.planar_distance(global_position, aim)
 	_turn_toward(to_target, delta)
 	if _ammo <= 0:
 		_reload_left = maxf(0.0, _reload_left - delta)
@@ -117,17 +185,8 @@ func _combat_step(player: Node3D, delta: float) -> Dictionary:
 			_ammo = clip_size
 
 	var stars := _current_stars()
-	# One raycast per tick, shared by the line-of-sight gate and the shot itself.
-	var shot := _ray_to(player)
 	var plan := PoliceCombat.plan(
-		distance,
-		_los_clear(shot),
-		_facing,
-		to_target,
-		_hp.health_fraction(),
-		stars,
-		_ammo,
-		_fire_cd <= 0.0
+		distance, seen, _facing, to_target, _hp.health_fraction(), stars, _ammo, _fire_cd <= 0.0
 	)
 	var action: int = plan["action"]
 	if bool(plan["fire"]):
@@ -138,7 +197,7 @@ func _combat_step(player: Node3D, delta: float) -> Dictionary:
 			_reload_left = reload_time
 
 	return {
-		"dir": CombatAi.desired_move(action, global_position, player.global_position, _strafe_sign),
+		"dir": CombatAi.desired_move(action, global_position, aim, _strafe_sign),
 		"speed": CombatAi.move_speed(action, PoliceCombat.chase_speed(chase_speed, stars)),
 	}
 
@@ -260,6 +319,10 @@ func _respawn() -> void:
 	_fire_cd = 0.0
 	_reload_left = 0.0
 	_facing = Vector3.FORWARD
+	_engaged = false
+	_gave_up = false
+	_time_unseen = 0.0
+	_last_known = _home
 	_rig.rotation = Vector3.ZERO
 	global_position = _home
 	velocity = Vector3.ZERO
