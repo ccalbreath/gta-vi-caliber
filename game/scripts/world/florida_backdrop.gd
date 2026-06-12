@@ -70,6 +70,7 @@ func _ready() -> void:
 	_build_coastal_palms()
 	_build_clouds()
 	_build_bay_boats()
+	_build_seabirds()
 	_build_swim_volume()
 
 
@@ -734,6 +735,15 @@ func _build_coastal_palms() -> void:
 	palms.map_scale = map_scale
 	palms.ground_y = land_y + 0.05
 	add_child(palms)
+
+
+func _build_seabirds() -> void:
+	# Ambient gulls wheeling over the bay — the moving life the static scenery
+	# doesn't give. Centred over the open bay so they read against sky + water.
+	var birds := SeabirdFlock.new()
+	birds.name = "SeabirdFlock"
+	birds.centre = Vector3(2800.0, 80.0, 0.0)
+	add_child(birds)
 
 
 func _build_bay_boats() -> void:

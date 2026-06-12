@@ -5,6 +5,20 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 7) — gulls in the sky: ambient life, not just scenery
+
+Track Q (detail/life), a deliberate diversification — the backdrop had grown
+rich in *static* scenery (water, ground, trees, clouds, boats, palms) but the
+only motion was the drifting boats. Added `SeabirdFlock`: ~26 gulls that each
+circle a slowly drifting flock centre at their own radius/altitude/phase, bank
+into the turn, and flap (a hinged wing pivot driven by a sine). Pure time-math
+motion, no per-frame allocation. Reads as real gulls — swept silhouettes up
+close, specks at distance (`/tmp/birds.png`). Added over the bay via
+FloridaBackdrop; verified in isolation + 4 functional unit tests (count,
+altitude band, drift, wing-flap). Honest limit: box-built wings (fine at gull
+scale/distance, not a hero close-up bird), and the flight is decorative orbits,
+not true boids flocking.
+
 ## 2026-06-12 (cont. 6) — the shore gets its palms (named ledger gap)
 
 Track Q (detail/set-dressing) — closes a gap the ledger named outright back in
