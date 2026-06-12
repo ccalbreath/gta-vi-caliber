@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=22 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -13,6 +13,16 @@
 [ext_resource type="Script" path="res://scripts/world/world_quality.gd" id="6_quality"]
 [ext_resource type="PackedScene" path="res://scenes/ui/game_hud.tscn" id="7_gamehud"]
 [ext_resource type="Script" path="res://scripts/ui/streaming_hud.gd" id="9_shud"]
+[ext_resource type="Script" path="res://scripts/systems/player_health.gd" id="10_health"]
+[ext_resource type="Script" path="res://scripts/player/player_stats.gd" id="11_stats"]
+[ext_resource type="Script" path="res://scripts/systems/wanted_tracker.gd" id="12_wanted"]
+[ext_resource type="Script" path="res://scripts/missions/mission_director.gd" id="13_mission"]
+[ext_resource type="Script" path="res://scripts/npc/bark_director.gd" id="14_bark"]
+[ext_resource type="Script" path="res://scripts/npc/crowd_director.gd" id="15_crowd"]
+[ext_resource type="Script" path="res://scripts/ai/traffic_director.gd" id="16_traffic"]
+[ext_resource type="Script" path="res://scripts/npc/police_spawner.gd" id="17_police_spawner"]
+[ext_resource type="PackedScene" path="res://scenes/npc/police.tscn" id="18_police"]
+[ext_resource type="PackedScene" path="res://scenes/vehicles/car.tscn" id="19_car"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_top_color = Color(0.14, 0.24, 0.52, 1)
@@ -92,3 +102,44 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 
 [node name="StreamingHud" type="CanvasLayer" parent="."]
 script = ExtResource("9_shud")
+
+; --- Gameplay simulation: self-wiring system nodes ---------------------------
+; These discover the player / weapon controller / each other through groups at
+; runtime (player_health, player_stats, wanted, mission, bark, player), so the
+; live HUD lights up and shooting in the city now has consequences. The dynamic
+; directors stream pedestrians, traffic, and a wanted-driven police response
+; around the player across the paged districts.
+
+[node name="PlayerHealth" type="Node" parent="."]
+script = ExtResource("10_health")
+
+[node name="PlayerStats" type="Node" parent="."]
+script = ExtResource("11_stats")
+
+[node name="WantedTracker" type="Node" parent="."]
+script = ExtResource("12_wanted")
+
+[node name="MissionDirector" type="Node" parent="."]
+script = ExtResource("13_mission")
+
+[node name="BarkDirector" type="Node" parent="."]
+script = ExtResource("14_bark")
+
+[node name="CrowdDirector" type="Node3D" parent="."]
+script = ExtResource("15_crowd")
+target_count = 24
+spawn_max_radius = 46.0
+cull_radius = 60.0
+
+[node name="TrafficDirector" type="Node3D" parent="."]
+script = ExtResource("16_traffic")
+target_count = 12
+spawn_max_radius = 52.0
+cull_radius = 72.0
+
+[node name="PoliceSpawner" type="Node3D" parent="."]
+script = ExtResource("17_police_spawner")
+police_scene = ExtResource("18_police")
+
+[node name="Car" parent="." instance=ExtResource("19_car")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.6, 5)
