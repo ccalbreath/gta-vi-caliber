@@ -36,12 +36,24 @@ PR #31) is our animation library.
   scripted via `tools/pull-material.sh`, section 5), Poly Haven, cgbookcase,
   ShareTextures. All CC0. With these, AI texture generation shrinks to
   custom-only work (signage, graffiti, liveries, decals).
-- **Buildings:** procedural, not downloaded. Blender-OSM free tier (real
-  street layouts + building footprints; the data is ODbL like our existing
-  `game/assets/world/*.json` extracts — same attribution rules apply) +
-  Buildify (free geometry-nodes building generator) dressed with ambientCG
-  facade materials. Sketchfab CC0/CC-BY for distinctive hero buildings.
-  The Base Mesh (CC0) for kitbashing.
+- **Buildings:** procedural, not downloaded. Blosm (blender-osm) free tier
+  (real street layouts + building footprints; the data is ODbL like our
+  existing `game/assets/world/*.json` extracts — same attribution rules
+  apply) + Buildify (free geometry-nodes building generator) dressed with
+  ambientCG facade materials. Sketchfab CC0/CC-BY for distinctive hero
+  buildings — fictional designs only, per the policy below. The Base Mesh
+  (CC0) for kitbashing.
+
+  **Building art policy (decided): real footprints, fictional buildings.**
+  Real OSM street layouts and building FOOTPRINTS are welcome — that's
+  what makes the city feel real — but no building ships as a recreation of
+  its real-world counterpart. Every building is a fictionalized
+  Buildify/procedural variation on its footprint: different facades,
+  heights within reason, details, names. The city should feel like Miami
+  without containing Miami. Photogrammetry of real buildings and
+  likeness-replication (by any technique, including AI) are out entirely.
+  Practically: randomize floor counts, swap facade material sets and
+  tints per building, never reuse a real building's name or signage.
 - **Vehicles:** Sketchfab CC0/CC-BY base cars. Audition ~10, keep 3–5;
   verify the license per asset on the asset page (CC, not "Standard").
   Multiplier: a few good bases × Blender reskins (colors, AI liveries,
@@ -203,6 +215,37 @@ tweaks, one-off exports, recipe development); headless
 batch-applying. Strengths: batch operations, materials, mesh separations,
 exports, rig boilerplate. Weakness: creative modeling and topology — don't
 ask it to sculpt.
+
+### Blosm + Buildify on Blender 5.1 (verified 2026-06-12)
+
+**Manual steps (once per machine):** only the two Gumroad checkouts/
+downloads (Blosm zip, `buildify_1.0.blend`). Everything after that was
+driven entirely over the bridge — zero Blender clicks:
+
+- **Blosm install:** `bpy.ops.preferences.addon_install(filepath=zip)` +
+  `addon_enable(module="blosm")`, set `preferences.dataDir`. Import via
+  `scene.blosm` props (`dataType='osm'`, `mode='3Dsimple'`, extent
+  lat/lon) + `bpy.ops.blosm.import_data()`. A downtown test block pulled
+  46 buildings from Overpass headlessly. **OSM mode only** — the addon
+  has Google/Mapbox/ArcGIS key fields; they stay empty and the
+  `3d-tiles` data type is never used (no keys exist for this project).
+  The old GitHub release (vvoovv v2.4.21, 2021) does NOT work on 5.x
+  (imports the removed `bgl` module); use the current Gumroad build.
+- **Buildify:** it's a .blend asset, not an addon — append the
+  `building` node group (`bpy.data.libraries.load`); its module
+  collections come along as dependencies. Works on 5.1 with quirks:
+  (a) instances must be realized before GLB export (the glTF exporter
+  silently exports only the base footprint otherwise — add a Realize
+  Instances modifier or realize to a mesh); (b) Collection Info nodes
+  READ as unbound (`None` defaults) — false alarm, they're fed by links
+  from group-node sockets, which survive the version migration; don't
+  "fix" them; (c) one muted Frame node — cosmetic, ignore; (d) the roof
+  `Set Material` node arrives genuinely unbound — rebind it.
+- **Density warning:** Buildify output is arch-viz density (~300k+ tris
+  for an 18-floor tower after conservative limited dissolve). Fine for
+  one hero/POC asset; bulk city use needs an optimization lane (module
+  simplification, LODs, or Godot-side MultiMesh from module GLBs +
+  transform lists) before it ships at scale.
 
 ## 11. Staged rollout (proposed, repo-adjusted)
 

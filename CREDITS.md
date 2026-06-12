@@ -40,3 +40,9 @@ Format: `Asset — Author — Source URL — CC0 1.0`
 
 Engine and vendored addon licenses live with their sources (`LICENSE`,
 `game/addons/*/LICENSE*`); they are not duplicated here.
+
+Content-generation tools used in the asset pipeline (not redistributed in
+this repo):
+
+- Blosm (blender-osm) — prochitecture — https://prochitecture.gumroad.com
+- Buildify — Pavel Oliva — https://paveloliva.gumroad.com/l/buildify

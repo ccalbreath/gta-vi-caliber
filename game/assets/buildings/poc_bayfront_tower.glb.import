@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://lqum4kytgn71"
-path="res://.godot/imported/poc_miami_tower.glb-566fa2af7d6fc0981552c34fde361c49.scn"
+uid="uid://3wnbov4e4qu2"
+path="res://.godot/imported/poc_bayfront_tower.glb-59e79b0512d03a043ea8f3f67940470b.scn"
 
 [deps]
 
-source_file="res://assets/buildings/poc_miami_tower.glb"
-dest_files=["res://.godot/imported/poc_miami_tower.glb-566fa2af7d6fc0981552c34fde361c49.scn"]
+source_file="res://assets/buildings/poc_bayfront_tower.glb"
+dest_files=["res://.godot/imported/poc_bayfront_tower.glb-59e79b0512d03a043ea8f3f67940470b.scn"]
 
 [params]
 

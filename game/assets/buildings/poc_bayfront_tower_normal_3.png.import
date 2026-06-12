@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cwaw8u3pxnsen"
-path="res://.godot/imported/poc_miami_tower_normal.png-b9082f90a8004bf99423adcf4bdf0bfe.ctex"
+uid="uid://ckmekyhlm58c5"
+path="res://.godot/imported/poc_bayfront_tower_normal_3.png-0fa6b4baf8e33adf619c48dfa070deb8.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "7149b303ab1a9473a43fadd9178c6aca"
+"md5": "d29aea83ac588ee5bb2af1abebb93d40"
 }
 
 [deps]
 
-source_file="res://assets/buildings/poc_miami_tower_normal.png"
-dest_files=["res://.godot/imported/poc_miami_tower_normal.png-b9082f90a8004bf99423adcf4bdf0bfe.ctex"]
+source_file="res://assets/buildings/poc_bayfront_tower_normal_3.png"
+dest_files=["res://.godot/imported/poc_bayfront_tower_normal_3.png-0fa6b4baf8e33adf619c48dfa070deb8.ctex"]
 
 [params]
 

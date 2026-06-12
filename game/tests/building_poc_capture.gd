@@ -1,12 +1,13 @@
 extends SceneTree
-## Asset-pipeline proof of concept: the OSM-footprint Miami Tower massing
-## (game/assets/buildings/poc_miami_tower.glb, ambientCG facade) standing in a
-## scratch scene built entirely here — the live miami scene is not touched.
+## Asset-pipeline proof of concept: a FICTIONAL tower generated on a real OSM
+## footprint (Buildify-dressed massing, ambientCG facades — see the art policy
+## in docs/ASSET_PIPELINE.md) standing in a scratch scene built entirely here.
+## The live miami scene is not touched.
 ## Run with a renderer, not --headless:
 ##   SHOT_DIR=session_captures/building_poc godot --path game --script res://tests/building_poc_capture.gd
 ## Saves street-level day/night shots plus a facade close-up for each.
 
-const BUILDING_GLB := "res://assets/buildings/poc_miami_tower.glb"
+const BUILDING_GLB := "res://assets/buildings/poc_bayfront_tower.glb"
 const GROUND_SET := "res://assets/materials/asphalt_street_01"
 const SETTLE_FRAMES := 20
 
@@ -20,10 +21,10 @@ var _camera: Camera3D
 
 ## Each entry: [shot name, day?, camera position, look-at target].
 var _shots: Array = [
-	["01_street_day", true, Vector3(10.0, 1.7, 95.0), Vector3(0.0, 70.0, 0.0)],
-	["02_facade_closeup_day", true, Vector3(24.0, 1.7, 42.0), Vector3(8.0, 30.0, 0.0)],
-	["03_street_night", false, Vector3(10.0, 1.7, 95.0), Vector3(0.0, 70.0, 0.0)],
-	["04_facade_closeup_night", false, Vector3(24.0, 1.7, 42.0), Vector3(8.0, 30.0, 0.0)],
+	["01_street_day", true, Vector3(12.0, 1.7, 78.0), Vector3(0.0, 24.0, 0.0)],
+	["02_facade_closeup_day", true, Vector3(22.0, 1.7, 40.0), Vector3(4.0, 16.0, 0.0)],
+	["03_street_night", false, Vector3(12.0, 1.7, 78.0), Vector3(0.0, 24.0, 0.0)],
+	["04_facade_closeup_night", false, Vector3(22.0, 1.7, 40.0), Vector3(4.0, 16.0, 0.0)],
 ]
 
 
@@ -108,14 +109,15 @@ func _apply_lighting(day: bool) -> void:
 			if mat != null and mat.emission_enabled:
 				mat.emission_energy_multiplier = 0.0 if day else 1.0
 	var sky_mat := _env.sky.sky_material as ProceduralSkyMaterial
+	_env.glow_enabled = not day  # daylight + bloom veils the whole frame white
 	if day:
 		sky_mat.sky_top_color = Color(0.25, 0.45, 0.78)
 		sky_mat.sky_horizon_color = Color(0.74, 0.82, 0.92)
 		sky_mat.ground_horizon_color = Color(0.66, 0.68, 0.66)
 		sky_mat.ground_bottom_color = Color(0.2, 0.2, 0.2)
-		_sun.light_energy = 1.4
-		_sun.rotation_degrees = Vector3(-55.0, 35.0, 0.0)
-		_env.ambient_light_energy = 1.0
+		_sun.light_energy = 1.0
+		_sun.rotation_degrees = Vector3(-50.0, 38.0, 0.0)
+		_env.ambient_light_energy = 0.45
 	else:
 		sky_mat.sky_top_color = Color(0.01, 0.015, 0.04)
 		sky_mat.sky_horizon_color = Color(0.05, 0.04, 0.09)
