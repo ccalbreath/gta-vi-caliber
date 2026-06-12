@@ -96,5 +96,9 @@ step "miami helicopter probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_helicopter_probe.gd
 step "miami day-night probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_day_night_probe.gd
+step "miami evade probe"
+"$GODOT_BIN" --headless --path game --script res://tests/miami_evade_probe.gd
+step "miami property probe"
+"$GODOT_BIN" --headless --path game --script res://tests/miami_property_probe.gd
 
 printf '\nAll checks passed ✔\n'
