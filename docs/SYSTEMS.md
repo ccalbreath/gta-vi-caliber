@@ -35,6 +35,7 @@ Groups the live scene already publishes: `player`, `player_health`,
 | `PursuitTactics` | chase tactics | `intercept_point`, `should_ram`, `pit_side`, `choose_tactic` | drive `Police`/traffic-cop movement when chasing |
 | `GangTerritory` | turf control | `add_influence`, `take_over`, `controlled_fraction` | a per-district influence tracker + a turf-war trigger |
 | `FactionStanding` | per-faction reputation (-100 hostile..+100 allied) | `adjust`, `tier_of`, `will_attack`, `will_assist`, `to_dict` | adjust on player actions (rivalry bleeds onto enemies); NPC AI reads `will_attack`/`will_assist`; faction ids align with `GangTerritory` |
+| `CrimeNotoriety` | per-crime-type infamy "rap sheet" — persistent, day-decaying, ORTHOGONAL to wanted-heat and faction-rep (legendary bank-robber at 0 stars) | `record`, `infamy_of`, `tier_of`, `notoriety_score`, `reputation_label`, `fear_level`, `hiring_appeal`, `shop_price_multiplier`, `news_severity_for`, `decay` | `record(crime_type, amount)` on the same `wanted` hook `CrimeReactionDirector` uses; FEEDS `NewsBulletin.report()` (pass `news_severity_for(dominant_category())`), `ShopModel`/`ContrabandMarket` (× `shop_price_multiplier()`), `HeistCrew` (gate on `hiring_appeal()`), NPC AI/`CrowdPanic` (read `fear_level()`/`intimidates_civilians()`). Persist via `serialize`/`restore`. Pure |
 
 ## Combat
 
