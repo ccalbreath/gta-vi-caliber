@@ -27,8 +27,10 @@ godot --path game        # run the game
 godot -e --path game     # open the editor
 ```
 
-You should be standing on a sunlit ground plane, able to walk (WASD), sprint
-(Shift), jump (Space), and look around (mouse; Esc releases the cursor).
+This opens on the NEON BAY title cinematic (skippable with any key); from the
+main menu press Play to drop onto the world, where you can walk (WASD), sprint
+(Shift), jump (Space), enter/exit the nearest car (E), and look around (mouse;
+Esc releases the cursor).
 
 ## The local CI gate
 

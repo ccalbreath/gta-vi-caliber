@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3 uid="uid://b8gshowcase6vc01"]
+
+; Vice City — Graphics Showcase. A one-node stub: graphics_showcase.gd builds the
+; entire maxed-out hero block (dusk-neon avenue, facade-shader city block with
+; panels + rooftop props, palms, hero cars under a warm key, ULTRA cinematic
+; environment) and a self-orbiting cinematic camera in _ready.
+; This is the "what the end state could look like" demo — NOT the playable map.
+;   godot --path game res://scenes/world/graphics_showcase.tscn
+
+[ext_resource type="Script" path="res://scripts/world/graphics_showcase.gd" id="1_show"]
+
+[node name="GraphicsShowcase" type="Node3D"]
+script = ExtResource("1_show")

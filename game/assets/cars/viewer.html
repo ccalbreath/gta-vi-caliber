@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vice Coupe — 3D Viewer</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b1014;overflow:hidden;font-family:system-ui,sans-serif}
+  #hud{position:fixed;left:16px;top:14px;color:#7fe7d4;z-index:10;
+       font-size:13px;letter-spacing:.04em;text-shadow:0 1px 4px #000}
+  #hud b{color:#fff;font-size:15px}
+  #hud span{color:#9fb0bb}
+  #tip{position:fixed;right:16px;bottom:14px;color:#5c6e78;font-size:12px;z-index:10}
+</style>
+</head>
+<body>
+<div id="hud"><b>VICE COUPE</b><br><span>drag · rotate &nbsp;|&nbsp; scroll · zoom</span>
+  <br><button id="toggle" style="margin-top:8px;background:#13343f;color:#7fe7d4;border:1px solid #2a5663;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px">switch model</button></div>
+<div id="tip">Meshy PBR · 61k tris · 4 maps</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+// Miami-dusk gradient backdrop
+scene.background = new THREE.Color(0x12202b);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(3.2, 1.7, 4.4);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.9;
+
+// Lighting — warm key + teal rim, Vice City vibe
+const key = new THREE.DirectionalLight(0xfff0d8, 2.4); key.position.set(5,8,4); scene.add(key);
+const rim = new THREE.DirectionalLight(0x33d0ff, 1.6); rim.position.set(-6,3,-5); scene.add(rim);
+scene.add(new THREE.HemisphereLight(0x9fd8ff, 0x202028, 0.6));
+
+// Reflective ground
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(20, 64),
+  new THREE.MeshStandardMaterial({ color:0x0d161d, roughness:0.35, metalness:0.1 })
+);
+ground.rotation.x = -Math.PI/2; ground.position.y = -0.01; scene.add(ground);
+const grid = new THREE.GridHelper(40, 40, 0x2a4a5a, 0x16242e);
+grid.position.y = 0; scene.add(grid);
+
+const MODELS = [
+  { file:'./muscle_gta6.glb',     label:'GTA muscle · multi-view · 298k tris · 4 maps' },
+  { file:'./vice_coupe_gta6.glb', label:'Exotic v2 · single-view · 81k tris · 4 maps' },
+  { file:'./vice_coupe_hifi.glb', label:'Teal v1 · single-view · 61k tris · 4 maps' },
+  { file:'./vice_coupe.glb',      label:'SAM-3 budget · 12k tris · 1 map' }
+];
+const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
+const loader = new GLTFLoader();
+let current = null, idx = 0;
+
+function loadModel(i){
+  loader.load(MODELS[i].file, (gltf) => {
+    if(current){ scene.remove(current); }
+    const car = gltf.scene;
+    const box = new THREE.Box3().setFromObject(car);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const s = 2.6 / Math.max(size.x, size.z);
+    car.scale.setScalar(s);
+    car.position.sub(center.multiplyScalar(s));
+    const box2 = new THREE.Box3().setFromObject(car);
+    car.position.y -= box2.min.y;
+    car.traverse(o => { if(o.isMesh){
+      o.castShadow=true;
+      const m=o.material;
+      m.envMapIntensity=1.2;
+      // sharpness: max anisotropic filtering + proper mips on every texture
+      for(const k of ['map','normalMap','roughnessMap','metalnessMap','emissiveMap','aoMap']){
+        if(m[k]){ m[k].anisotropy=MAX_ANISO; m[k].generateMipmaps=true; m[k].needsUpdate=true; }
+      }
+    }});
+    scene.add(car); current = car;
+    document.getElementById('tip').textContent = MODELS[i].label;
+  }, undefined, (e)=>{ document.getElementById('tip').textContent = 'Failed to load GLB: '+e; });
+}
+loadModel(idx);
+document.getElementById('toggle').addEventListener('click', ()=>{ idx=(idx+1)%MODELS.length; loadModel(idx); });
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+(function loop(){ requestAnimationFrame(loop); controls.update(); renderer.render(scene,camera); })();
+</script>
+</body>
+</html>
