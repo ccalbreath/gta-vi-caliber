@@ -54,19 +54,23 @@ and the core GTA loop wired end to end (commit crimes → wanted stars → polic
 dispatch → evade or get busted), plus missions and a property/economy layer.
 See [docs/ROADMAP.md](docs/ROADMAP.md) for what's next.
 
-## Token
+## Support the project
 
-The community token lives on Solana. Contract address (CA):
+GTA-VI-caliber is free, open source, and built by the community. If you'd like
+to help fund development, you can support the project on Solana. Contract
+address (CA):
 
 ```text
 DY2ZAaZrt27b3PpXjxH8qqDBZwrEoFoSqb83t7VNpump
 ```
 
-[View on Phantom »](https://phantom.com/tokens/solana/DY2ZAaZrt27b3PpXjxH8qqDBZwrEoFoSqb83t7VNpump)
+[Donate / view on Phantom »](https://phantom.com/tokens/solana/DY2ZAaZrt27b3PpXjxH8qqDBZwrEoFoSqb83t7VNpump)
 
-> Always verify the full address character-for-character before interacting.
-> The token is community-run and not a promise of returns; nothing here is
-> financial advice.
+Every bit goes back into the game — tooling, assets, and contributor time.
+
+> Always verify the full address character-for-character before sending
+> anything. Support is voluntary and non-refundable; this is community-run, not
+> a promise of returns, and nothing here is financial advice.
 
 ## Contributing
 
