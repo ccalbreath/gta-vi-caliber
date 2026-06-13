@@ -56,6 +56,7 @@ Groups the live scene already publishes: `player`, `player_health`,
 |---|---|---|---|
 | `VehicleHandling` | arcade grip/drift | `apply_friction`, `slip_angle`, `drift_factor`, `DriftScorer` | layer onto `Car`/`Bike` velocity each physics frame |
 | `VehicleHealth` | damage -> fire -> wreck | `apply_damage`, `tick`, `state`, `just_exploded` | on car damage; trigger `ExplosionModel` on wreck |
+| `VehicleCondition` | persistent per-vehicle fuel + engine/tire wear (the gas/mechanic loop) | `drive`, `apply_crash`, `refuel`, `service`, `condition`, `fuel_fraction`, `top_speed_factor`, `grip_factor` | a `Car` node owns one per active vehicle: each frame `drive(id, dist, intensity)` burns fuel + wears; `VehicleHealth` impacts feed `apply_crash`. HUD reads `fuel_fraction`/`condition`; `top_speed_factor` caps max-speed and `grip_factor` multiplies into `VehicleHandling`. A gas-station calls `refuel`, a mechanic `service`. **Produces the `condition` float `ChopShop.value()` consumes** (the seam nothing fed before). Persists via `to_dict`/`load_dict`. Pure |
 | `VehicleModShop` | tiered upgrades -> stat multipliers | `upgrade`, `top_speed_multiplier`, `grip_multiplier` | a mod-garage trigger; multipliers feed `VehicleHandling` |
 | `Carjacking` | yank a driver out | `can_reach`, `door_side`, struggle timer, `heat_for_jack` | player enter-vehicle path + `WantedTracker.report_crime` |
 | `GarageStorage` | store/retrieve/impound vehicles | `store`, `retrieve`, `impound`, `recover_from_impound` | a garage trigger + saved vehicle list |
