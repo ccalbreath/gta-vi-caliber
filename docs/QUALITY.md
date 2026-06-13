@@ -5,6 +5,25 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-13 (cont. 26) — shared backdrop: stars + sunset clouds (lifts both)
+
+Pivoted off intro-only polish to higher leverage: enhanced the **shared**
+`menu_backdrop` (the procedural dusk skyline) so the same change lifts BOTH the
+intro and the main menu. The upper sky was an empty gradient; now it carries a
+fixed-seed **star field** (70 stars, twinkling, fading out toward the bright
+horizon so they only read in the dark zenith) and **5 drifting sunset clouds**
+(soft warm-lit puffs near the horizon glow). All zero-asset `_draw`, baked once
+from a derived seed (`seed ^ 0x5151`) so layout is stable while only twinkle/drift
+animate — same discipline as the existing skyline bake.
+
+Verified in a windowed capture of the real intro (`/tmp/intro_title2.png`): stars
+fill the previously-dead upper sky tastefully (dusk-faint, not a night blanket),
+the sun stays centred, skyline + letterbox + grain intact — no regression.
+Shared-file discipline observed: `menu_backdrop.gd` was clean before editing and
+staged by explicit path.
+
+Gate green: unit tests **2520 passed, 0 failed** + intro probe + 12 probes.
+
 ## 2026-06-13 (cont. 25) — intro gets analog texture: film grain + scanlines
 
 Addresses the "same textures" ask directly. Added `shaders/intro_grain.gdshader`
