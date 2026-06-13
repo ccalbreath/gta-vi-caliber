@@ -149,5 +149,7 @@ step "disguise evasion probe"
 "$GODOT_BIN" --headless --path game --script res://tests/disguise_evasion_probe.gd
 step "rival retaliation probe"
 "$GODOT_BIN" --headless --path game --script res://tests/rival_retaliation_probe.gd
+step "contraband heat probe"
+"$GODOT_BIN" --headless --path game --script res://tests/contraband_heat_probe.gd
 
 printf '\nAll checks passed ✔\n'
