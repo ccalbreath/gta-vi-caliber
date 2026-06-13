@@ -122,6 +122,7 @@ Groups the live scene already publishes: `player`, `player_health`,
 | `SwimStamina` | oxygen/stamina/drowning | `update`, `is_drowning`, `swim_speed`, `drown_damage` | the meter layer above the swim motion node |
 | `LootTable` | weighted seeded drops | `roll`, `roll_many`, `drop_chance_satisfied` | on enemy death / crate smash -> pickups |
 | `CharacterRoster` | dual-protagonist switching + per-lead state | `switch_to`, `can_switch`, `active`, `money_of`, `position_of`, `to_dict` | load the active lead's wallet/wanted/position into PlayerStats + world on `switch_to`; write it back before switching away |
+| `ProtagonistBond` | the Lucia+Jason RELATIONSHIP layer atop the roster — a persistent bond meter (estranged→wary→partners→ride_or_die) that scales co-op payouts, backup, and switch feel | `record_coop`, `record_rescue`, `record_conflict`, `record_betrayal`, `bond`, `tier`, `backup_available`, `payout_multiplier`, `switch_cooldown_scale`, `drift`, `to_dict`/`from_dict` | feed `record_*` from mission/combat events (a co-op heist clear → `record_coop`; saving the other lead → `record_rescue`; abandoning them under fire → `record_betrayal`); multiply a co-op `HeistCrew` cut by `payout_multiplier()`; gate a "call your partner" backup spawn on `backup_available()`; scale `CharacterSwitcher`'s cooldown by `switch_cooldown_scale()`; `drift(days)` on a world-day tick. Pure — persisted by the save system |
 
 ---
 
