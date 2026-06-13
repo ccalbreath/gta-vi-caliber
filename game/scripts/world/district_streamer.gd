@@ -17,7 +17,13 @@ const DistrictLoaderScript := preload("res://scripts/world/district_loader.gd")
 @export_range(1, 8, 1) var max_loads_per_update: int = 1
 
 var _districts: Array = []
+## name -> DistrictLoader node. Presence means "instanced": resolve uses it to
+## avoid paging the same district in twice while it is still building.
 var _resident: Dictionary = {}
+## name -> true once the district finishes its streamed build. resident_names()
+## reports this set, so callers that wait on residency (HUD, capture probes) only
+## trust a district once its geometry and colliders actually exist.
+var _built: Dictionary = {}
 var _accum: float = 0.0
 
 
@@ -39,9 +45,10 @@ func _ready() -> void:
 	_update()  # resolve once on spawn so the starting district is present immediately
 
 
-## Sorted-on-read by the HUD; presence in the dict means loaded.
+## Sorted-on-read by the HUD; presence means the district is fully built (not
+## merely instanced), so a "settled" world really has its geometry up.
 func resident_names() -> Array:
-	return _resident.keys()
+	return _built.keys()
 
 
 func district_count() -> int:
@@ -86,15 +93,23 @@ func _load_district(name: String) -> void:
 		# nearest street so they don't start buried inside a building at the fixed
 		# scene spawn point. Later districts leave the player where they are.
 		node.set("place_player", _resident.is_empty())
+		# Mark built only when the loader signals it has finished assembling, so
+		# residency reflects real geometry rather than a just-instanced shell.
+		node.connect("district_built", _on_district_built.bind(name))
 		add_child(node)
 		_resident[name] = node
 		return
+
+
+func _on_district_built(_buildings: int, _roads: int, name: String) -> void:
+	_built[name] = true
 
 
 func _unload(name: String) -> void:
 	if _resident.has(name):
 		(_resident[name] as Node).queue_free()
 		_resident.erase(name)
+	_built.erase(name)
 
 
 func _load(path: String) -> Dictionary:

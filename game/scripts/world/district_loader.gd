@@ -21,6 +21,10 @@ const STREET_VISUAL_Y: float = 0.32
 const SIDEWALK_VISUAL_Y: float = 0.28
 const GROUND_SURFACE_Y: float = 0.4
 
+## Cross-instance build lock: only one district runs its heavy build at a time so
+## several paging in together never stack their phases onto the same frame.
+static var _build_in_progress: bool = false
+
 ## res:// path to the district JSON (OSM-derived, ODbL).
 @export_file("*.json") var district_path: String = "res://assets/world/downtown_miami.json"
 ## Build collision for buildings. Off speeds up pure-visual previews.
@@ -38,6 +42,13 @@ const GROUND_SURFACE_Y: float = 0.4
 @export var place_player: bool = true
 ## Extra ground beyond the district footprint, in metres.
 @export var ground_margin: float = 90.0
+## Build the district incrementally (one phase per frame) instead of all-at-once.
+## A full district is thousands of meshes + colliders; building it synchronously
+## in _ready() hangs the main thread for seconds, and several districts paging in
+## the same frame spike memory hard enough to crash. Streaming spreads the work
+## across frames and a static lock keeps two districts off the same frame. Tools
+## that need the finished district on the very next frame can set this false.
+@export var stream_build: bool = true
 
 var _building_mat: Material
 var _facade_glass_mat: StandardMaterial3D
@@ -46,199 +57,89 @@ var _roof_mat: StandardMaterial3D
 var _road_mat: Material
 var _sidewalk_mat: Material
 
+## Buildings actually meshed in the last build (for the summary log only).
+var _meshed_buildings: int = 0
+
 
 func _ready() -> void:
 	# TimeOfDay fades our building-window glow through set_night_amount().
 	add_to_group("night_emissive")
 	_make_materials()
+	# Coroutine: in stream mode this returns immediately and the city assembles
+	# over the next frames; otherwise it completes synchronously here.
+	_build_district()
+
+
+## Assemble the district. When stream_build is on, each heavy phase is separated
+## by a frame and the static lock serializes districts, so the build can never
+## hang the main thread or spike several districts at once.
+func _build_district() -> void:
+	# Acquire the build lock first (stream mode) so even the JSON parse below is
+	# serialized — releasing it on every early exit to avoid a permanent stall.
+	if stream_build:
+		while _build_in_progress:
+			await get_tree().process_frame
+			if not is_inside_tree():  # unloaded while waiting our turn
+				return
+		_build_in_progress = true
+
 	var data := _load_district(district_path)
 	if data.is_empty():
 		push_error("district_loader: could not load %s" % district_path)
+		if stream_build:
+			_build_in_progress = false
+		district_built.emit(0, 0)
 		return
 
 	var origin: Dictionary = data["origin"]
 	var proj := GeoProjection.new(origin["lat"], origin["lon"])
+	var buildings: Array = data.get("buildings", [])
+	var roads: Array = data.get("roads", [])
 
+	# Ordered heavy phases — each runs in its own frame in stream mode.
+	var phases: Array[Callable] = []
 	if spawn_ground:
-		_build_ground(data, proj)
-	var built_buildings := _build_buildings(data.get("buildings", []), proj)
-	DistrictFacadePanels.build(self, data.get("buildings", []), proj)
+		phases.append(func() -> void: _build_ground(data, proj))
+	phases.append(func() -> void: _meshed_buildings = _build_buildings(buildings, proj))
+	phases.append(func() -> void: DistrictFacadePanels.build(self, buildings, proj))
 	if build_doors:
-		BuildingDoors.build(self, data.get("buildings", []), proj)
-		BuildingShops.build(self, data.get("buildings", []), proj)
-	_build_rooftops(data.get("buildings", []), proj)
-	_build_roads(data.get("roads", []), proj)
-	_build_sidewalks(data.get("roads", []), proj)
+		phases.append(func() -> void: BuildingDoors.build(self, buildings, proj))
+		phases.append(func() -> void: BuildingShops.build(self, buildings, proj))
+	phases.append(func() -> void: DistrictRooftops.build(self, buildings, proj))
+	phases.append(func() -> void: _build_roads(roads, proj))
+	phases.append(func() -> void: _build_sidewalks(roads, proj))
 	if build_streetlights:
-		_build_streetlights(data.get("roads", []), proj)
-	_build_palms(data.get("roads", []), proj)
-	_build_parked_cars(data.get("roads", []), proj)
-	_build_trees(data.get("roads", []), proj)
-	_build_street_furniture(data.get("roads", []), proj)
+		phases.append(func() -> void: _build_streetlights(roads, proj))
+	phases.append(func() -> void: _build_palms(roads, proj))
+	phases.append(func() -> void: _build_parked_cars(roads, proj))
+	phases.append(func() -> void: _build_trees(roads, proj))
+	phases.append(func() -> void: _build_street_furniture(roads, proj))
+
+	for phase in phases:
+		phase.call()
+		if stream_build:
+			await get_tree().process_frame
+			if not is_inside_tree():  # unloaded mid-build — release and bail
+				_build_in_progress = false
+				return
+
 	if place_player:
 		var centre_geo: Dictionary = data.get("centroid", origin)
 		var centre := proj.to_local(centre_geo["lat"], centre_geo["lon"])
-		_place_actors_on_street(data.get("roads", []), data.get("buildings", []), proj, centre)
+		_place_actors_on_street(roads, buildings, proj, centre)
 
-	var nb: int = (data.get("buildings", []) as Array).size()
-	var nr: int = (data.get("roads", []) as Array).size()
+	if stream_build:
+		_build_in_progress = false
+
+	var nb: int = buildings.size()
+	var nr: int = roads.size()
 	print(
 		(
 			"district_loader: built %s — %d buildings (%d meshed), %d roads"
-			% [data.get("name", "district"), nb, built_buildings, nr]
+			% [data.get("name", "district"), nb, _meshed_buildings, nr]
 		)
 	)
 	district_built.emit(nb, nr)
-
-
-## Break up the flat-topped skyline with rooftop superstructure: mechanical
-## penthouses (scaled boxes) on mid/high-rises, water tanks + AC condensers on
-## the rest, and antenna masts capped with a red aircraft-warning beacon on the
-## genuine towers. Everything batches into a handful of MultiMesh draw calls
-## (one per prop type) so hundreds of props cost almost nothing.
-func _build_rooftops(buildings: Array, proj: GeoProjection) -> void:
-	var ac_tf: Array[Transform3D] = []
-	var tank_tf: Array[Transform3D] = []
-	var house_tf: Array[Transform3D] = []
-	var mast_tf: Array[Transform3D] = []
-	var beacon_tf: Array[Transform3D] = []
-
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 7
-	var placed := 0
-	for b in buildings:
-		if placed >= 650:
-			break
-		var height := float(b.get("height_m", 0.0))
-		if height < 6.0:
-			continue
-		var ring := _project_ring(b["footprint"], proj)
-		if ring.size() < 3:
-			continue
-		var mn := Vector2(INF, INF)
-		var mx := Vector2(-INF, -INF)
-		var centre := Vector2.ZERO
-		for p in ring:
-			centre += p
-			mn = mn.min(p)
-			mx = mx.max(p)
-		centre /= float(ring.size())
-		var ext := mx - mn  # footprint extent (metres) in x/z
-		var roof := Vector3(centre.x, height, centre.y)
-
-		# Mechanical penthouse — a smaller box, sized to a fraction of the roof,
-		# is the single biggest break to the dead-flat silhouette from afar.
-		if height >= 22.0 and ext.x > 6.0 and ext.y > 6.0:
-			var phx := clampf(ext.x * rng.randf_range(0.3, 0.5), 3.0, 16.0)
-			var phz := clampf(ext.y * rng.randf_range(0.3, 0.5), 3.0, 16.0)
-			var phh := rng.randf_range(3.0, 6.0)
-			var off := Vector3(rng.randf_range(-1.5, 1.5), 0.0, rng.randf_range(-1.5, 1.5))
-			house_tf.append(
-				Transform3D(
-					Basis.from_scale(Vector3(phx, phh, phz)), roof + off + Vector3(0, phh * 0.5, 0)
-				)
-			)
-
-		# Antenna mast + always-on red beacon on the real high-rises; a water tank
-		# on mid-rises; a small stair/elevator bulkhead on the low-rise Deco roofs
-		# so even the two-storey hotels aren't bare flat boxes.
-		if height >= 50.0:
-			var mh := rng.randf_range(8.0, 18.0)
-			mast_tf.append(
-				Transform3D(Basis.from_scale(Vector3(1, mh, 1)), roof + Vector3(0, mh * 0.5, 0))
-			)
-			beacon_tf.append(Transform3D(Basis.IDENTITY, roof + Vector3(0, mh, 0)))
-		elif height >= 12.0:
-			tank_tf.append(
-				Transform3D(
-					Basis.IDENTITY,
-					roof + Vector3(rng.randf_range(-2.5, 2.5), 1.1, rng.randf_range(-2.5, 2.5))
-				)
-			)
-		elif ext.x > 4.0 and ext.y > 4.0:
-			var bw := clampf(minf(ext.x, ext.y) * rng.randf_range(0.25, 0.4), 2.0, 5.0)
-			var bh := rng.randf_range(1.8, 2.8)
-			house_tf.append(
-				Transform3D(
-					Basis.from_scale(Vector3(bw, bh, bw)),
-					roof + Vector3(rng.randf_range(-1.0, 1.0), bh * 0.5, rng.randf_range(-1.0, 1.0))
-				)
-			)
-
-		# AC condenser on (almost) every roof, randomly yawed.
-		var ac_basis := Basis(Vector3.UP, rng.randf() * TAU)
-		ac_tf.append(
-			Transform3D(
-				ac_basis, roof + Vector3(rng.randf_range(-3, 3), 0.6, rng.randf_range(-3, 3))
-			)
-		)
-		placed += 1
-
-	var container := Node3D.new()
-	container.name = "Rooftops"
-	add_child(container)
-
-	var tank_mat := StandardMaterial3D.new()
-	tank_mat.albedo_color = Color(0.4, 0.36, 0.3)
-	tank_mat.roughness = 0.85
-	var ac_mat := StandardMaterial3D.new()
-	ac_mat.albedo_color = Color(0.5, 0.51, 0.54)
-	ac_mat.metallic = 0.5
-	ac_mat.roughness = 0.5
-	var house_mat := StandardMaterial3D.new()
-	house_mat.albedo_color = Color(0.42, 0.43, 0.45)
-	house_mat.roughness = 0.8
-	var mast_mat := StandardMaterial3D.new()
-	mast_mat.albedo_color = Color(0.12, 0.12, 0.13)
-	mast_mat.metallic = 0.7
-	mast_mat.roughness = 0.45
-	var beacon_mat := StandardMaterial3D.new()
-	beacon_mat.albedo_color = Color(0.9, 0.1, 0.08)
-	beacon_mat.emission_enabled = true
-	beacon_mat.emission = Color(1.0, 0.12, 0.06)
-	beacon_mat.emission_energy_multiplier = 3.0
-
-	var tank_mesh := CylinderMesh.new()
-	tank_mesh.top_radius = 1.1
-	tank_mesh.bottom_radius = 1.1
-	tank_mesh.height = 2.2
-	var ac_mesh := BoxMesh.new()
-	ac_mesh.size = Vector3(2.6, 1.2, 2.0)
-	var house_mesh := BoxMesh.new()  # unit box, scaled per instance
-	house_mesh.size = Vector3.ONE
-	var mast_mesh := CylinderMesh.new()  # unit-height, scaled per instance
-	mast_mesh.top_radius = 0.1
-	mast_mesh.bottom_radius = 0.22
-	mast_mesh.height = 1.0
-	var beacon_mesh := SphereMesh.new()
-	beacon_mesh.radius = 0.32
-	beacon_mesh.height = 0.64
-
-	_rooftop_layer("ACUnits", ac_mesh, ac_mat, ac_tf, container)
-	_rooftop_layer("WaterTanks", tank_mesh, tank_mat, tank_tf, container)
-	_rooftop_layer("Penthouses", house_mesh, house_mat, house_tf, container)
-	_rooftop_layer("Masts", mast_mesh, mast_mat, mast_tf, container)
-	_rooftop_layer("Beacons", beacon_mesh, beacon_mat, beacon_tf, container)
-
-
-## Pack a set of instance transforms into one MultiMeshInstance3D (a single draw
-## call) under `parent`. No-op for an empty layer.
-func _rooftop_layer(
-	layer_name: String, mesh: Mesh, mat: Material, transforms: Array[Transform3D], parent: Node3D
-) -> void:
-	if transforms.is_empty():
-		return
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = mesh
-	mm.instance_count = transforms.size()
-	for i in transforms.size():
-		mm.set_instance_transform(i, transforms[i])
-	var mmi := MultiMeshInstance3D.new()
-	mmi.name = layer_name
-	mmi.multimesh = mm
-	mmi.material_override = mat
-	parent.add_child(mmi)
 
 
 ## Sprinkle sidewalk furniture — trash bins and fire hydrants — along the kerb of

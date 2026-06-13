@@ -113,6 +113,11 @@ func _streaming_settled() -> bool:
 		return false
 	var districts := get_first_node_in_group("district_streamer")
 	if districts != null:
+		# QA wants the whole world on screen, but gameplay streams only nearby
+		# districts (miami.tscn uses tight load/unload radii). Override them here
+		# so every district pages in and the "all resident" settle below holds.
+		districts.set("load_radius", 1.0e9)
+		districts.set("unload_radius", 1.1e9)
 		var resident: int = districts.call("resident_names").size()
 		if resident < int(districts.call("district_count")):
 			return false

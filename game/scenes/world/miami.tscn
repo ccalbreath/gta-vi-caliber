@@ -156,10 +156,17 @@ script = ExtResource("34_causeways")
 [node name="BayIslands" type="Node3D" parent="."]
 script = ExtResource("35_islands")
 
+; Conditional/streaming load: only districts within load_radius of the player
+; are paged in; they unload again past unload_radius (the gap is hysteresis so a
+; district on the boundary doesn't thrash). At spawn this pulls in the connected
+; mainland (downtown/Brickell/Wynwood) and defers the two big beach districts
+; (~3100 of ~5000 buildings) until the player crosses the bay toward them — so we
+; load what's near/visible instead of the whole map. Old 8500/9500 covered every
+; district from origin, which loaded everything at once.
 [node name="Streamer" type="Node3D" parent="."]
 script = ExtResource("3_streamer")
-load_radius = 1200.0
-unload_radius = 2200.0
+load_radius = 4500.0
+unload_radius = 6000.0
 
 [node name="Weather" type="Node3D" parent="."]
 script = ExtResource("5_weather")
