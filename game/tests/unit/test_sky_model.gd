@@ -58,6 +58,23 @@ func test_night_keeps_moonlight_floor() -> bool:
 	return SkyModel.light_energy(0.0) >= SkyModel.MOON_ENERGY - 1e-6
 
 
+func test_night_is_navigable() -> bool:
+	# Regression: midnight must stay bright enough to actually see the city —
+	# moonlight key + ambient fill together, not a blackout.
+	return SkyModel.light_energy(0.0) >= 0.18 and SkyModel.ambient_energy(0.0) >= 0.10
+
+
+func test_deep_night_key_is_cool() -> bool:
+	# Deep-blue Miami night: the midnight key light leans blue, not warm orange.
+	var midnight := SkyModel.light_color(0.0)
+	return midnight.b > midnight.r
+
+
+func test_ambient_cools_at_night() -> bool:
+	# Night sky fill tints cooler/bluer than the warm daytime ambient.
+	return SkyModel.ambient_color(0.0).b > SkyModel.ambient_color(12.0).b
+
+
 func test_daylight_reaches_full_energy() -> bool:
 	return absf(SkyModel.light_energy(12.0) - SkyModel.MAX_SUN_ENERGY) < 0.05
 

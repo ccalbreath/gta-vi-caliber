@@ -22,14 +22,16 @@ const SOUTH_LEAN: float = 0.35
 const MAX_SUN_ENERGY: float = 1.35
 
 ## Residual key-light energy at night (moonlight). Never fully black so shadowed
-## night scenes still read.
-const MOON_ENERGY: float = 0.06
+## night scenes still read — a moonlit city you can actually navigate, not a
+## blackout.
+const MOON_ENERGY: float = 0.22
 
 ## Daytime ambient light energy at the sun's zenith.
 const MAX_AMBIENT: float = 0.55
 
-## Ambient floor at deep night.
-const MIN_AMBIENT: float = 0.04
+## Ambient floor at deep night — enough sky fill that streets and facades stay
+## legible between the pools of streetlight/neon.
+const MIN_AMBIENT: float = 0.14
 
 ## Twilight thresholds expressed as sun height (sin of elevation), so the ramps
 ## track real dusk/dawn rather than snapping at the geometric horizon:
@@ -49,6 +51,15 @@ const SKY_HIGH: float = 0.06
 ## (sunrise/sunset orange) — lerped by how warm the low sun is.
 const DAY_LIGHT_COLOR: Color = Color(1.0, 0.98, 0.95)
 const HORIZON_LIGHT_COLOR: Color = Color(1.0, 0.54, 0.26)
+
+## Cool moonlight tint the key light cools toward in deep night, so the city
+## reads as a deep-blue Miami night rather than a warm afterglow that never ends.
+const MOON_LIGHT_COLOR: Color = Color(0.6, 0.7, 1.0)
+
+## Ambient (sky-fill) colour by day vs deep night. Day matches the warm scene
+## ambient; night cools to blue so shadowed areas tint moonlit, not muddy-warm.
+const AMBIENT_DAY_COLOR: Color = Color(0.92, 0.76, 0.62)
+const AMBIENT_NIGHT_COLOR: Color = Color(0.40, 0.52, 0.85)
 
 
 ## Unit vector pointing from the world TO the sun at time `tod`.
@@ -88,11 +99,22 @@ static func light_energy(tod: float) -> float:
 	return lerpf(MOON_ENERGY, MAX_SUN_ENERGY, day)
 
 
-## Key-light colour — warm orange when the sun is low, neutral when high.
+## Key-light colour — warm orange when the sun is low, neutral when high, cooling
+## to a blue moon tint in deep night.
 static func light_color(tod: float) -> Color:
 	var h := sun_direction(tod).y
 	var warmth := 1.0 - smoothstep(0.0, 0.4, h)
-	return HORIZON_LIGHT_COLOR.lerp(DAY_LIGHT_COLOR, 1.0 - warmth)
+	var base := HORIZON_LIGHT_COLOR.lerp(DAY_LIGHT_COLOR, 1.0 - warmth)
+	# Only cool toward moonlight once it is genuinely night — the warm dusk/dawn
+	# afterglow (low night_amount) is left untouched.
+	var deep_night := smoothstep(0.55, 0.95, night_amount(tod))
+	return base.lerp(MOON_LIGHT_COLOR, deep_night)
+
+
+## Ambient (sky-fill) colour: warm by day, cooling to blue moonlight in deep
+## night. Pairs with ambient_energy so night fill is both dimmer and cooler.
+static func ambient_color(tod: float) -> Color:
+	return AMBIENT_DAY_COLOR.lerp(AMBIENT_NIGHT_COLOR, night_amount(tod))
 
 
 ## Ambient (sky-contributed) light energy for the WorldEnvironment.

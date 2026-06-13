@@ -128,6 +128,7 @@ func _update_environment(tod: float) -> void:
 		return
 	var env := world_environment.environment
 	env.ambient_light_energy = SkyModel.ambient_energy(tod)
+	env.ambient_light_color = SkyModel.ambient_color(tod)
 	# Tie any distance fog to the warm/cool key-light colour so aerial
 	# perspective matches the sky.
 	if env.fog_enabled:
