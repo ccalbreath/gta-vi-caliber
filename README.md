@@ -22,15 +22,15 @@ brew install --cask godot && brew install git-lfs && git lfs install
 git clone https://github.com/duolahypercho/gta-vi-caliber.git
 cd gta-vi-caliber
 
-# 3. Play — boots straight into the one map, no editor needed:
+# 3. Play — boots through the branded intro to the menu, no editor needed:
 godot --path game
 #    — or open it in the Godot editor and press F5:
 godot --path game --editor
 ```
 
-There is **one map** and it boots straight into play — no menus, no scene
-picker. The command above (or pressing F5 in the editor) drops you into the
-streaming Vice City world, ready to walk, drive, and trigger the wanted system.
+The game opens on a short, skippable **intro cinematic** (press any key to skip)
+and a **main menu** — press **Play** to drop into the one streaming Vice City
+world, ready to walk, drive, and trigger the wanted system.
 
 ### Controls
 
@@ -48,11 +48,14 @@ More detail in [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Project status
 
-🟢 **Playable.** Launching the game drops you straight into a single streaming
-Vice City map: a third-person character, drivable vehicles, traffic and crowds,
-and the core GTA loop wired end to end (commit crimes → wanted stars → police
-dispatch → evade or get busted), plus missions and a property/economy layer.
-See [docs/ROADMAP.md](docs/ROADMAP.md) for what's next.
+🟢 **Playable.** The game opens on a branded intro + main menu, then drops you
+into a single streaming Vice City map: a third-person character, drivable
+vehicles, traffic and crowds, and the core GTA loop wired end to end (commit
+crimes → wanted stars → police dispatch → evade or get busted), plus missions, a
+property/economy layer, and a deep, unit-tested simulation layer (heists, gangs,
+drug economy, social-media fame, weather, and more — see
+[docs/SYSTEMS.md](docs/SYSTEMS.md)). See [docs/ROADMAP.md](docs/ROADMAP.md) for
+what's next.
 
 ## Contributing
 
