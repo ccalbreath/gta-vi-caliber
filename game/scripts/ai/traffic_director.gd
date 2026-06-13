@@ -49,20 +49,23 @@ var _base_target_count: int = -1
 
 func _ready() -> void:
 	_rng.randomize()
-	add_to_group("density_aware")
-	apply_graphics_setting(int(SettingsPanel.load_settings().get("graphics", 1)))
+	add_to_group("graphics_quality_aware")
+	apply_graphics_quality(GraphicsQuality.resolved_tier())
 
 
-func apply_graphics_setting(quality: int) -> void:
+func apply_graphics_quality(quality: int) -> void:
 	if _base_target_count == -1:
 		_base_target_count = target_count
-	match quality:
-		0:
-			target_count = maxi(1, int(_base_target_count * 0.25))
-		1:
-			target_count = maxi(1, int(_base_target_count * 0.6))
-		2:
-			target_count = _base_target_count
+	var multiplier := float(GraphicsQuality.profile(quality)["traffic_multiplier"])
+	target_count = maxi(1, int(round(_base_target_count * multiplier)))
+	_trim_to_target()
+
+
+func _trim_to_target() -> void:
+	while _cars.size() > target_count:
+		var car: TrafficCar = _cars.pop_back()
+		if is_instance_valid(car):
+			car.queue_free()
 
 
 func _physics_process(delta: float) -> void:

@@ -30,7 +30,17 @@ var _sky_material: ShaderMaterial
 func _ready() -> void:
 	_resolve_refs()
 	_resolve_sky_material()
+	add_to_group("graphics_quality_aware")
+	apply_graphics_quality(GraphicsQuality.resolved_tier())
 	_apply(time_of_day)
+
+
+func apply_graphics_quality(tier: int) -> void:
+	var distance := float(GraphicsQuality.profile(tier)["shadow_distance"])
+	if sun_light != null:
+		sun_light.directional_shadow_max_distance = distance
+	if moon_light != null:
+		moon_light.directional_shadow_max_distance = distance
 
 
 ## Fill any unset node references by searching the scene. Lets the controller be

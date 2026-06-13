@@ -22,9 +22,14 @@ var _frame_times: PackedFloat32Array = []
 var _render_cpu_ms: PackedFloat32Array = []
 var _render_gpu_ms: PackedFloat32Array = []
 var _draw_calls_peak := 0.0
+var _quality_tier := GraphicsQuality.DEFAULT_TIER
+var _quality_profile: Dictionary = {}
 
 
 func _initialize() -> void:
+	_quality_tier = GraphicsQuality.resolved_tier()
+	_quality_profile = GraphicsQuality.profile(_quality_tier)
+	GraphicsQuality.apply_to_tree(_quality_tier, self)
 	change_scene_to_file(SCENE)
 
 
@@ -92,6 +97,8 @@ func _report() -> void:
 		[
 			"| Metric | Value |",
 			"| --- | --- |",
+			"| Quality preset | %s |" % GraphicsQuality.tier_name(_quality_tier),
+			"| Render scale / AA | %.2f / FSR2 |" % float(_quality_profile["render_scale"]),
 			"| Frames measured | %d |" % sorted.size(),
 			"| Average | %.2f ms (%.0f FPS) |" % [avg * 1000.0, 1.0 / avg],
 			"| Median | %.2f ms (%.0f FPS) |" % [p50 * 1000.0, 1.0 / p50],

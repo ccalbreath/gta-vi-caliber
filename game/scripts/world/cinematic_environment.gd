@@ -229,17 +229,4 @@ static func apply_quality(env: Environment, tier: int = Quality.MEDIUM) -> Envir
 ## `rendering/quality_tier` (int 0–3); otherwise MEDIUM — the safe default that
 ## ships SSAO/SSR but holds back the GI pair that tanks FPS on weaker GPUs.
 static func resolved_tier() -> int:
-	match OS.get_environment("GTA_QUALITY").strip_edges().to_lower():
-		"low":
-			return Quality.LOW
-		"medium":
-			return Quality.MEDIUM
-		"high":
-			return Quality.HIGH
-		"ultra":
-			return Quality.ULTRA
-	if ProjectSettings.has_setting("rendering/quality_tier"):
-		return clampi(
-			int(ProjectSettings.get_setting("rendering/quality_tier")), Quality.LOW, Quality.ULTRA
-		)
-	return Quality.MEDIUM
+	return GraphicsQuality.resolved_tier()
