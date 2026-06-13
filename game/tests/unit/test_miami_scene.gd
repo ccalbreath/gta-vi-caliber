@@ -25,15 +25,13 @@ func test_miami_game_hud_contains_full_map() -> bool:
 	return ok
 
 
-func test_miami_keeps_cinematic_quality_floor() -> bool:
+func test_miami_allows_the_low_quality_tier() -> bool:
 	var packed := MIAMI_SCENE
 	if packed == null:
 		return false
 	var scene := packed.instantiate()
 	var world_quality := scene.get_node("WorldEnvironment") as WorldQuality
-	var ok := (
-		world_quality != null and world_quality.minimum_tier == CinematicEnvironment.Quality.MEDIUM
-	)
+	var ok := world_quality != null and world_quality.minimum_tier == GraphicsQuality.Tier.LOW
 	scene.free()
 	return ok
 

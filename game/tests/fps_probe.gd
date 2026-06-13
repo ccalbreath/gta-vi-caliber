@@ -15,6 +15,14 @@ var _sample := 240
 
 func _initialize() -> void:
 	DisplayServer.window_set_size(Vector2i(1600, 900))
+	var quality := GraphicsQuality.resolved_tier()
+	GraphicsQuality.apply_to_tree(quality, self)
+	print(
+		(
+			"FPS_PROBE quality=%s scale=%.2f aa=FSR2"
+			% [GraphicsQuality.tier_name(quality), GraphicsQuality.profile(quality)["render_scale"]]
+		)
+	)
 	_warmup = int(OS.get_environment("WARMUP")) if OS.get_environment("WARMUP") != "" else 400
 	_sample = int(OS.get_environment("SAMPLE")) if OS.get_environment("SAMPLE") != "" else 240
 	var scene := OS.get_environment("SCENE")
