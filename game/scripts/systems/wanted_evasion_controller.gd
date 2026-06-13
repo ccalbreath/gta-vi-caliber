@@ -17,6 +17,8 @@ extends Node
 var _evasion: WantedEvasion
 var _tracker: Node = null
 var _player: Node3D = null
+var _disguise: Node = null
+var _was_seen: bool = false
 
 
 func _ready() -> void:
@@ -31,11 +33,32 @@ func _physics_process(delta: float) -> void:
 	if not _tracker.is_wanted():
 		# Not wanted: nothing to evade, keep the timer primed for next time.
 		_evasion.reset()
+		_was_seen = false
 		return
-	_evasion.update(_seen_by_police(), delta)
+	var seen := _seen_by_police()
+	# The moment the cops first lay eyes on the player, stamp the description they'll
+	# hunt — so recognition() is meaningful and CHANGING clothes afterward is what
+	# earns the evasion bonus (not merely owning a disguise).
+	if seen and not _was_seen and _disguise != null and _disguise.has_method("log_sighting"):
+		_disguise.log_sighting()
+	_was_seen = seen
+	# A disguised player drains the "go cold" countdown faster (Disguise.evasion_speedup,
+	# 1x..3x) — but only while unseen; being seen resets the timer regardless of step.
+	var step := delta if seen else delta * _disguise_speedup()
+	_evasion.update(seen, step)
 	if _evasion.is_cold() and _tracker.has_method("clear"):
 		_tracker.clear()
 		_evasion.reset()
+
+
+## Search-drain multiplier from the player's Disguise (group "player_disguise"):
+## 1.0 when none is wired or the player still matches the cops' description, up to
+## Disguise.MAX_EVASION_SPEEDUP when fully disguised. Clamped both ends so a stray
+## node in the group can't slow evasion below normal OR snap the player cold.
+func _disguise_speedup() -> float:
+	if _disguise != null and _disguise.has_method("evasion_speedup"):
+		return clampf(float(_disguise.evasion_speedup()), 1.0, Disguise.MAX_EVASION_SPEEDUP)
+	return 1.0
 
 
 ## 0 while in sight, ramping to 1 as the player nears going cold (HUD star flash).
@@ -52,6 +75,8 @@ func _bind() -> void:
 		_player = get_tree().get_first_node_in_group("player") as Node3D
 	if _tracker == null or not is_instance_valid(_tracker):
 		_tracker = get_tree().get_first_node_in_group("wanted")
+	if _disguise == null or not is_instance_valid(_disguise):
+		_disguise = get_tree().get_first_node_in_group("player_disguise")
 
 
 ## True if any living officer is within range and has an unobstructed sightline
