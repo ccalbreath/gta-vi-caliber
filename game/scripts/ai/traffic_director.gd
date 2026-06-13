@@ -44,10 +44,25 @@ var nav: NavGrid = null
 var _cars: Array[TrafficCar] = []
 var _rng := RandomNumberGenerator.new()
 var _accum: float = 0.0
+var _base_target_count: int = -1
 
 
 func _ready() -> void:
 	_rng.randomize()
+	add_to_group("density_aware")
+	apply_graphics_setting(int(SettingsPanel.load_settings().get("graphics", 1)))
+
+
+func apply_graphics_setting(quality: int) -> void:
+	if _base_target_count == -1:
+		_base_target_count = target_count
+	match quality:
+		0:
+			target_count = maxi(1, int(_base_target_count * 0.25))
+		1:
+			target_count = maxi(1, int(_base_target_count * 0.6))
+		2:
+			target_count = _base_target_count
 
 
 func _physics_process(delta: float) -> void:
