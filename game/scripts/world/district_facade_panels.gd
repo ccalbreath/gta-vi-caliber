@@ -17,6 +17,12 @@ static func build(parent: Node3D, buildings: Array, proj: GeoProjection) -> void
 			continue
 		var ring := _project_ring(b["footprint"], proj)
 		collect_transforms(ring, height, int(b.get("id", 0)), dark_tf, lit_tf)
+	build_transforms(parent, dark_tf, lit_tf)
+
+
+static func build_transforms(
+	parent: Node3D, dark_tf: Array[Transform3D], lit_tf: Array[Transform3D]
+) -> void:
 	if dark_tf.is_empty() and lit_tf.is_empty():
 		return
 	var root := Node3D.new()

@@ -53,6 +53,8 @@ Goal: get in a car, drive it, crash it, get out.
 Goal: walk or drive 4 km in any direction with no loading screen.
 
 - [ ] World partitioned into tiles with seam-free LOD terrain
+- [x] GDScript district residency with threaded 128 m tile preparation, near-ring
+  collision/navigation, HLOD/occluders, and one bounded main-thread step per frame
 - [ ] **`engine/`: async tile streamer GDExtension** (load/unload around camera, priority by velocity vector)
 - [ ] **`engine/`: runtime impostor baker** for distant buildings
 - [x] Floating-origin shift to dodge float precision at distance

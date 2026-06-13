@@ -8,19 +8,23 @@ extends SceneTree
 ##   godot --headless --path game --script res://tests/miami_facade_probe.gd
 
 const SCENE_PATH: String = "res://scenes/world/miami.tscn"
-const WARMUP_FRAMES: int = 150
+const MIN_WARMUP_FRAMES: int = 30
+const MAX_WAIT_MSEC: int = 30_000
 const MIN_FACADE_ROOTS: int = 1
 const MIN_DARK_PANELS: int = 1000
 const MIN_LIT_PANELS: int = 250
 
 var _scene: Node = null
 var _frames: int = 0
+var _started_msec: int = 0
 var _facade_roots: int = 0
 var _dark_panels: int = 0
 var _lit_panels: int = 0
 
 
 func _initialize() -> void:
+	Engine.max_fps = 120
+	_started_msec = Time.get_ticks_msec()
 	var packed: PackedScene = load(SCENE_PATH)
 	if packed == null:
 		push_error("miami facade probe: scene failed to load")
@@ -32,10 +36,21 @@ func _initialize() -> void:
 
 func _process(_delta: float) -> bool:
 	_frames += 1
-	if _frames < WARMUP_FRAMES:
+	if _frames < MIN_WARMUP_FRAMES:
 		return false
+	_facade_roots = 0
+	_dark_panels = 0
+	_lit_panels = 0
 	_scan(_scene)
-	return _finish()
+	if (
+		_facade_roots >= MIN_FACADE_ROOTS
+		and _dark_panels >= MIN_DARK_PANELS
+		and _lit_panels >= MIN_LIT_PANELS
+	):
+		return _finish()
+	if Time.get_ticks_msec() - _started_msec >= MAX_WAIT_MSEC:
+		return _finish()
+	return false
 
 
 func _scan(node: Node) -> void:
