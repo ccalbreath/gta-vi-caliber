@@ -44,8 +44,8 @@ func _process(_delta: float) -> bool:
 func _run_checks() -> PackedStringArray:
 	var failures: PackedStringArray = []
 
-	# Structure: the beats and the black handoff overlay must exist.
-	for node_name in ["Card", "Title", "Fade"]:
+	# Structure: the beats, the cinematic bars, and the black handoff overlay.
+	for node_name in ["Card", "Title", "TopBar", "BottomBar", "Fade"]:
 		if _intro.find_child(node_name) == null:
 			failures.append("missing node '%s'" % node_name)
 	var card: Control = _intro.find_child("Card")
@@ -69,6 +69,13 @@ func _run_checks() -> PackedStringArray:
 		failures.append("title not visible at its peak (a=%.2f)" % title.modulate.a)
 	if card.modulate.a > 0.1:
 		failures.append("card lingering into the title beat (a=%.2f)" % card.modulate.a)
+	# Neon ignition has settled to steady by now, so the wordmark reads solid.
+	if wordmark.modulate.a < 0.5:
+		failures.append("wordmark not lit at the title peak (neon a=%.2f)" % wordmark.modulate.a)
+	# Letterbox bars have slid in (only assertable when the viewport has height).
+	var top_bar: Control = _intro.find_child("TopBar")
+	if _intro.size.y > 0.0 and top_bar.offset_bottom <= 0.0:
+		failures.append("letterbox did not slide in (top bar h=%.1f)" % top_bar.offset_bottom)
 
 	# Exit — past the end of the timeline the intro must hand off, never hang.
 	_advance(_intro, 3.0)

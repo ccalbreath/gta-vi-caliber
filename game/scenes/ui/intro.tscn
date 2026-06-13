@@ -120,6 +120,21 @@ theme_override_font_sizes/font_size = 18
 text = "an open world, built in the open"
 horizontal_alignment = 1
 
+[node name="TopBar" type="ColorRect" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="BottomBar" type="ColorRect" parent="."]
+layout_mode = 1
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_vertical = 0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
 [node name="SkipHint" type="Label" parent="."]
 layout_mode = 1
 anchors_preset = 12

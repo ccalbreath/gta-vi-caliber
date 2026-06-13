@@ -5,6 +5,26 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 22) — intro elevated: neon ignition + cinematic letterbox
+
+Pushed the boot intro from "clean" toward "premium" with two on-theme cinematic
+touches, both pure code on owned files (no UI-lane contact):
+
+1. **Neon-tube ignition.** The VICE CITY wordmark no longer just fades in — it
+   *flickers on* like a neon sign powering up (harsh blinks that calm to steady
+   over the first 0.75 s of the title beat), the single most Vice-City detail
+   available in 2D. Deterministic (`sin`-driven, clock-only) so the probe steps
+   it exactly.
+2. **Cinematic letterbox.** Two black bars slide in over the opening second to a
+   filmic ~2.2:1 frame and hold, reinforcing "this is a title sequence, not a
+   menu."
+
+Gate stays green — `intro probe` extended to assert the bars slide in and the
+wordmark is lit (neon settled) at the title peak; full run = format/lint/import/
+smoke + intro probe + 7 miami + 5 systems probes + **2435 unit tests, 0 failed**.
+Same honest limit as cont. 21 (2D cinematic, not a 3D city flyover — still gated
+on the env owner's day/night work).
+
 ## 2026-06-12 (cont. 21) — front-end: branded boot intro, Godot splash removed
 
 The first thing a player saw was the **Godot engine logo** (no `boot_splash`

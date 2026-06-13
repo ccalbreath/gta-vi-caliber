@@ -36,6 +36,14 @@ const _CARD_END := _CARD_IN + _CARD_HOLD + _CARD_OUT  # 2.9
 const _TITLE_START := _CARD_END
 const _TITLE_END := _TITLE_START + _TITLE_IN + _TITLE_HOLD + _TITLE_OUT  # 6.7
 
+# --- Cinematic framing + neon ignition ----------------------------------------
+## Fraction of screen height each letterbox bar grows to (filmic 2.x:1 frame).
+const _LETTERBOX_FRAC := 0.085
+## Seconds for the letterbox bars to slide fully in.
+const _LETTERBOX_IN := 1.0
+## Seconds the wordmark "ignites" (neon flicker) once the title beat begins.
+const _NEON_IGNITE := 0.75
+
 ## Seconds for the fade-to-black handoff into the menu (and the fade-up on boot).
 @export var fade_time: float = 0.6
 
@@ -53,6 +61,8 @@ var _fade_tween: Tween = null
 @onready var _kicker: Label = $Title/Center/VBox/Kicker
 @onready var _underline: TextureRect = $Title/Center/VBox/Underline
 @onready var _skip_hint: Label = $SkipHint
+@onready var _top_bar: ColorRect = $TopBar
+@onready var _bottom_bar: ColorRect = $BottomBar
 @onready var _fade: ColorRect = $Fade
 
 
@@ -75,10 +85,17 @@ func _process(delta: float) -> void:
 	var title_a := _beat_alpha(_time, _TITLE_START, _TITLE_IN, _TITLE_HOLD, _TITLE_OUT)
 	_title.modulate.a = title_a
 
-	# Continuous neon life on the wordmark + cyan kicker shimmer (only meaningful
-	# while the title beat is visible, but cheap to run throughout).
+	# Cinematic letterbox slides in over the opening second and holds.
+	var bar_h := _letterbox_h()
+	_top_bar.offset_bottom = bar_h
+	_bottom_bar.offset_top = -bar_h
+
+	# Continuous neon life on the wordmark + cyan kicker shimmer. The wordmark
+	# also "ignites" — flickering on like a neon tube — as the title beat begins.
 	var warm := _PINK.lerp(_ORANGE, 0.5 + 0.5 * sin(_time * 0.7))
-	_wordmark.modulate = warm.lerp(Color(1, 1, 1), 0.35 + 0.2 * sin(_time * 1.6))
+	var lit := warm.lerp(Color(1, 1, 1), 0.35 + 0.2 * sin(_time * 1.6))
+	lit.a = _neon_flicker()
+	_wordmark.modulate = lit
 	_kicker.modulate = _CYAN.lerp(Color(1, 1, 1), 0.3 + 0.3 * sin(_time * 1.1))
 	_skip_hint.modulate.a = 0.30 + 0.18 * sin(_time * 2.4)
 
@@ -137,6 +154,24 @@ func _beat_alpha(t: float, start: float, in_dur: float, hold: float, out_dur: fl
 	if a < in_dur + hold + out_dur:
 		return 1.0 - (a - in_dur - hold) / out_dur
 	return 0.0
+
+
+## Letterbox bar height in pixels — slides 0→target over the opening second.
+func _letterbox_h() -> float:
+	var target := size.y * _LETTERBOX_FRAC
+	return clampf((_time - 0.4) / _LETTERBOX_IN, 0.0, 1.0) * target
+
+
+## Neon-tube ignition multiplier for the wordmark alpha: harsh, calming blinks
+## over the first [constant _NEON_IGNITE] seconds of the title beat, then steady.
+func _neon_flicker() -> float:
+	var ign := _time - _TITLE_START
+	if ign < 0.0 or ign >= _NEON_IGNITE:
+		return 1.0
+	var charge := ign / _NEON_IGNITE  # the tube "warming up", 0..1
+	var blink := 0.5 + 0.5 * sin(ign * 47.0)
+	var level := 1.0 if blink > (0.7 - charge * 0.6) else 0.22
+	return lerpf(level, 1.0, charge)
 
 
 ## A horizontal magenta→pink→orange bar used as the wordmark underline.
