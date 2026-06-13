@@ -274,20 +274,36 @@ gauntlet-time:
    placeholder imagery visible" as an explicit pass criterion — the
    by-eye backstop, never the primary catch.
 
-## 11. Staged rollout (proposed, repo-adjusted)
+## 11. What the pipeline delivers: an asset library
 
-| Stage | What | Gate |
+**The pipeline's deliverable is shelf stock, not world changes.** Output =
+gauntlet-passed assets landing in the `game/assets/` and
+`game/scenes/props/` folders, ledgered, unplaced, and unused by the live
+game until someone deliberately uses them in their own later PR. Placement
+and world integration are explicitly out of scope per asset — every asset
+PR ships library stock only, and booting the game after merging one
+changes nothing a player sees.
+
+Library lanes, in priority order:
+
+| Lane | What lands on the shelf | Gate |
 | --- | --- | --- |
-| 1 | `tools/pull-material.sh` + starter material set (asphalt, concrete/pavement, facades) | Safe to PR: CC0, ledger rows, no scene changes |
-| 2 | Streets/ground: wire starter materials into the road/sidewalk/ground shaders | PR per surface; in-game before/after screenshots required |
-| 3 | Buildings: Blender-OSM + Buildify proof of concept → recipe doc → batch | Recipe PR safe; **bulk generation waits on section 9** |
-| 4 | Vehicles: rubbery-car fast fix on the traffic fleet + ReflectionProbes | Safe to PR with screenshots; probe placement reviewed for perf |
-| 5 | NPCs: MB-Lab/MakeHuman + UAL retarget pilot (one body) | Pilot PR safe; variety batch waits on section 9 |
-| 6 | AI decal/signage lane | Waits on section 9 **and** maintainer review of generator terms |
+| 1 | `tools/pull-material.sh` + material sets (asphalt, concrete/pavement, facades) | CC0, ledger rows, no scene changes |
+| 2 | Buildings: Blosm + Buildify recipe → fictionalized buildings as prop scenes | Gauntlet-passed; **bulk generation waits on section 9** |
+| 3 | Vehicles: rubbery-car material recipe applied to base cars | Gauntlet-passed (glass sweep mandatory) |
+| 4 | NPCs: MB-Lab/MakeHuman + UAL retarget pilot (one body) | Pilot ships shelf-only; variety batch waits on section 9 |
+| 5 | AI decal/signage lane | Waits on section 9 **and** maintainer review of generator terms |
 
-Every stage: `tools/check.sh` green, ledger rows in the same commit as the
-binaries, `git lfs status` verified, in-game screenshot judged by eye
-before any PR.
+Every lane: `tools/check.sh` green, ledger rows in the same commit as the
+binaries, `git lfs status` verified, gauntlet passed (§12) before any PR.
+
+**How this could feed the city later (future team decision, not part of
+any asset PR):** once shelves have depth, separate world-integration PRs
+could wire material sets into the road/sidewalk/ground shaders
+(before/after screenshots per surface) and place buildings, props, and
+NPCs in the live scenes. Who does that, when, and with what look is a
+team call that starts with section 9 — nothing in this pipeline presumes
+it.
 
 ## 12. The integration gauntlet (mandatory)
 
