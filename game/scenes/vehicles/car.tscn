@@ -7,8 +7,11 @@
 
 [sub_resource type="StandardMaterial3D" id="body_mat"]
 albedo_color = Color(0.75, 0.2, 0.15, 1)
-roughness = 0.4
-metallic = 0.3
+metallic = 0.6
+roughness = 0.24
+clearcoat_enabled = true
+clearcoat = 0.7
+clearcoat_roughness = 0.06
 
 [sub_resource type="BoxMesh" id="chassis_mesh"]
 material = SubResource("body_mat")

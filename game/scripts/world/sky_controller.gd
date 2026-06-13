@@ -43,6 +43,12 @@ func _resolve_refs() -> void:
 		scope = self
 	if sun_light == null:
 		sun_light = _find_node_of_type(scope, "DirectionalLight3D") as DirectionalLight3D
+	if moon_light == null:
+		# A sibling DirectionalLight3D named "Moon" is the night key; resolved by
+		# name so it never gets confused with the sun in the type search above.
+		var moon := scope.get_node_or_null("Moon")
+		if moon is DirectionalLight3D:
+			moon_light = moon
 	if world_environment == null:
 		world_environment = _find_node_of_type(scope, "WorldEnvironment") as WorldEnvironment
 
@@ -100,7 +106,7 @@ func _orient_sun(sun_dir: Vector3, tod: float) -> void:
 		var moon_dir := SkyModel.moon_direction(tod)
 		_aim_light(moon_light, -moon_dir)
 		var night := SkyModel.night_amount(tod)
-		moon_light.light_energy = SkyModel.MOON_ENERGY * night * dim
+		moon_light.light_energy = SkyModel.MOON_LIGHT_ENERGY * night * dim
 		moon_light.shadow_enabled = night > 0.5 and moon_dir.y > 0.0
 
 
@@ -131,6 +137,10 @@ func _update_environment(tod: float) -> void:
 		return
 	var env := world_environment.environment
 	env.ambient_light_energy = SkyModel.ambient_energy(tod)
+	# Warm sky fill by day, cool moonlit blue by night — keeps night shadows from
+	# staying the warm daytime tint. (WeatherController may scale the energy down
+	# afterwards for overcast; it runs later in the tree.)
+	env.ambient_light_color = SkyModel.ambient_color(tod)
 	# Tie any distance fog to the warm/cool key-light colour so aerial
 	# perspective matches the sky.
 	if env.fog_enabled:

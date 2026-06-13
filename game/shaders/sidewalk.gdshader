@@ -28,6 +28,19 @@ float hash21(vec2 p) {
 	return fract(p.x * p.y);
 }
 
+// Smooth value noise (bilinear hash + smoothstep fade) — C1 enough that the
+// screen-space derivatives used for the tangent-free bump stay clean.
+float vnoise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	float a = hash21(i);
+	float b = hash21(i + vec2(1.0, 0.0));
+	float c = hash21(i + vec2(0.0, 1.0));
+	float d = hash21(i + vec2(1.0, 1.0));
+	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
 // Without this, v_uv stayed (0,0) and the whole joint/curb/patch pattern below
 // collapsed to a flat slab — the mesh carries UVs (CityBuilder.sidewalk_ribbon).
 void vertex() {
@@ -60,4 +73,23 @@ void fragment() {
 	ALBEDO = col * mix(1.0, 0.7, wet);
 	ROUGHNESS = mix(0.93, 0.24, wet);
 	METALLIC = 0.0;
+
+	// Troweled-concrete micro-relief: a smooth value-noise height perturbs the
+	// normal (tangent-free Mikkelsen gradient) and roughness so the walking top
+	// reads as real concrete grain up close. Kept off the joints so the grooves
+	// stay crisp, faded with distance, and relaxed when wet.
+	float micro_fade = 1.0 - smoothstep(10.0, 42.0, length(VERTEX));
+	float micro = on_top * (1.0 - joint) * micro_fade;
+	if (micro > 0.001) {
+		vec2 st = vec2(u * 5.0, along) * 4.0;
+		float h = vnoise(st) * 0.6 + vnoise(st * 2.7) * 0.3;
+		vec3 sx = dFdx(VERTEX);
+		vec3 sy = dFdy(VERTEX);
+		vec3 r1 = cross(sy, NORMAL);
+		vec3 r2 = cross(NORMAL, sx);
+		float det = dot(sx, r1);
+		vec3 grad = sign(det) * (dFdx(h) * r1 + dFdy(h) * r2);
+		NORMAL = normalize(abs(det) * NORMAL - (0.04 * micro * (1.0 - 0.7 * wet)) * grad);
+		ROUGHNESS = clamp(ROUGHNESS + (h - 0.45) * 0.10 * micro * (1.0 - wet), 0.1, 1.0);
+	}
 }

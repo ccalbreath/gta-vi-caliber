@@ -1,10 +1,11 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera/orbit_camera.gd" id="2_camera"]
 [ext_resource type="PackedScene" path="res://scenes/player/character_rig.tscn" id="3_rig"]
 [ext_resource type="Script" path="res://scripts/weapons/weapon_controller.gd" id="5_weapon"]
 [ext_resource type="Script" path="res://scripts/combat/melee_controller.gd" id="6_melee"]
+[ext_resource type="Script" path="res://scripts/weapons/grenade_thrower.gd" id="7_grenade"]
 
 [sub_resource type="CapsuleShape3D" id="body_shape"]
 radius = 0.4
@@ -69,3 +70,6 @@ gun_mount_path = NodePath("../Rig/GunMount")
 
 [node name="MeleeController" type="Node" parent="."]
 script = ExtResource("6_melee")
+
+[node name="GrenadeThrower" type="Node" parent="."]
+script = ExtResource("7_grenade")

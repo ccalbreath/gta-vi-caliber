@@ -17,6 +17,13 @@ signal district_built(building_count: int, road_count: int)
 const STREETLIGHT_SPACING_M: float = 45.0
 const MAX_STREETLIGHTS: int = 60
 const STREETLIGHT_RADIUS_M: float = 250.0
+## Real warm OmniLight3D pools hung under the lamp heads, faded in at night by
+## the StreetlightSwitch. Capped below the pole count and shadowless so the
+## streets actually glow without paying a shadow map per lamp; range/energy tuned
+## for a soft on-ground pool cast from the ~5 m head.
+const MAX_STREETLIGHT_LIGHTS: int = 100
+const STREETLIGHT_LIGHT_RANGE_M: float = 13.0
+const STREETLIGHT_LIGHT_ENERGY: float = 4.0
 # The player/vehicles/props rest on the ground collider whose top is at y=0, so
 # every visual walking surface sits at (or a hair above) y=0 too — otherwise the
 # character stands on the collider and the feet sink below the visible street.
@@ -571,6 +578,7 @@ func _build_streetlights(roads: Array, proj: GeoProjection) -> void:
 	container.add_child(switch)
 
 	var placed := 0
+	var lights: Array[OmniLight3D] = []
 	for r in roads:
 		if placed >= 180:
 			break
@@ -592,8 +600,24 @@ func _build_streetlights(roads: Array, proj: GeoProjection) -> void:
 			head.material_override = lamp_mat
 			head.position = Vector3(0.0, 5.0, 0.0)
 			lamp.add_child(head)
+			# A real warm pool under the first N heads turns the dark street into
+			# lit asphalt at night; the rest stay emissive-only to keep the count
+			# in budget. Shadowless and out of the volumetric pass for cheapness.
+			if lights.size() < MAX_STREETLIGHT_LIGHTS:
+				var glow := OmniLight3D.new()
+				glow.omni_range = STREETLIGHT_LIGHT_RANGE_M
+				glow.omni_attenuation = 1.5
+				glow.light_color = Color(1.0, 0.85, 0.55)
+				glow.light_energy = 0.0
+				glow.light_volumetric_fog_energy = 0.0
+				glow.shadow_enabled = false
+				glow.visible = false
+				glow.position = Vector3(0.0, 4.7, 0.0)
+				lamp.add_child(glow)
+				lights.append(glow)
 			container.add_child(lamp)
 			placed += 1
+	switch.bind_lights(lights, STREETLIGHT_LIGHT_ENERGY)
 
 
 func _load_district(path: String) -> Dictionary:

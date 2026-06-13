@@ -25,6 +25,19 @@ float hash21(vec2 p) {
 	return fract(p.x * p.y);
 }
 
+// Smooth value noise (bilinear hash + smoothstep fade) — C1 enough that the
+// screen-space derivatives used for the tangent-free bump stay clean.
+float vnoise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	float a = hash21(i);
+	float b = hash21(i + vec2(1.0, 0.0));
+	float c = hash21(i + vec2(0.0, 1.0));
+	float d = hash21(i + vec2(1.0, 1.0));
+	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
 void vertex() {
 	v_uv = UV;
 }
@@ -82,4 +95,24 @@ void fragment() {
 	ROUGHNESS = mix(0.92 - 0.25 * paint, 0.16, wet);
 	METALLIC = 0.0;
 	SPECULAR = mix(0.5, 0.72, wet);
+
+	// Aggregate micro-relief: a smooth value-noise height perturbs the normal
+	// (tangent-free Mikkelsen surface gradient — road meshes carry no tangents)
+	// and roughness, so close asphalt reads as coarse, light-catching aggregate
+	// instead of a flat slab. Faded with distance (derivatives go noisy far off),
+	// kept off the paint/kerb, and relaxed when wet (a soaked road is glassy).
+	float micro_fade = 1.0 - smoothstep(12.0, 50.0, length(VERTEX));
+	float micro = asphalt_area * micro_fade;
+	if (micro > 0.001) {
+		vec2 st = vec2(x * 6.0, along * 1.2);
+		float h = vnoise(st) * 0.6 + vnoise(st * 2.6) * 0.3;
+		vec3 sx = dFdx(VERTEX);
+		vec3 sy = dFdy(VERTEX);
+		vec3 r1 = cross(sy, NORMAL);
+		vec3 r2 = cross(NORMAL, sx);
+		float det = dot(sx, r1);
+		vec3 grad = sign(det) * (dFdx(h) * r1 + dFdy(h) * r2);
+		NORMAL = normalize(abs(det) * NORMAL - (0.06 * micro * (1.0 - 0.7 * wet)) * grad);
+		ROUGHNESS = clamp(ROUGHNESS + (h - 0.45) * 0.13 * micro * (1.0 - wet), 0.08, 1.0);
+	}
 }

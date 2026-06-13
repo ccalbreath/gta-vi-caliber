@@ -20,10 +20,13 @@ static func build(parent: Node3D, spawn: Vector3, yaw: float, street_y: float) -
 	root.rotation.y = yaw
 	parent.add_child(root)
 
+	# Shaded (was unshaded) so the hero corridor breathes with the day/night
+	# cycle, the cinematic grade and the night streetlamps instead of rendering
+	# as a flat black slab the lighting can't touch. Dark asphalt albedo keeps it
+	# reading as fresh tarmac.
 	var asphalt_mat := StandardMaterial3D.new()
-	asphalt_mat.albedo_color = Color(0.025, 0.028, 0.03)
-	asphalt_mat.roughness = 0.94
-	asphalt_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	asphalt_mat.albedo_color = Color(0.05, 0.052, 0.055)
+	asphalt_mat.roughness = 0.92
 	var road_mesh := BoxMesh.new()
 	road_mesh.size = Vector3(18.0, 0.12, 160.0)
 	_add_surface(root, "HeroRoad", road_mesh, asphalt_mat, Vector3.ZERO)
@@ -31,7 +34,6 @@ static func build(parent: Node3D, spawn: Vector3, yaw: float, street_y: float) -
 	var sidewalk_mat := StandardMaterial3D.new()
 	sidewalk_mat.albedo_color = Color(0.30, 0.30, 0.28)
 	sidewalk_mat.roughness = 0.88
-	sidewalk_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var sidewalk_mesh := BoxMesh.new()
 	sidewalk_mesh.size = Vector3(4.0, 0.12, 160.0)
 	_add_surface(root, "LeftSidewalk", sidewalk_mesh, sidewalk_mat, Vector3(11.0, 0.04, 0.0))
@@ -52,6 +54,60 @@ static func build(parent: Node3D, spawn: Vector3, yaw: float, street_y: float) -
 
 	_build_palms(root)
 	_build_cones(root)
+	_build_lamps(root)
+
+
+## Warm streetlamps down the hero corridor with real OmniLight3D pools that fade
+## in at night via a StreetlightSwitch — so the player's opening view lights up
+## after dusk like the streamed district roads do.
+static func _build_lamps(parent: Node3D) -> void:
+	var pole_mat := StandardMaterial3D.new()
+	pole_mat.albedo_color = Color(0.1, 0.1, 0.12)
+	pole_mat.metallic = 0.6
+	pole_mat.roughness = 0.5
+	var lamp_mat := StandardMaterial3D.new()
+	lamp_mat.albedo_color = Color(1.0, 0.92, 0.72)
+	lamp_mat.emission_enabled = true
+	lamp_mat.emission = Color(1.0, 0.85, 0.55)
+	lamp_mat.emission_energy_multiplier = 2.5
+	var pole_mesh := BoxMesh.new()
+	pole_mesh.size = Vector3(0.14, 5.0, 0.14)
+	var head_mesh := BoxMesh.new()
+	head_mesh.size = Vector3(0.5, 0.22, 0.32)
+
+	var switch := StreetlightSwitch.new()
+	switch.setup(lamp_mat, lamp_mat.emission_energy_multiplier)
+	parent.add_child(switch)
+
+	var lights: Array[OmniLight3D] = []
+	for side in [-1.0, 1.0]:
+		for z in [-60.0, -36.0, -12.0, 12.0, 36.0, 60.0]:
+			var lamp := Node3D.new()
+			lamp.name = "SpawnLamp"
+			lamp.position = Vector3(side * 9.3, 0.1, z)
+			var pole := MeshInstance3D.new()
+			pole.mesh = pole_mesh
+			pole.material_override = pole_mat
+			pole.position = Vector3(0.0, 2.5, 0.0)
+			lamp.add_child(pole)
+			var head := MeshInstance3D.new()
+			head.mesh = head_mesh
+			head.material_override = lamp_mat
+			head.position = Vector3(0.0, 5.0, 0.0)
+			lamp.add_child(head)
+			var glow := OmniLight3D.new()
+			glow.omni_range = 14.0
+			glow.omni_attenuation = 1.4
+			glow.light_color = Color(1.0, 0.85, 0.55)
+			glow.light_energy = 0.0
+			glow.light_volumetric_fog_energy = 0.0
+			glow.shadow_enabled = false
+			glow.visible = false
+			glow.position = Vector3(0.0, 4.7, 0.0)
+			lamp.add_child(glow)
+			lights.append(glow)
+			parent.add_child(lamp)
+	switch.bind_lights(lights, 4.0)
 
 
 static func _add_surface(

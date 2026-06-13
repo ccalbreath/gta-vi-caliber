@@ -287,10 +287,16 @@ void sky() {
 	vec4 cl = clouds(view, sun, day);
 	sky_col = mix(sky_col, cl.rgb, cl.a);
 
-	// --- tonemap (ACES-ish) + exposure ---------------------------------------
+	// --- exposure -> linear HDR ----------------------------------------------
+	// Output linear radiance and let the WorldEnvironment's ACES tonemapper do
+	// the single, authoritative filmic compression. Previously a second ACES
+	// curve was applied here, double-tonemapping the sky into a flat, washed
+	// vault and crushing the highlight rolloff on the sun disk and lit cloud
+	// flanks.
 	sky_col *= exposure;
-	sky_col = (sky_col * (2.51 * sky_col + 0.03)) / (sky_col * (2.43 * sky_col + 0.59) + 0.14);
-	sky_col = clamp(sky_col, vec3(0.0), vec3(1.0));
+	// A generous ceiling tames fireflies in the radiance cubemap (the sun disk
+	// is intentionally very bright) without clipping the visible HDR range.
+	sky_col = clamp(sky_col, vec3(0.0), vec3(60.0));
 
 	COLOR = sky_col;
 }
