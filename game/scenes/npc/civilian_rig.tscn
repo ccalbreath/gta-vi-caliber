@@ -1,14 +1,19 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="PackedScene" path="res://assets/characters/player_male_01/Superhero_Male_FullBody.gltf" id="1_model"]
 [ext_resource type="Script" path="res://scripts/player/animated_rig.gd" id="2_rig"]
 [ext_resource type="PackedScene" path="res://assets/characters/coastal_residents/npc_man.glb" id="3_man"]
 [ext_resource type="PackedScene" path="res://assets/characters/coastal_residents/npc_woman.glb" id="4_woman"]
+[ext_resource type="PackedScene" path="res://assets/characters/npc_exec/npc_exec.glb" id="5_exec"]
+[ext_resource type="PackedScene" path="res://assets/characters/npc_local/npc_local.glb" id="6_local"]
+[ext_resource type="PackedScene" path="res://assets/characters/npc_tourist/npc_tourist.glb" id="7_tourist"]
+[ext_resource type="PackedScene" path="res://assets/characters/npc_jogger/npc_jogger.glb" id="8_jogger"]
+[ext_resource type="PackedScene" path="res://assets/characters/npc_nightlife/npc_nightlife.glb" id="9_nightlife"]
 
 [node name="Rig" instance=ExtResource("1_model")]
 script = ExtResource("2_rig")
 visual_scene = null
-visual_scene_options = Array[PackedScene]([ExtResource("3_man"), ExtResource("4_woman")])
+visual_scene_options = Array[PackedScene]([ExtResource("3_man"), ExtResource("4_woman"), ExtResource("5_exec"), ExtResource("6_local"), ExtResource("7_tourist"), ExtResource("8_jogger"), ExtResource("9_nightlife")])
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 

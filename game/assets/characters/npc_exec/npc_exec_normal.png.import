@@ -2,18 +2,21 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b8divthl3p7c8"
-path.s3tc="res://.godot/imported/T_Hair_2_Normal.png-6ffbd0589d22ad43a68149852dea4bcd.s3tc.ctex"
-path.etc2="res://.godot/imported/T_Hair_2_Normal.png-6ffbd0589d22ad43a68149852dea4bcd.etc2.ctex"
+uid="uid://mpkv4gibq5y2"
+path.s3tc="res://.godot/imported/npc_exec_normal.png-14c1bf7f613b3c18a3da47282a63007b.s3tc.ctex"
+path.etc2="res://.godot/imported/npc_exec_normal.png-14c1bf7f613b3c18a3da47282a63007b.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
+generator_parameters={
+"md5": "d568f0198ad5120f7d61f1b8b6b0644a"
+}
 
 [deps]
 
-source_file="res://assets/characters/npc_female_01/T_Hair_2_Normal.png"
-dest_files=["res://.godot/imported/T_Hair_2_Normal.png-6ffbd0589d22ad43a68149852dea4bcd.s3tc.ctex", "res://.godot/imported/T_Hair_2_Normal.png-6ffbd0589d22ad43a68149852dea4bcd.etc2.ctex"]
+source_file="res://assets/characters/npc_exec/npc_exec_normal.png"
+dest_files=["res://.godot/imported/npc_exec_normal.png-14c1bf7f613b3c18a3da47282a63007b.s3tc.ctex", "res://.godot/imported/npc_exec_normal.png-14c1bf7f613b3c18a3da47282a63007b.etc2.ctex"]
 
 [params]
 
@@ -28,7 +31,7 @@ compress/channel_pack=0
 mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=1
-roughness/src_normal="res://assets/characters/npc_female_01/T_Hair_2_Normal.png"
+roughness/src_normal="res://assets/characters/npc_exec/npc_exec_normal.png"
 process/channel_remap/red=0
 process/channel_remap/green=1
 process/channel_remap/blue=2

@@ -61,9 +61,90 @@ const TARGET_TO_SOURCE: Dictionary = {
 	&"RightToes": &"ball_r",
 }
 
+# Mixamo names its bones differently from the canonical humanoid set above
+# (its mesh comes out of Meshy then auto-rigged in Mixamo). Map each Mixamo bone
+# to the canonical name so converted Mixamo visuals retarget like the Tripo ones.
+const MIXAMO_TO_CANONICAL: Dictionary = {
+	&"Hips": &"Hips",
+	&"Spine": &"Spine",
+	&"Spine1": &"Chest",
+	&"Spine2": &"UpperChest",
+	&"Neck": &"Neck",
+	&"Head": &"Head",
+	&"LeftShoulder": &"LeftShoulder",
+	&"LeftArm": &"LeftUpperArm",
+	&"LeftForeArm": &"LeftLowerArm",
+	&"LeftHand": &"LeftHand",
+	&"LeftHandThumb1": &"LeftThumbMetacarpal",
+	&"LeftHandThumb2": &"LeftThumbProximal",
+	&"LeftHandThumb3": &"LeftThumbDistal",
+	&"LeftHandIndex1": &"LeftIndexProximal",
+	&"LeftHandIndex2": &"LeftIndexIntermediate",
+	&"LeftHandIndex3": &"LeftIndexDistal",
+	&"LeftHandMiddle1": &"LeftMiddleProximal",
+	&"LeftHandMiddle2": &"LeftMiddleIntermediate",
+	&"LeftHandMiddle3": &"LeftMiddleDistal",
+	&"LeftHandRing1": &"LeftRingProximal",
+	&"LeftHandRing2": &"LeftRingIntermediate",
+	&"LeftHandRing3": &"LeftRingDistal",
+	&"LeftHandPinky1": &"LeftLittleProximal",
+	&"LeftHandPinky2": &"LeftLittleIntermediate",
+	&"LeftHandPinky3": &"LeftLittleDistal",
+	&"RightShoulder": &"RightShoulder",
+	&"RightArm": &"RightUpperArm",
+	&"RightForeArm": &"RightLowerArm",
+	&"RightHand": &"RightHand",
+	&"RightHandThumb1": &"RightThumbMetacarpal",
+	&"RightHandThumb2": &"RightThumbProximal",
+	&"RightHandThumb3": &"RightThumbDistal",
+	&"RightHandIndex1": &"RightIndexProximal",
+	&"RightHandIndex2": &"RightIndexIntermediate",
+	&"RightHandIndex3": &"RightIndexDistal",
+	&"RightHandMiddle1": &"RightMiddleProximal",
+	&"RightHandMiddle2": &"RightMiddleIntermediate",
+	&"RightHandMiddle3": &"RightMiddleDistal",
+	&"RightHandRing1": &"RightRingProximal",
+	&"RightHandRing2": &"RightRingIntermediate",
+	&"RightHandRing3": &"RightRingDistal",
+	&"RightHandPinky1": &"RightLittleProximal",
+	&"RightHandPinky2": &"RightLittleIntermediate",
+	&"RightHandPinky3": &"RightLittleDistal",
+	&"LeftUpLeg": &"LeftUpperLeg",
+	&"LeftLeg": &"LeftLowerLeg",
+	&"LeftFoot": &"LeftFoot",
+	&"LeftToeBase": &"LeftToes",
+	&"RightUpLeg": &"RightUpperLeg",
+	&"RightLeg": &"RightLowerLeg",
+	&"RightFoot": &"RightFoot",
+	&"RightToeBase": &"RightToes",
+}
 
-static func source_name(target_name: StringName) -> StringName:
-	return TARGET_TO_SOURCE.get(target_name, &"")
+
+## Strip a "mixamorig:" or "mixamorig_" prefix (Godot sanitises the colon to an
+## underscore on import), leaving the bare Mixamo bone name.
+static func _strip_mixamo(bone_name: StringName) -> StringName:
+	var s := String(bone_name)
+	for prefix in ["mixamorig:", "mixamorig_"]:
+		if s.begins_with(prefix):
+			return StringName(s.substr(prefix.length()))
+	return bone_name
+
+
+## The canonical humanoid name for a skeleton bone, whether it already uses the
+## canonical naming (Tripo) or Mixamo naming. Empty if it is neither.
+static func canonical(bone_name: StringName) -> StringName:
+	if TARGET_TO_SOURCE.has(bone_name):
+		return bone_name
+	return MIXAMO_TO_CANONICAL.get(_strip_mixamo(bone_name), &"")
+
+
+## Source-rig bone name for a target bone, accepting canonical or Mixamo naming.
+## Empty when the bone is not part of the humanoid set.
+static func source_name(bone_name: StringName) -> StringName:
+	var canon := canonical(bone_name)
+	if canon == &"":
+		return &""
+	return TARGET_TO_SOURCE.get(canon, &"")
 
 
 static func source_bone_names() -> PackedStringArray:
@@ -74,14 +155,17 @@ static func source_bone_names() -> PackedStringArray:
 
 
 static func rename_target_skeleton(skeleton: Skeleton3D) -> PackedStringArray:
-	var missing := PackedStringArray()
 	_rename_skin_binds(skeleton)
+	var found := {}
+	for bone_idx in skeleton.get_bone_count():
+		var src := source_name(skeleton.get_bone_name(bone_idx))
+		if src != &"":
+			skeleton.set_bone_name(bone_idx, src)
+			found[src] = true
+	var missing := PackedStringArray()
 	for target_name: StringName in TARGET_TO_SOURCE:
-		var bone_idx := skeleton.find_bone(target_name)
-		if bone_idx < 0:
+		if not found.has(TARGET_TO_SOURCE[target_name]):
 			missing.append(target_name)
-			continue
-		skeleton.set_bone_name(bone_idx, TARGET_TO_SOURCE[target_name])
 	return missing
 
 
