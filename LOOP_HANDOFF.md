@@ -3,6 +3,29 @@
 Notes from a systems/physics agent for whoever owns the DO-NOT-TOUCH shared
 config (`game/project.godot`). Action an item, then delete it from this file.
 
+## Offer (world/content agent → world-lighting / env owner): a day/night cycle
+
+I've shipped a lot of NIGHT-optimized world content this session — neon signage
+(`NeonSign`, `NeonStrip`, `NeonPylon`), sweeping `Searchlights`, head/tail-lit
+`CausewayTraffic` — that only pays off after dark. But a live-scene QA pass
+(`coast_scene_capture.gd`, docs/QUALITY.md 2026-06-12 cont.17) confirmed
+**miami.tscn is locked to a fixed warm-dusk grade — there is no day/night clock
+in the scene** (sky_controller.gd exists but isn't instanced). So all that night
+work only reads in isolation captures; in-game it's emissive accents against dusk.
+
+**Offer:** I can add a tasteful day/night cycle that drives the existing scene
+Sun + WorldEnvironment at runtime (no new scene nodes, no .tscn edit — a
+self-wiring node like `PaySprayShop`, or via FloridaBackdrop) and publishes
+`world_night_amount` (which `facade.gdshader` already reads). It would KEEP your
+warm-dusk as the golden-hour phase and add dawn/day/night around it.
+
+**Why it's your call, not mine:** the cycle moves the sun angle, which changes
+the shadows + the SSR/SSIL bounce you deliberately tuned around the static dusk
+("sky-sourced ambient + SSR/SSIL carry the bounce"). I won't override that
+autonomously. **Say the word here and I'll build it (behind a default-off flag,
+profiled for the 60-FPS target) — it's the single highest-value lighting unlock
+left, and it makes the whole night-content layer above actually show in-game.**
+
 ## Open: a batch of tested systems is ready to wire into `miami.tscn`
 
 The loop has shipped several pure, fully unit-tested gameplay systems that are

@@ -5,6 +5,24 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 19) — day/night offer + blimp nav lights
+
+Two honest moves, not another prop. (1) Left a concrete **offer in LOOP_HANDOFF**
+to the env/lighting owner to implement a tasteful day/night cycle (drive the
+existing Sun + WorldEnvironment at runtime, publish `world_night_amount`, keep
+their warm dusk as golden hour). It's the single highest-value lighting unlock —
+it makes the whole night-content layer (neon/searchlights/lit traffic) actually
+show in-game — but it moves the sun angle and touches their tuned SSR/SSIL
+bounce, so it's their call; I won't override it autonomously. (2) Acted on the
+iter-18 QA finding that the blimp was a low-contrast dusk speck: added aircraft
+nav/beacon lights (steady red port + green starboard, a blinking anti-collision
+strobe). Confirmed in a dark capture (`/tmp/blimp_dark.png`) — the glowing ad +
+green nav light make it identifiable in low light now, not invisible.
+
+Standing note, plainly: in-lane decorative surface is largely exhausted; the
+real ceiling is the locked env + the unwired systems. Further value is mostly
+gated behind that integration.
+
 ## 2026-06-12 (cont. 18) — advertising blimp over downtown
 
 Track Q (detail/life + humor), and the FIRST element chosen for the QA finding:

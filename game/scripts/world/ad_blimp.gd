@@ -21,6 +21,7 @@ const ADS: Array[String] = [
 
 var _time: float = 0.0
 var _ad_index: int = 0
+var _beacon: Node3D
 
 
 func _ready() -> void:
@@ -111,13 +112,49 @@ func populate() -> int:
 	label.double_sided = true
 	add_child(label)
 
+	_build_nav_lights()
 	_apply(0.0)
 	return get_child_count()
+
+
+## Aircraft nav/beacon lights so the blimp reads in the dusk grade (and at night):
+## steady red (port) + green (starboard) at the tail, and a blinking red strobe.
+func _build_nav_lights() -> void:
+	var dot := SphereMesh.new()
+	dot.radius = 0.45
+	dot.height = 0.9
+	for spec in [[-1.0, Color(1.0, 0.1, 0.1)], [1.0, Color(0.1, 1.0, 0.2)]]:
+		var nav := MeshInstance3D.new()
+		nav.mesh = dot
+		var m := StandardMaterial3D.new()
+		m.albedo_color = spec[1]
+		m.emission_enabled = true
+		m.emission = spec[1]
+		m.emission_energy_multiplier = 3.0
+		nav.material_override = m
+		nav.position = Vector3(float(spec[0]) * 5.5, 0.0, 16.0)
+		add_child(nav)
+
+	_beacon = MeshInstance3D.new()
+	(_beacon as MeshInstance3D).mesh = dot
+	var bm := StandardMaterial3D.new()
+	bm.albedo_color = Color(1.0, 0.15, 0.1)
+	bm.emission_enabled = true
+	bm.emission = Color(1.0, 0.15, 0.1)
+	bm.emission_energy_multiplier = 5.0
+	(_beacon as MeshInstance3D).material_override = bm
+	_beacon.name = "Beacon"
+	_beacon.position = Vector3(0.0, -7.8, -2.0)
+	add_child(_beacon)
 
 
 func _process(delta: float) -> void:
 	_time += delta
 	_apply(_time)
+	# Anti-collision strobe: a quick double-blink each ~1.3 s.
+	if _beacon != null:
+		var ph := fmod(_time, 1.3)
+		_beacon.visible = ph < 0.08 or (ph > 0.18 and ph < 0.26)
 
 
 func _apply(t: float) -> void:
