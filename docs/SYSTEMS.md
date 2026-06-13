@@ -63,6 +63,7 @@ Groups the live scene already publishes: `player`, `player_health`,
 | `VehicleModShop` | tiered upgrades -> stat multipliers | `upgrade`, `top_speed_multiplier`, `grip_multiplier` | a mod-garage trigger; multipliers feed `VehicleHandling` |
 | `Carjacking` | yank a driver out | `can_reach`, `door_side`, struggle timer, `heat_for_jack` | player enter-vehicle path + `WantedTracker.report_crime` |
 | `GarageStorage` | store/retrieve/impound vehicles | `store`, `retrieve`, `impound`, `recover_from_impound` | a garage trigger + saved vehicle list |
+| `VehicleSupplier` | on-call vehicle DELIVERY (timer) + respawn-after-wreck cooldown — dynamic logistics atop GarageStorage's instant retrieve | `request`, `report_destroyed`, `tick`, `is_available`, `eta_of`, `available_count` | `request(id, PlayerStats.money)` pays a fee + starts the delivery timer; `report_destroyed(id)` on a wreck starts the respawn cooldown; each frame `for a in tick(dt): spawn a.vehicle_id at the waypoint` (delivered / respawned). Location-free — caller owns the waypoint. Persist via `serialize`/`restore`. Pure |
 | `ChopShop` | fence a vehicle: class × condition × demand × heat | `value`, `deliver`, `set_requests`, `rotate_requests`, `total_earned` | a chop-shop trigger reads the car's class + `VehicleHealth.health_fraction()`, calls `deliver` and pays the wallet; rotate most-wanted orders for bonus pay |
 | `Parachute` | freefall/deploy/land | `deploy`, `update_fall_speed`, `landing_impact` | player skydive state above a height threshold |
 
