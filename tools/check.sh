@@ -143,5 +143,7 @@ step "stock terminal probe"
 "$GODOT_BIN" --headless --path game --script res://tests/stock_terminal_probe.gd
 step "turf zone probe"
 "$GODOT_BIN" --headless --path game --script res://tests/turf_zone_probe.gd
+step "interaction district probe"
+"$GODOT_BIN" --headless --path game --script res://tests/interaction_district_probe.gd
 
 printf '\nAll checks passed ✔\n'

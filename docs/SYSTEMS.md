@@ -171,3 +171,19 @@ headless by `tests/character_switch_probe.gd`.
 `{stars (from the wanted group), district}`, rolls `trigger_next`, and emits
 `encounter_triggered(id, kind)` for the scene to spawn. CI-gated headless by
 `tests/ambient_event_probe.gd`.
+
+## One-node deployment: `InteractionDistrict`
+
+`InteractionDistrict` (group `interaction_district`) drops the WHOLE walk-up
+interaction layer into a scene as a single node. In `_ready` it builds, on a ring
+of radius `spread`, the six activities — `ClothingStore`, `SlotMachine`,
+`BlackMarketStall`, `StockTerminal`, `TurfZone`, and a `HitContractBoard` (with its
+Board/Target zones) — each as an Area3D with a box trigger so the player can enter
+it. It then spawns the four shared-state controllers (`DisguiseController`,
+`ContrabandController`, `GangTerritoryController`, `MarketEventCoordinator`) **only
+if their group isn't already present**, so it composes with anything a scene already
+wired and never creates a duplicate owner — two districts added the same frame still
+yield one controller per group. So the integrator's whole job to make the services
+playable is: add one `InteractionDistrict` where the plaza should sit (set a unique
+`turf_district` per plaza). Structurally CI-gated headless by
+`tests/interaction_district_probe.gd`.
