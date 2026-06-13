@@ -65,6 +65,7 @@ func _ready() -> void:
 	DistrictFacadePanels.build(self, data.get("buildings", []), proj)
 	if build_doors:
 		BuildingDoors.build(self, data.get("buildings", []), proj)
+		BuildingShops.build(self, data.get("buildings", []), proj)
 	_build_rooftops(data.get("buildings", []), proj)
 	_build_roads(data.get("roads", []), proj)
 	_build_sidewalks(data.get("roads", []), proj)
