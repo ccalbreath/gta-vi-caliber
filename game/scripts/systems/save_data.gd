@@ -19,7 +19,7 @@ static func encode(snapshot: Dictionary) -> String:
 ## isn't a versioned object with a Dictionary payload, so callers can trust the
 ## shape without try/catch.
 static func decode(text: String) -> Dictionary:
-	var parsed: Variant = JSON.parse_string(text)
+	var parsed: Variant = _parse(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return {}
 	var data: Variant = (parsed as Dictionary).get("data")
@@ -31,10 +31,20 @@ static func decode(text: String) -> Dictionary:
 ## The format version embedded in save text, or 0 if absent/unparseable. Lets a
 ## loader migrate or reject old saves.
 static func version_of(text: String) -> int:
-	var parsed: Variant = JSON.parse_string(text)
+	var parsed: Variant = _parse(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return 0
 	return int((parsed as Dictionary).get("version", 0))
+
+
+## Parse JSON without the global ERROR log that JSON.parse_string pushes on bad
+## input. Empty/missing/old save text is a normal path here (callers fall back
+## to {} / 0), so it must stay silent instead of spamming hard errors.
+static func _parse(text: String) -> Variant:
+	var json := JSON.new()
+	if text.strip_edges().is_empty() or json.parse(text) != OK:
+		return null
+	return json.data
 
 
 ## Vector3 -> JSON-safe [x, y, z].
