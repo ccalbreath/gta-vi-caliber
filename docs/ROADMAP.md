@@ -1,5 +1,11 @@
 # Roadmap
 
+> **Where are we right now?** This file is the forward task board, and its
+> checkboxes lag the code. For the authoritative current state and the
+> dependency-ordered build order, read [`BUILD_ORDER.md`](BUILD_ORDER.md). For
+> which gameplay systems are wired versus still on the shelf,
+> [`SYSTEMS.md`](SYSTEMS.md) is the source of truth.
+
 > See [`../plan.md`](../plan.md) for the end-to-end strategy (Phases A–H, scope,
 > and the cut line). This file is the live task board (M0–M6); `plan.md` sits
 > above it. When the two disagree, fix one of them in the same PR.
