@@ -93,7 +93,7 @@ Groups the live scene already publishes: `player`, `player_health`,
 | `HeistCrew` | crew skill/cut -> odds + take | `add_member`, `success_chance`, `attempt`, `payout` | a heist-planning UI + a mission finale |
 | `MissionModifier` | optional per-mission challenges (time limit / no-damage / extra enemies / stay-undetected) that raise difficulty AND payout | `roll`, `activate`, `is_active`, `combined_difficulty`, `combined_payout_mult`, `apply_to_payout` | on mission start `roll(seed, n)` (deterministic) or let the player `activate` modifiers; read `combined_difficulty()` to scale enemy counts/timers (lowers `HeistCrew.success_chance`), gate each rule on `is_active(id)`, and size the cash reward via `apply_to_payout(base)` (paid out like `MissionReward`). Pure |
 | `StuntScore` | freeform trick-combo scorer (air/near-miss) | `add_trick`, `multiplier`, `pending_score`, `bank`, `wipe` | a stunt controller calls `add_trick` on detected tricks, `bank` on a clean land / `wipe` on crash; apply `cash_for`/`respect_for` to wallet + `PlayerProgression` |
-| `HitContract` | assassination board that moves the stock market | `available`, `accept`, `market_effect_of`, `complete`, `total_earned` | wired live via `HitContractBoard` (Node3D, group `hit_contract_board`, two Area3D zones Board+Target like `SideJobBoard`): step into Board → accept the next contract; reach Target → `complete()` banks the reward (`PlayerStats`) and fires the `market_effect` at a `StockMarket`-shaped node (group `stock_market`) via `apply_rivalry_shock` — the invest-then-hit loop. Verified in `hit_contract_probe`. Remaining hookup: a `stock_market` group node (StockMarket is a pure model; needs a thin wrapper) |
+| `HitContract` | assassination board that moves the stock market | `available`, `accept`, `market_effect_of`, `complete`, `total_earned` | wired live via `HitContractBoard` (Node3D, group `hit_contract_board`, two Area3D zones Board+Target like `SideJobBoard`): step into Board → accept the next contract; reach Target → `complete()` banks the reward (`PlayerStats`) and fires the `market_effect` at the live market node (group `stock_market` = `MarketEventCoordinator`) via `apply_rivalry_shock` — the invest-then-hit loop, now fully closed. Verified in `hit_contract_probe` |
 
 ## Economy / progression
 
@@ -111,7 +111,7 @@ Groups the live scene already publishes: `player`, `player_health`,
 | `PlayerProgression` | respect/XP + unlocks | `add_xp`, `level`, `unlocks_at`, `is_unlocked` | wired live via `ProgressionTracker` (missions grant XP) |
 | `PlayerSkills` | activity-based proficiency (drive/shoot/stamina...) | `train`, `level`, `tier`, `bonus`, `overall_mastery`, `to_dict` | call `train` from the matching activity (distance driven, shots landed); read `bonus(id)` to scale recoil/grip/sprint; persist via the save system |
 | `StatTracker` | lifetime stats + 100% | `add`, `is_achieved`, `completion_percent`, serialize | wired live via `StatsCoordinator` |
-| `StockMarket` | event-driven equities + tracked portfolio | `apply_rivalry_shock`, `apply_sector_event`, `price`, `buy`, `sell`, `unrealized_gain` | a brokerage/phone-app UI vs `PlayerStats`; feed mission kills, heists & district turf changes in as price shocks (the assassinate-a-rival-to-pump-the-stock loop) |
+| `StockMarket` | event-driven equities + tracked portfolio | `apply_rivalry_shock`, `apply_sector_event`, `price`, `buy`, `sell`, `unrealized_gain` | owned live by `MarketEventCoordinator` (group `stock_market`). Traded via `StockTerminal` (Area3D, group `stock_terminal`): walk into a terminal flat → buy `shares` of its company (charged via `PlayerStats`); price moves on events (a `HitContractBoard` hit, a wanted-rally); walk in holding → sell the position at the new price. The invest-then-hit swing, verified in `stock_terminal_probe` |
 
 ## Support
 
@@ -145,11 +145,13 @@ the busted/arrest fail-loop (`miami_arrest_probe`). `WantedEvasionController`,
 scene — copy their shape to wire the rest.
 
 `MarketEventCoordinator` is a ready-to-drop self-wiring node (cf. PaySprayShop):
-it owns a `StockMarket`, subscribes to the `wanted` group's `stars_changed` to
-rally defense stocks on a crime spree, and applies `HitContract` effects via
-`apply_hit_effect`. Its node-level wiring is CI-gated headless by
-`tests/market_event_probe.gd` (a mock tree, no scene file). Adding it to
-`miami.tscn` is the remaining step to make the stock-market loop live in play.
+it owns the one `StockMarket`, publishes itself in group `stock_market`,
+subscribes to the `wanted` group's `stars_changed` to rally defense stocks on a
+crime spree, and applies `HitContract` effects (via `apply_hit_effect` /
+`apply_rivalry_shock`). A `StockTerminal` trades its `.market` and a
+`HitContractBoard` shocks it — both find it by group. Its node-level wiring is
+CI-gated headless by `tests/market_event_probe.gd` and `tests/stock_terminal_probe.gd`.
+Adding it to `miami.tscn` is the remaining step to make the stock-market loop live.
 
 `CrimeReactionDirector` is its sibling on the same `wanted` hook: it owns a
 `NewsBulletin` + `DistrictEconomy` and, on a wanted spike, files a severity-scaled

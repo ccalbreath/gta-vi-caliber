@@ -139,5 +139,7 @@ step "black market probe"
 "$GODOT_BIN" --headless --path game --script res://tests/black_market_probe.gd
 step "hit contract probe"
 "$GODOT_BIN" --headless --path game --script res://tests/hit_contract_probe.gd
+step "stock terminal probe"
+"$GODOT_BIN" --headless --path game --script res://tests/stock_terminal_probe.gd
 
 printf '\nAll checks passed ✔\n'

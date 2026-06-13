@@ -31,6 +31,9 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	# Publish as the scene's live stock market so a brokerage terminal / contract
+	# board can find it by group (it owns the one market — no duplicate owners).
+	add_to_group("stock_market")
 	# The `wanted` node may be added after us; wire on the next idle frame.
 	call_deferred("_connect_wanted")
 
@@ -65,4 +68,14 @@ func apply_hit_effect(effect: Dictionary) -> bool:
 	)
 	if applied:
 		market_shocked.emit("hit:%s" % effect["company_id"])
+	return applied
+
+
+## Passthrough to the owned market's rivalry shock, so a node that holds an effect
+## as (id, magnitude, spillover) — e.g. HitContractBoard — can shock the market via
+## the group without unpacking into a Dictionary.
+func apply_rivalry_shock(company_id: String, magnitude: float, spillover: float) -> bool:
+	var applied: bool = market.apply_rivalry_shock(company_id, magnitude, spillover)
+	if applied:
+		market_shocked.emit("hit:%s" % company_id)
 	return applied
