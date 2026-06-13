@@ -22,15 +22,17 @@ brew install --cask godot && brew install git-lfs && git lfs install
 git clone https://github.com/duolahypercho/gta-vi-caliber.git
 cd gta-vi-caliber
 
-# 3. Play — boots straight into the one map, no editor needed:
+# 3. Play — opens on the title cinematic, no editor needed:
 godot --path game
 #    — or open it in the Godot editor and press F5:
 godot --path game --editor
 ```
 
-There is **one map** and it boots straight into play — no menus, no scene
-picker. The command above (or pressing F5 in the editor) drops you into the
-streaming Vice City world, ready to walk, drive, and trigger the wanted system.
+Launching the game opens with the **NEON BAY** title cinematic — a neon dusk-bay
+title reveal — which lands on the main menu; press **Play** to drop into the one
+streaming Vice City map, ready to walk, drive, and trigger the wanted system. The
+intro is skippable (press any key) and hands straight to the menu, so you're never
+more than a key or two from playing.
 
 ### Controls
 
@@ -48,11 +50,31 @@ More detail in [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Project status
 
-🟢 **Playable.** Launching the game drops you straight into a single streaming
-Vice City map: a third-person character, drivable vehicles, traffic and crowds,
+🟢 **Playable.** After the NEON BAY title cinematic and main menu, pressing Play
+drops you into a single streaming Vice City map: a third-person character,
+drivable vehicles, traffic and crowds,
 and the core GTA loop wired end to end (commit crimes → wanted stars → police
 dispatch → evade or get busted), plus missions and a property/economy layer.
 See [docs/ROADMAP.md](docs/ROADMAP.md) for what's next.
+
+## Graphics showcase — where we're headed
+
+![Vice City graphics showcase — a wet neon avenue at dusk](docs/images/graphics_showcase.png)
+
+The playable map is perf-gated so the *whole* streaming city holds 120 FPS. This
+separate, hand-crafted hero block shows the **visual ceiling** of the engine —
+everything turned up: real-time global illumination (SDFGI), screen-space
+reflections so the wet asphalt mirrors the neon, screen-space indirect light,
+volumetric dusk haze, ACES tonemapping, and bloom. A camera orbits the block on
+its own, so it plays as a live demo:
+
+```bash
+godot --path game res://scenes/world/graphics_showcase.tscn
+```
+
+It's a target, not the average frame — the streamed world trades some of this
+back for scale and framerate. See [docs/QUALITY.md](docs/QUALITY.md) for the
+honest fidelity assessment and the road to closing the gap.
 
 ## Support the project
 

@@ -92,6 +92,12 @@ step "headless import"
 step "smoke test"
 "$GODOT_BIN" --headless --path game --script res://tests/smoke_test.gd
 
+# --- 4b. intro cinematic boot gate -------------------------------------------
+# The boot scene is the "Sunset Sting" cinematic; assert it instances, the hero
+# title ignites, and it auto-advances to the main menu without input.
+step "intro probe"
+"$GODOT_BIN" --headless --path game --script res://tests/intro_probe.gd
+
 # --- 5. gdUnit4 unit tests ----------------------------------------------------
 step "gdUnit4 unit tests"
 "$GODOT_BIN" --headless --path game --script res://tests/run_tests.gd

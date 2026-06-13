@@ -1,0 +1,69 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/intro_sequence.gd" id="1_seq"]
+[ext_resource type="Script" path="res://scripts/ui/menu_backdrop.gd" id="2_back"]
+[ext_resource type="Script" path="res://scripts/ui/intro_behind.gd" id="3_behind"]
+[ext_resource type="Script" path="res://scripts/ui/intro_title.gd" id="4_title"]
+[ext_resource type="Script" path="res://scripts/ui/intro_foreground.gd" id="5_fore"]
+[ext_resource type="Shader" path="res://shaders/title_neon.gdshader" id="6_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_title"]
+shader = ExtResource("6_shader")
+
+[node name="IntroSequence" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_seq")
+
+[node name="BG" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="Backdrop" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+modulate = Color(1, 1, 1, 0)
+script = ExtResource("2_back")
+
+[node name="BehindTitle" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("3_behind")
+
+[node name="TitleMaster" type="Control" parent="."]
+material = SubResource("ShaderMaterial_title")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+modulate = Color(1, 1, 1, 0)
+script = ExtResource("4_title")
+
+[node name="Foreground" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("5_fore")
+
+[node name="Fade" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0)

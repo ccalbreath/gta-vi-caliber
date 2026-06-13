@@ -25,8 +25,12 @@ explicitly in the PR body — do not claim checks passed.
 
 ## Hard rules
 
-1. `main` stays playable: `godot --path game` must boot to a controllable
-   character after your change.
+1. `main` stays playable end-to-end: `godot --path game` boots the NEON BAY
+   intro cinematic (skippable with any key, auto-advances to the main menu), and
+   Play loads `res://scenes/world/miami.tscn` into a controllable character. The
+   `intro probe` gate enforces boot→menu; the `smoke test` gate enforces the
+   world scene has a working player rig. Do not "fix" the menu away by pointing
+   `run/main_scene` back at the map — the intro is intentional.
 2. Typed GDScript only; tabs; `snake_case` files; `PascalCase` class names.
 3. Extract testable logic into plain `RefCounted`/static-function classes
    (pattern: `game/scripts/player/player_motion.gd`) and add a
