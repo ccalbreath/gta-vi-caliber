@@ -67,6 +67,11 @@ var _fade_tween: Tween = null
 
 
 func _ready() -> void:
+	# Boot-time: honour saved audio/display settings from the very first frame.
+	# The intro is the boot scene now, so without this the player would hear the
+	# whole intro at the default volume until the menu loaded and re-applied them.
+	SettingsPanel.apply(SettingsPanel.load_settings())
+
 	_underline.texture = _sunset_bar()
 	_card.modulate.a = 0.0
 	_title.modulate.a = 0.0

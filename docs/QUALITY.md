@@ -5,6 +5,23 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 23) — intro honours saved settings from frame one
+
+Small correctness win now that the intro is the boot scene: it applies the
+player's saved audio/display settings in `_ready`
+(`SettingsPanel.apply(SettingsPanel.load_settings())`, the same call the menu
+makes). Before this, the whole ~7 s intro ran at the *default* volume/window mode
+until the menu loaded and re-applied them — a muted player still heard a
+full-volume intro. `intro probe` now also asserts the master bus already sits at
+the loaded/default volume after boot, so the behaviour can't silently regress.
+
+Gate green for these changes — unit tests **2451 passed, 0 failed** + intro probe
++ all 12 wiring probes. (Note: a parallel lane has an *uncommitted, untracked*
+`test_business_venture.gd` that trips the documented Dictionary-Variant inference
+trap — `var x := dict[k] >= n` needs `var x: bool =`; it's not on the branch and
+doesn't reach CI, and it'll block their own commit until they fix it. Verified my
+green by setting their untracked file aside and restoring it unchanged.)
+
 ## 2026-06-12 (cont. 22) — intro elevated: neon ignition + cinematic letterbox
 
 Pushed the boot intro from "clean" toward "premium" with two on-theme cinematic

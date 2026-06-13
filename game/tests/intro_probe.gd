@@ -56,6 +56,18 @@ func _run_checks() -> PackedStringArray:
 	if not failures.is_empty():
 		return failures
 
+	# Boot applied saved settings from frame one: the master bus already sits at
+	# the loaded/default volume, so the player never hears a wrong-volume intro.
+	var bus := AudioServer.get_bus_index("Master")
+	if bus >= 0:
+		var saved_volume: float = SettingsPanel.load_settings()["volume"]
+		var want_db := SettingsPanel.volume_to_db(saved_volume)
+		var got_db := AudioServer.get_bus_volume_db(bus)
+		if absf(got_db - want_db) > 0.5:
+			failures.append(
+				"boot did not apply audio settings (%.2f dB vs %.2f)" % [got_db, want_db]
+			)
+
 	# Beat 1 — the studio card peaks first while the title is still hidden.
 	_advance(_intro, 1.0)
 	if card.modulate.a < 0.9:
