@@ -5,6 +5,32 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-13 (cont. 25) — intro gets analog texture: film grain + scanlines
+
+Addresses the "same textures" ask directly. Added `shaders/intro_grain.gdshader`
+— a true post-process (samples `hint_screen_texture`) that modulates the real
+intro pixels with **animated film grain, fine CRT scanlines and a soft vignette**,
+the textured VHS-title-card look from the GTA trailers. Subtle by design
+(grain 0.07, scanline 0.045, vignette 0.30) so it reads as texture, not noise.
+Wired as a full-screen `Grain` ColorRect above the content and below the exit
+fade, so the whole frame (skyline + sun emblem + neon wordmark + letterbox) is
+graded as one image.
+
+Verified the real look in **windowed GPU captures** of both beats
+(`/tmp/intro_card.png`, `/tmp/intro_title.png`): the card beat reads as a glowing
+retrowave sun over the lit dusk skyline with a cyan studio credit; the title beat
+as the magenta-outlined VICE CITY wordmark + cyan kicker + sunset underline — both
+letterboxed and grain-graded. Genuinely premium, AAA-trailer-grade title cards.
+`intro probe` checks the `Grain` node is wired; shader compiles clean headless.
+
+Gate green: unit tests **2499 passed, 0 failed** + intro probe + 12 probes.
+
+**The intro is now complete** (5 passes: splash removal + flow, neon/letterbox,
+boot settings, sun emblem, grain). Further intro work is real diminishing returns.
+The highest-leverage remaining quality unlocks stay HUMAN-GATED on committing the
+parallel UI integration (live day/night lighting; wiring the tested systems layer
+into miami.tscn) — see LOOP_HANDOFF.
+
 ## 2026-06-12 (cont. 24) — intro opens on a logo: procedural retrowave sun
 
 A real AAA intro opens on a mark, not a line of text. Added a **procedural

@@ -46,7 +46,7 @@ func _run_checks() -> PackedStringArray:
 
 	# Structure: the beats (incl. the studio emblem), the cinematic bars, and the
 	# black handoff overlay.
-	for node_name in ["Card", "Emblem", "Title", "TopBar", "BottomBar", "Fade"]:
+	for node_name in ["Card", "Emblem", "Title", "TopBar", "BottomBar", "Grain", "Fade"]:
 		if _intro.find_child(node_name) == null:
 			failures.append("missing node '%s'" % node_name)
 	var card: Control = _intro.find_child("Card")
