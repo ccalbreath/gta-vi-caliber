@@ -135,5 +135,7 @@ step "clothing store probe"
 "$GODOT_BIN" --headless --path game --script res://tests/clothing_store_probe.gd
 step "slot machine probe"
 "$GODOT_BIN" --headless --path game --script res://tests/slot_machine_probe.gd
+step "black market probe"
+"$GODOT_BIN" --headless --path game --script res://tests/black_market_probe.gd
 
 printf '\nAll checks passed ✔\n'
