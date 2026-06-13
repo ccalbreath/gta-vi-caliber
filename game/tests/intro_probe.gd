@@ -44,8 +44,9 @@ func _process(_delta: float) -> bool:
 func _run_checks() -> PackedStringArray:
 	var failures: PackedStringArray = []
 
-	# Structure: the beats, the cinematic bars, and the black handoff overlay.
-	for node_name in ["Card", "Title", "TopBar", "BottomBar", "Fade"]:
+	# Structure: the beats (incl. the studio emblem), the cinematic bars, and the
+	# black handoff overlay.
+	for node_name in ["Card", "Emblem", "Title", "TopBar", "BottomBar", "Fade"]:
 		if _intro.find_child(node_name) == null:
 			failures.append("missing node '%s'" % node_name)
 	var card: Control = _intro.find_child("Card")

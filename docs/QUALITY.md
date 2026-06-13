@@ -5,6 +5,27 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 24) — intro opens on a logo: procedural retrowave sun
+
+A real AAA intro opens on a mark, not a line of text. Added a **procedural
+Art-Deco "outrun" sun emblem** (`scripts/ui/intro_emblem.gd`) above the studio
+card — the Vice City sunset signature: a yellow crown fading through orange to
+magenta, cut by widening horizontal slats toward the base, with a soft glow halo.
+Drawn entirely in `_draw` (44 chord bands), **zero assets**, so it scales crisply
+and needs no texture import; self-contained brand colours so it boots clean. It
+bobs gently and the halo pulses.
+
+Verified the look in **isolation** (windowed GPU capture, `/tmp/emblem_shot.png`,
+360 px over the brand near-black) — it reads exactly as the iconic synthwave sun;
+the faint band-stepping suits the 80s aesthetic and shrinks away at the intro's
+152 px display size. (2D Control captures ARE reliable headless/windowed here,
+unlike the fog + FloatingOrigin 3D world — so isolation verification works for
+intro chrome.) `intro probe` now also checks the emblem node is wired.
+
+Gate green: unit tests **2476 passed, 0 failed** + intro probe + 12 probes. (The
+parallel lane's `test_business_venture.gd` Variant trap from cont. 23 is now
+fixed on their side — annotated `var sell_ok: bool =`.)
+
 ## 2026-06-12 (cont. 23) — intro honours saved settings from frame one
 
 Small correctness win now that the intro is the boot scene: it applies the

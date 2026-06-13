@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/intro_sequence.gd" id="1_intro"]
 [ext_resource type="Script" path="res://scripts/ui/menu_backdrop.gd" id="2_back"]
+[ext_resource type="Script" path="res://scripts/ui/intro_emblem.gd" id="3_emblem"]
 
 [node name="Intro" type="Control"]
 layout_mode = 3
@@ -51,6 +52,12 @@ mouse_filter = 2
 [node name="VBox" type="VBoxContainer" parent="Card/Center"]
 layout_mode = 2
 theme_override_constants/separation = 12
+
+[node name="Emblem" type="Control" parent="Card/Center/VBox"]
+custom_minimum_size = Vector2(152, 152)
+layout_mode = 2
+size_flags_horizontal = 4
+script = ExtResource("3_emblem")
 
 [node name="CardKicker" type="Label" parent="Card/Center/VBox"]
 modulate = Color(0.22, 0.87, 0.96, 1)
