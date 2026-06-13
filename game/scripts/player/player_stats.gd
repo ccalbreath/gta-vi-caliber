@@ -55,7 +55,10 @@ func add_armor(amount: float) -> void:
 
 
 func add_money(amount: int) -> void:
-	money += amount
+	# Floor at zero so a large negative adjustment (a fine, a failed deal) can't
+	# drive the wallet negative — matches CharacterRoster.add_money. spend_money
+	# stays the guarded debit path for affordability checks.
+	money = maxi(0, money + amount)
 	money_changed.emit(money)
 
 
