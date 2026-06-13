@@ -89,6 +89,12 @@ Everything in `docs/ASSETS.md` applies. On top of that:
   ledger footnote in `docs/ASSETS.md`); meshes we *generate* from footprints
   are our own work, but the extracted data files keep their attribution and
   a credits entry.
+- **Watermark/logo audit is part of license verification.** Inbound
+  assets (Sketchfab, OpenGameArt, tool-bundled module packs) sometimes
+  carry author watermarks, embedded logos, or branded geometry — Buildify
+  ships literal Blender-logo sign meshes, which baked straight into the
+  first POC export. Audit every inbound asset for them (textures AND
+  mesh shapes) before it touches a scene; see the export gate in §10.
 - Nothing enters the repo without a confirmed license. One bad asset
   poisons the project.
 
@@ -241,11 +247,32 @@ driven entirely over the bridge — zero Blender clicks:
   from group-node sockets, which survive the version migration; don't
   "fix" them; (c) one muted Frame node — cosmetic, ignore; (d) the roof
   `Set Material` node arrives genuinely unbound — rebind it.
-- **Density warning:** Buildify output is arch-viz density (~300k+ tris
-  for an 18-floor tower after conservative limited dissolve). Fine for
-  one hero/POC asset; bulk city use needs an optimization lane (module
-  simplification, LODs, or Godot-side MultiMesh from module GLBs +
-  transform lists) before it ships at scale.
+- **Density warning:** Buildify output is arch-viz density (~200k+ tris
+  for an 18-floor tower after removing branded modules and a conservative
+  limited dissolve). Fine for one hero/POC asset; bulk city use needs an
+  optimization lane (module simplification, LODs, or Godot-side MultiMesh
+  from module GLBs + transform lists) before it ships at scale.
+- **Branded content warning:** Buildify's detail collections include
+  street-sign modules modeled as Blender-logo boards (logo + wordmark as
+  GEOMETRY, so no image audit catches them). Delete `street_sign_a/b`
+  before generating. Audit any module pack for branded shapes by name and
+  by eye before first use.
+
+### Mandatory export gate (no watermarks/logos/placeholders, ever)
+
+Before ANY GLB/texture export, in this order — export-time, not
+gauntlet-time:
+
+1. **Missing-image audit** in Blender: every image datablock and every
+   image node resolves to a real, intended file on disk — zero
+   missing/unpacked/generated stand-ins. Blender silently substitutes a
+   placeholder for broken references rather than erroring.
+2. **Embedded-image enumeration:** after export, parse the GLB and list
+   every embedded image; each must trace to a deliberately sourced,
+   ledgered file (`docs/ASSETS.md`). Nothing embeds that we didn't choose.
+3. The gauntlet close-up lens (§12) includes "no watermarks, logos, or
+   placeholder imagery visible" as an explicit pass criterion — the
+   by-eye backstop, never the primary catch.
 
 ## 11. Staged rollout (proposed, repo-adjusted)
 
@@ -261,3 +288,54 @@ driven entirely over the bridge — zero Blender clicks:
 Every stage: `tools/check.sh` green, ledger rows in the same commit as the
 binaries, `git lfs status` verified, in-game screenshot judged by eye
 before any PR.
+
+## 12. The integration gauntlet (mandatory)
+
+**No asset enters the live scene without a passed gauntlet — automated
+checks AND human eyes on the contact sheet.** The gauntlet exists because
+assets that look fine in a clean test scene fail under real conditions:
+grazing golden-hour sun, the night grade, distance bloom, free-look
+motion. (The road-PBR rounds proved each of those failure modes the hard
+way.)
+
+The stage is `game/tests/asset_gauntlet.tscn` — a self-contained scene
+that replicates the live miami.tscn rendering stack verbatim (PR #33
+physical sky + SkyController, the real Environment grade, the WorldQuality
+tier script, a ReflectionProbe). It never references miami.tscn. Run:
+
+```
+ASSET=res://assets/<path-to>.glb \
+SHOT_DIR=session_captures/gauntlet/<asset_name> \
+godot --path game --script res://tests/asset_gauntlet_capture.gd
+echo $?   # check it directly — never through a pipe
+```
+
+The battery, all automated:
+
+- **Time sweep** — noon, golden hour 17.8 (grazing sun, the known worst
+  case), night 22.0, deep night 2.0.
+- **Distance sweep** — close-up, 50 m, 220 m, at noon AND at night (the
+  night-far case is where emissive windows fuse into bloom blobs).
+- **Motion pass** — a free-look-style approach arc at walking height with
+  sinusoidal view swing (deliberately NOT a fixed dolly), with a
+  same-pose consecutive-frame comparison at every arc pose; a flicker
+  fraction above `GauntletChecks.FLICKER_MAX_FRACTION` (z-fighting,
+  shimmer) is an automatic FAIL.
+- **Glass sweep** — when reflective/transparent materials are detected
+  (or `GLASS=1` forces it): incidence angles 5° → 85° across the facade,
+  with the stage's ReflectionProbe providing something to reflect.
+- **Pixel sanity on every shot** — blank and single-tone (uniform)
+  detection via `GauntletChecks` (pure logic, unit-tested in
+  `tests/unit/test_gauntlet_checks.gd`).
+- **Close-up lens pass criteria (by eye):** texture detail resolves, no
+  aliasing/shimmer, and **no watermarks, logos, or placeholder imagery
+  visible** — the backstop for the §10 export gate. The first gauntlet
+  run caught Blender-logo signboards that every automated check missed.
+
+Output: numbered shots plus `contact_sheet.png` under
+`session_captures/gauntlet/<asset_name>/`. The verdict protocol: a human
+opens every image (or at minimum the contact sheet at full size), judges
+each lens, and records pass/fail per lens in the session notes / PR body.
+**A FAIL on any lens blocks the asset** — fix and re-run; a failed
+gauntlet is a finding, not an embarrassment. Exit code 0 from the script
+is necessary but never sufficient.
