@@ -267,6 +267,21 @@ driven entirely over the bridge — zero Blender clicks:
   shared ambientCG sets in Godot via `scripts/props/building_facade.gd`
   (per-building wall set + tint + glass colour). GLBs drop to 0.5-9 MB
   and the textures live once in `game/assets/materials/`.
+  - `building_facade` matches slots tolerantly: it strips Godot's `.NNN`
+    duplicate suffixes AND maps Buildify's raw `proxy_mat_*` names to
+    slots, so it works even when the generator's rename didn't take (a
+    real bug — repeated Buildify re-appends duplicate the proxy
+    materials, silently defeating an exact-name remap). It uses
+    **triplanar** facade projection (UV-independent) and drives its own
+    window emission from the day/night clock, so it does not depend on a
+    sibling node's `_ready` order.
+- **Houses are procedural, NOT Buildify.** Buildify is a flat-roof
+  apartment/office generator: no pitched roof, no residential door/porch
+  modules — at 1-2 floors it makes a corniced box, not a house. The
+  residential set is a small bmesh generator instead: gable roof (eave
+  overhang + gable ends), human-scale door, home-sized windows, optional
+  porch + chimney. Same named-slot + `building_facade` convention (adds
+  ROOF2 terracotta + DOOR wood slots).
 - **Branded content warning:** Buildify's detail collections include
   street-sign modules modeled as Blender-logo boards (logo + wordmark as
   GEOMETRY, so no image audit catches them). Delete `street_sign_a/b`
