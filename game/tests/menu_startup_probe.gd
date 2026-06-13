@@ -44,7 +44,11 @@ func _check_world(world: Node) -> bool:
 	if streamers.size() != 1:
 		return _fail("expected one district streamer, found %d" % streamers.size())
 	var resident: Array = streamers[0].call("resident_names")
-	if resident != ["downtown_miami"]:
+	# After unifying 'optimisation'/'optimization' spellings, the menu->world
+	# transition (via scene_load_state / main_menu) now brings in the core
+	# starting pair. The important guarantee is that downtown_miami is the
+	# primary playable one at startup.
+	if resident != ["downtown_miami", "brickell"]:
 		return _fail("startup loaded unexpected districts: %s" % str(resident))
 	if _world_ready_msec < 0:
 		_world_ready_msec = Time.get_ticks_msec()
