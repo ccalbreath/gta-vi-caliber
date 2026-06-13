@@ -5,6 +5,32 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-13 (cont. 28) — 3D hero render: attempted, NOT shipped (honest)
+
+Tried to add a 3D "showroom" hero to the intro — a stylised car on a turntable
+under neon key/rim lights with real shadows + PBR, in its own `SubViewport` —
+to serve the "same textures/shadow/physics" bar with actual 3D. Built it fully
+self-contained (geometry/lights/camera/env in code, no gameplay coupling) and
+verified in isolation across three lighting/camera passes.
+
+**Did not ship it.** Two reasons: (1) the car kept rendering into the
+bottom-right quadrant regardless of camera position or `look_at` /
+`look_at_from_position` — a SubViewport→ViewportTexture compositing/framing
+quirk that would need a real rabbit-hole to pin down; (2) even ignoring framing,
+flat-shaded primitive boxes read as cheap next to the finished 2D intro (sun
+emblem + neon wordmark + grain). Shipping it would have *degraded* a complete,
+polished sequence — so per "don't ship something worse," the attempt was deleted,
+not committed. Recorded here so it isn't blindly re-attempted; a 3D hero is only
+worth it with a real vehicle GLB (not primitives) and the SubViewport framing
+solved first.
+
+**State:** the intro deliverable is COMPLETE (cont. 21–27: splash removal + flow,
+neon/letterbox, boot settings, sun emblem, grain, backdrop stars/clouds,
+world-preload). High-value UNBLOCKED front-end work is now genuinely exhausted.
+The transformative levers (live day/night lighting; wiring the tested systems
+into `miami.tscn`) remain gated on the human committing the parallel UI tree —
+see LOOP_HANDOFF. Not manufacturing filler past this point.
+
 ## 2026-06-13 (cont. 27) — load-masking: warm the world during the intro
 
 The boot→gameplay seam used to hitch: the menu's Play did a cold
