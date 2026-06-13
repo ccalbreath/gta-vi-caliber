@@ -37,6 +37,15 @@ func _initialize() -> void:
 		return
 	_scene = packed.instantiate()
 	root.add_child(_scene)
+	# FloatingOrigin rebases the world as the player drifts far from the origin.
+	# This probe teleports the player to fixed *absolute* waypoints every frame,
+	# which would make the origin chase the teleports and the streamer's observer
+	# position diverge. Drop it so streaming is exercised against absolute world
+	# coordinates directly (continuous play, where FloatingOrigin belongs, never
+	# teleports like this).
+	var floating_origin := _scene.get_node_or_null("FloatingOrigin")
+	if floating_origin != null:
+		floating_origin.free()
 	_player = _scene.get_node_or_null("Player") as CharacterBody3D
 	_streamer = _scene.get_node_or_null("Streamer")
 	if _player == null or _streamer == null:
