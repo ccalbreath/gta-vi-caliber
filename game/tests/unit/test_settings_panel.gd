@@ -46,3 +46,10 @@ func test_sensitivity_monotonic() -> bool:
 func test_defaults_round_trip_shape() -> bool:
 	var d := SettingsPanel.defaults()
 	return d.has("volume") and d.has("fullscreen") and d.has("sensitivity") and d.has("graphics")
+
+
+func test_graphics_menu_tier_clamps_to_visible_options() -> bool:
+	return (
+		GraphicsQuality.clamp_menu_tier(-10) == GraphicsQuality.Tier.LOW
+		and GraphicsQuality.clamp_menu_tier(99) == GraphicsQuality.Tier.HIGH
+	)
