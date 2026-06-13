@@ -10,7 +10,12 @@ extends SceneTree
 
 const SETTLE_FRAMES: int = 4
 const CONTROLLERS: Array = [
-	"player_disguise", "contraband", "gang_territory", "stock_market", "rival_retaliation"
+	"player_disguise",
+	"contraband",
+	"gang_territory",
+	"stock_market",
+	"rival_retaliation",
+	"player_bounty",
 ]
 const ACTIVITIES: Array = [
 	"clothing_store", "slot_machine", "black_market", "stock_terminal", "turf_zone"
