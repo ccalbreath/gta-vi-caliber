@@ -178,7 +178,7 @@ void fragment() {
 	//  as painted stucco instead of plastic. Glass curtain-wall skips it.
 	// Grain is only legible up close; fade it out with view distance so far
 	// walls don't shimmer/alias (the screen-space derivative gets noisy there).
-	float grain_fade = 1.0 - smoothstep(10.0, 45.0, length(VERTEX));
+	float grain_fade = 1.0 - smoothstep(6.0, 18.0, length(VERTEX));
 	float stucco = wall * (1.0 - is_glass) * grain_fade;
 	if (stucco > 0.001) {
 		vec2 st = vec2(u, v) * 13.0;

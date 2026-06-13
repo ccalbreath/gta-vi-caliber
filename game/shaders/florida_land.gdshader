@@ -40,7 +40,7 @@ float vnoise(vec2 p) {
 float fbm(vec2 p) {
 	float sum = 0.0;
 	float amp = 0.5;
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 3; i++) {
 		sum += vnoise(p) * amp;
 		p *= 2.03;
 		amp *= 0.5;
@@ -78,16 +78,17 @@ void fragment() {
 	float dist = length(w_pos - CAMERA_POSITION_WORLD);
 	float aa = clamp((dist - 40.0) / 140.0, 0.0, 1.0);
 
-	float e = 2.0;
-	float h_l = fbm((p - vec2(e, 0.0)) * detail_scale);
-	float h_r = fbm((p + vec2(e, 0.0)) * detail_scale);
-	float h_d = fbm((p - vec2(0.0, e)) * detail_scale);
-	float h_u = fbm((p + vec2(0.0, e)) * detail_scale);
 	float ns = normal_strength * (1.0 - aa);
-	vec3 n = normalize(vec3((h_l - h_r) * ns, 1.0, (h_d - h_u) * ns));
+	vec3 sx = dFdx(VERTEX);
+	vec3 sy = dFdy(VERTEX);
+	vec3 r1 = cross(sy, NORMAL);
+	vec3 r2 = cross(NORMAL, sx);
+	float det = dot(sx, r1);
+	vec3 grad = sign(det) * (dFdx(detail) * r1 + dFdy(detail) * r2);
+	vec3 n = normalize(abs(det) * NORMAL - ns * grad);
 
 	ALBEDO = col;
-	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
+	NORMAL = n;
 	// Matte grass/marsh: high roughness floor + low specular so wet sheen never
 	// blows out, trending to 1.0 roughness in the distance.
 	float rough = mix(0.96, 0.86, marsh * 0.45);

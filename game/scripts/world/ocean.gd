@@ -15,7 +15,7 @@ extends MeshInstance3D
 @export var size_m: float = 1400.0
 ## Subdivisions per side. Vertex spacing = size_m / resolution; short waves
 ## below that still shade correctly (per-pixel normals) but won't displace.
-@export_range(16, 512) var resolution: int = 280
+@export_range(16, 512) var resolution: int = 200
 ## Scales every wave amplitude; 0 is a dead-flat sea.
 @export_range(0.0, 4.0) var amplitude_scale: float = 1.0
 ## Time multiplier for wave travel speed.

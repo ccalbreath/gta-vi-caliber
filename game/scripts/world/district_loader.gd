@@ -22,7 +22,7 @@ const SIDEWALK_VISUAL_Y: float = 0.28
 const GROUND_SURFACE_Y: float = 0.4
 
 ## res:// path to the district JSON (OSM-derived, ODbL).
-@export_file("*.json") var district_path: String = "res://assets/world/downtown_la.json"
+@export_file("*.json") var district_path: String = "res://assets/world/downtown_miami.json"
 ## Build collision for buildings. Off speeds up pure-visual previews.
 @export var build_collision: bool = true
 ## Spawn streetlight poles along roads (toggled at night by TimeOfDay).
@@ -266,6 +266,8 @@ func _build_street_furniture(roads: Array, proj: GeoProjection) -> void:
 	var container := Node3D.new()
 	container.name = "StreetFurniture"
 	container.position.y = 0.15  # sit props on the raised sidewalk, not the gutter
+	container.visibility_range_end = 120.0
+	container.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	add_child(container)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 99
@@ -316,6 +318,8 @@ func _build_trees(roads: Array, proj: GeoProjection) -> void:
 	rng.seed = 1337
 	var container := Node3D.new()
 	container.name = "Trees"
+	container.visibility_range_end = 300.0
+	container.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	add_child(container)
 
 	var placed := 0
@@ -409,6 +413,8 @@ func _add_palm_layer(
 	mmi.name = node_name
 	mmi.multimesh = mm
 	mmi.material_override = mat
+	mmi.visibility_range_end = 300.0
+	mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	add_child(mmi)
 
 
@@ -504,6 +510,8 @@ func _build_streetlights(roads: Array, proj: GeoProjection) -> void:
 	var container := Node3D.new()
 	container.name = "StreetLights"
 	container.position.y = 0.15  # poles rise from the raised sidewalk
+	container.visibility_range_end = 200.0
+	container.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	add_child(container)
 	# All lamp heads share lamp_mat, so one switch fades them all with day/night.
 	var switch := StreetlightSwitch.new()

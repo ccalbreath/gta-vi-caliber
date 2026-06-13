@@ -53,7 +53,20 @@ void fragment() {
 	float curb = 1.0 - smoothstep(curb_frac, curb_frac + 0.01, u);
 	col = mix(col, curb_color + vec3(patch), curb);
 
+	// Concrete micro-surface bump from the hash-based patch noise, giving the
+	// flat slabs a tactile quality under raking light.
+	vec3 sx = dFdx(VERTEX);
+	vec3 sy = dFdy(VERTEX);
+	vec3 r1 = cross(sy, NORMAL);
+	vec3 r2 = cross(NORMAL, sx);
+	float det = dot(sx, r1);
+	vec3 bump_grad = sign(det) * (dFdx(patch) * r1 + dFdy(patch) * r2);
+	float dist = length(VERTEX);
+	float aa = clamp((dist - 20.0) / 80.0, 0.0, 1.0);
+
 	ALBEDO = col;
-	ROUGHNESS = 0.93;
+	NORMAL = normalize(abs(det) * NORMAL - (0.03 * (1.0 - aa)) * bump_grad);
+	ROUGHNESS = mix(0.93, 1.0, aa * 0.4);
 	METALLIC = 0.0;
+	SPECULAR = mix(0.3, 0.12, aa);
 }
