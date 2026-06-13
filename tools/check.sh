@@ -125,6 +125,12 @@ run_godot_checked "menu startup probe" "$GODOT_BIN" --headless --path game --scr
 step "gdUnit4 unit tests"
 run_godot_checked "gdUnit4 unit tests" "$GODOT_BIN" --headless --path game --script res://tests/run_tests.gd
 
+# --- 5b. legacy unit tests (RefCounted suites, func test_*() -> bool) ---------
+# gdUnit4 only discovers GdUnitTestSuite scripts; the pre-port suites are the
+# bulk of the project's tests and must keep gating until issue #3 finishes.
+step "legacy unit tests"
+"$GODOT_BIN" --headless --path game --script res://tests/run_legacy_tests.gd
+
 # --- 6. playable-map integration probes --------------------------------------
 # Frame-stepped runtime checks the one-frame smoke test cannot make: the main
 # map's gameplay stack is wired (self-wiring system nodes registered) and the
@@ -154,6 +160,16 @@ step "miami helicopter probe"
 run_godot_checked "miami helicopter probe" "$GODOT_BIN" --headless --path game --script res://tests/miami_helicopter_probe.gd
 step "miami day-night probe"
 run_godot_checked "miami day-night probe" "$GODOT_BIN" --headless --path game --script res://tests/miami_day_night_probe.gd
+step "miami evade probe"
+run_godot_checked "miami evade probe" "$GODOT_BIN" --headless --path game --script res://tests/miami_evade_probe.gd
+step "miami property probe"
+run_godot_checked "miami property probe" "$GODOT_BIN" --headless --path game --script res://tests/miami_property_probe.gd
+step "miami vehicle mod probe"
+run_godot_checked "miami vehicle mod probe" "$GODOT_BIN" --headless --path game --script res://tests/miami_vehicle_mod_probe.gd
+step "miami citizen probe"
+run_godot_checked "miami citizen probe" "$GODOT_BIN" --headless --path game --script res://tests/miami_citizen_probe.gd
+step "contraband market probe"
+run_godot_checked "contraband market probe" "$GODOT_BIN" --headless --path game --script res://tests/contraband_market_probe.gd
 
 # --- 7. systems wiring probes (scene-free: self-wiring nodes in a mock tree) --
 step "market event probe"

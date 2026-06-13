@@ -93,7 +93,7 @@ Groups the live scene already publishes: `player`, `player_health`,
 | `PropertyOwnership` | buy properties + passive income | `buy`, `accrue`, `collect`, `daily_income` | property triggers + a daily income tick |
 | `BusinessVenture` | own + OPERATE production businesses (supply→product→sell) — the active layer atop PropertyOwnership's passive income | `acquire`, `buy_supplies`, `accrue`, `hire`, `upgrade`, `production_rate`, `sale_price`, `sell`, `total_product` | a business-property trigger `acquire()`s against `PlayerStats.money`; a daily/world tick calls `accrue(delta_days)`; a "manage" UI calls `buy_supplies`/`hire`/`upgrade`; at cash-out pass `DistrictEconomy.desirability(district)` as `demand` and a `WantedSystem`/`FactionStanding`-derived 0..1 `heat` into `sale_price`/`sell`, then credit `proceeds`. Pure — wallet resolved by caller |
 | `DistrictEconomy` | living real-estate: turf/crime move desirability | `desirability`, `property_value`, `income_multiplier`, `set_control`, `add_heat`, `invest` | feed `GangTerritory.influence_in` into `set_control` and crimes into `add_heat`; scale `PropertyOwnership` price/income by `desirability` |
-| `ContrabandMarket` | buy-low/sell-high arbitrage | `price_in`, `buy`, `sell`, `best_market`, `bust_risk` | district price boards + a carried-inventory risk |
+| `ContrabandMarket` | buy-low/sell-high arbitrage | `price_in`, `buy`, `sell`, `best_market`, `bust_risk` | **wired live** via `ContrabandDealer` (Node3D, group `contraband_dealer`): a DealZone Area3D buys, a FenceZone Area3D in a dearer district sells. CI-guarded by `tests/contraband_market_probe.gd`. TODO: surface `bust_risk` on police proximity + a price-board UI |
 | `CasinoGames` | roulette/slots/blackjack | `roulette_payout`, `slot_payout`, `blackjack_settle`, bankroll | a casino UI vs `PlayerStats` chips |
 | `PlayerProgression` | respect/XP + unlocks | `add_xp`, `level`, `unlocks_at`, `is_unlocked` | wired live via `ProgressionTracker` (missions grant XP) |
 | `PlayerSkills` | activity-based proficiency (drive/shoot/stamina...) | `train`, `level`, `tier`, `bonus`, `overall_mastery`, `to_dict` | call `train` from the matching activity (distance driven, shots landed); read `bonus(id)` to scale recoil/grip/sprint; persist via the save system |
@@ -127,25 +127,30 @@ the busted/arrest fail-loop (`miami_arrest_probe`). `WantedEvasionController`,
 `PaySprayShop`, and `SideJobBoard` are the self-wiring coordinators already in the
 scene — copy their shape to wire the rest.
 
-`MarketEventCoordinator` is a ready-to-drop self-wiring node (cf. PaySprayShop):
-it owns a `StockMarket`, subscribes to the `wanted` group's `stars_changed` to
-rally defense stocks on a crime spree, and applies `HitContract` effects via
-`apply_hit_effect`. Its node-level wiring is CI-gated headless by
-`tests/market_event_probe.gd` (a mock tree, no scene file). Adding it to
-`miami.tscn` is the remaining step to make the stock-market loop live in play.
+`MarketEventCoordinator` is **wired live in `miami.tscn`** (self-wiring node, cf.
+PaySprayShop): it owns a `StockMarket`, subscribes to the `wanted` group's
+`stars_changed` to rally defense stocks on a crime spree, and applies
+`HitContract` effects via `apply_hit_effect`. Node logic is CI-gated headless by
+`tests/market_event_probe.gd` (a mock tree); the live in-scene connection is
+asserted by `tests/miami_wiring_probe.gd`. Remaining to surface to the player: a
+brokerage/ticker UI reading its public `market`.
 
-`CrimeReactionDirector` is its sibling on the same `wanted` hook: it owns a
-`NewsBulletin` + `DistrictEconomy` and, on a wanted spike, files a severity-scaled
-headline and heats the active district (which cools over time via `_process`). The
-two directors split the signal cleanly — market vs news+real-estate — so both can
-sit in the scene. CI-gated headless by `tests/crime_reaction_probe.gd`.
+`CrimeReactionDirector` is its sibling on the same `wanted` hook and is **wired
+live in `miami.tscn`** too: it owns a `NewsBulletin` + `DistrictEconomy` and, on a
+wanted spike, files a severity-scaled headline and heats the active district
+(which cools over time via `_process`). The two directors split the signal cleanly
+— market vs news+real-estate. Node logic CI-gated by `tests/crime_reaction_probe.gd`;
+live connection asserted by `tests/miami_wiring_probe.gd`. Remaining: drain
+`news.next_bulletin()` into a radio NEWS slot.
 
 `CharacterSwitcher` owns a `CharacterRoster` and syncs each lead's wallet through
 the live `player_stats` node on `request_switch()` (write the current wallet back,
 load the incoming lead's), so per-character money persists across switches. CI-gated
 headless by `tests/character_switch_probe.gd`.
 
-`AmbientEventDirector` drives `AmbientEvents` on a timer: each tick it builds
+`AmbientEventDirector` is **wired live in `miami.tscn`**: on a timer it builds
 `{stars (from the wanted group), district}`, rolls `trigger_next`, and emits
-`encounter_triggered(id, kind)` for the scene to spawn. CI-gated headless by
-`tests/ambient_event_probe.gd`.
+`encounter_triggered(id, kind)`. Node logic CI-gated headless by
+`tests/ambient_event_probe.gd`; live in-scene connection asserted by
+`tests/miami_wiring_probe.gd`. Remaining to make encounters appear: connect
+`encounter_triggered` to scene spawn logic (mugging/race/heist actors).

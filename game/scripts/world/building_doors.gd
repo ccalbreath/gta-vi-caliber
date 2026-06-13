@@ -17,6 +17,8 @@ static func build(
 	loader: Node3D, buildings: Array, proj: GeoProjection, max_doors: int = MAX_DOORS
 ) -> void:
 	for b in Enterable.pick(buildings, max_doors):
+		if BuildingUse.is_shop(String(b.get("kind", ""))):
+			continue
 		var ring := _project_ring(b.get("footprint", []), proj)
 		if ring.size() < 3:
 			continue

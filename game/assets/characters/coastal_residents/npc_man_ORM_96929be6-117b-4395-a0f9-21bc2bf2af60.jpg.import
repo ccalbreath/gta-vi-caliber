@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bs4rxxmggixam"
-path="res://.godot/imported/npc_man_ORM_96929be6-117b-4395-a0f9-21bc2bf2af60.jpg-5f7439d78abc5440ef0925e7c45b098f.ctex"
+path.s3tc="res://.godot/imported/npc_man_ORM_96929be6-117b-4395-a0f9-21bc2bf2af60.jpg-5f7439d78abc5440ef0925e7c45b098f.s3tc.ctex"
+path.etc2="res://.godot/imported/npc_man_ORM_96929be6-117b-4395-a0f9-21bc2bf2af60.jpg-5f7439d78abc5440ef0925e7c45b098f.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "81ceaff30625bca4777850db5180067b"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/characters/coastal_residents/npc_man_ORM_96929be6-117b-4395-a0f9-21bc2bf2af60.jpg"
-dest_files=["res://.godot/imported/npc_man_ORM_96929be6-117b-4395-a0f9-21bc2bf2af60.jpg-5f7439d78abc5440ef0925e7c45b098f.ctex"]
+dest_files=["res://.godot/imported/npc_man_ORM_96929be6-117b-4395-a0f9-21bc2bf2af60.jpg-5f7439d78abc5440ef0925e7c45b098f.s3tc.ctex", "res://.godot/imported/npc_man_ORM_96929be6-117b-4395-a0f9-21bc2bf2af60.jpg-5f7439d78abc5440ef0925e7c45b098f.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +42,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0
