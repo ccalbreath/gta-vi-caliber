@@ -37,6 +37,18 @@ const PANIC_DURATION: float = 5.0
 @export var bubble_seconds: float = 2.6
 ## Force a specific archetype by id; empty = derive a stable one from the node.
 @export var archetype_id: String = ""
+## Speak lines aloud through the operating system's text-to-speech voice when one
+## is available, instead of only floating a speech bubble. Degrades to the bubble
+## on platforms / headless runs without TTS, so the line is never lost.
+@export var voice_enabled: bool = true
+## Past this distance (m) from the player a line is shown, not spoken — OS TTS is
+## not spatial, so only nearby citizens are voiced to keep the street legible.
+@export var voice_max_distance: float = 28.0
+## Minimum seconds between this citizen's spoken lines (the bubble is unthrottled).
+@export var voice_cooldown: float = 1.4
+## When a line is voiced, suppress its bubble ("voice instead of text"). Turn off
+## to keep bubbles as subtitles alongside the voice.
+@export var prefer_voice_over_text: bool = true
 
 var _needs := NpcNeeds.new(0.85)
 var _schedule: Array = []
@@ -59,6 +71,11 @@ var _panic_left: float = 0.0
 var _panic_from: Vector3 = Vector3.ZERO
 # Lingering memory (0..1) of a crime witnessed nearby — fades over ~13 s.
 var _crime_memory: float = 0.0
+# Wall-clock (ms) of this citizen's last spoken line, for the voice cooldown.
+var _last_voice_msec: int = 0
+# OS voice ids this citizen may use, probed once on first voiced line.
+var _voice_ids: PackedStringArray = PackedStringArray()
+var _voice_ids_probed: bool = false
 
 
 func _ready() -> void:
@@ -348,11 +365,58 @@ func _maybe_witness_bark() -> void:
 
 
 func _say(text: String) -> void:
+	# Speak it aloud when we can; only fall back to a bubble if we don't.
+	if _voice_line(text) and prefer_voice_over_text:
+		if _bubble != null:
+			_bubble.modulate.a = 0.0  # voiced — clear any stale text
+		return
 	if _bubble == null:
 		return
 	_bubble.text = text
 	_bubble.modulate.a = 1.0
 	_bubble_left = bubble_seconds
+
+
+## Try to speak `text` through the OS text-to-speech voice. Returns true only if
+## an utterance was actually handed to the synth; otherwise the caller shows a
+## bubble. Declines when TTS is unavailable, the line is purely visual (a mime's
+## gesture), the player is too far, or the single voice channel is busy / on
+## cooldown — the policy lives in the pure, tested NpcVoice.
+func _voice_line(text: String) -> bool:
+	if not voice_enabled or not DisplayServer.has_feature(DisplayServer.FEATURE_TEXT_TO_SPEECH):
+		return false
+	var spoken := NpcVoice.speakable(text)
+	var voices := _os_voice_ids()
+	var player := _nearest_player()
+	if spoken == "" or voices.is_empty() or player == null:
+		return false
+	var distance := global_position.distance_to(player.global_position)
+	var since := float(Time.get_ticks_msec() - _last_voice_msec) / 1000.0
+	if not NpcVoice.should_speak(
+		distance, voice_max_distance, since, voice_cooldown, DisplayServer.tts_is_speaking()
+	):
+		return false
+	var params := NpcVoice.params_for(_voice, voices.size())
+	if bool(params["mute"]):
+		return false
+	var voice_id := voices[int(params["voice_index"])]
+	DisplayServer.tts_speak(spoken, voice_id, 50, float(params["pitch"]), float(params["rate"]))
+	_last_voice_msec = Time.get_ticks_msec()
+	return true
+
+
+## OS voice ids this citizen may choose from, probed once and cached. Prefers the
+## system language, falling back to every installed voice if none match.
+func _os_voice_ids() -> PackedStringArray:
+	if _voice_ids_probed:
+		return _voice_ids
+	_voice_ids_probed = true
+	_voice_ids = DisplayServer.tts_get_voices_for_language(OS.get_locale_language())
+	if _voice_ids.is_empty():
+		for entry in DisplayServer.tts_get_voices():
+			if entry is Dictionary and (entry as Dictionary).has("id"):
+				_voice_ids.append(String((entry as Dictionary)["id"]))
+	return _voice_ids
 
 
 func _fade_bubble(delta: float) -> void:
