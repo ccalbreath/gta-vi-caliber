@@ -56,10 +56,6 @@ varying vec2 v_param;
 // Vertical displacement, for subtle crest tinting.
 varying float v_crest;
 varying vec3 v_world_pos;
-// Precomputed world-space normal from the vertex stage (mirrors the wave
-// displacement so shading stays consistent without recomputing all 5 waves
-// per fragment — a major GPU saving on a large water surface).
-varying vec3 v_normal_world;
 
 // Mirrors OceanMath.displacement().
 vec3 gerstner_offset(vec2 p, float t, float amp_scale) {
@@ -137,11 +133,10 @@ void vertex() {
 	v_crest = off.y;
 	VERTEX += off;
 	v_world_pos = VERTEX;
-	v_normal_world = gerstner_normal(v_param, u_time, u_amplitude_scale);
 }
 
 void fragment() {
-	vec3 n_world = v_normal_world;
+	vec3 n_world = gerstner_normal(v_param, u_time, u_amplitude_scale);
 	NORMAL = normalize(mat3(VIEW_MATRIX) * n_world);
 
 	// Water column thickness along the view ray: opaque scene depth minus
@@ -179,39 +174,24 @@ void fragment() {
 	// thin shoreline (u_foam_strength low) while still frothing on the open
 	// swell (u_whitecap_strength up). Noise breaks both into streaks so they
 	// read as moving wash, not painted stripes.
-	//
-	// Perf (PR #38): the streak noise taps plus the Jacobian whitecap test are
-	// the costly part and their detail is imperceptible far away, so beyond
-	// 120 m we fall back to a cheap pulsing band + crest proxy and skip both.
+	float streaks = foam_noise(v_param * 0.35 + vec2(u_time * 0.25, 0.0));
+	streaks = streaks * 0.6 + 0.4 * foam_noise(v_param * 1.4 - vec2(0.0, u_time * 0.4));
+
+	// (a) Shoreline band: white where the water column thins at the sand,
+	// pulsing with the longest wave so the surf line breathes.
 	float foam_band = 1.0 - smoothstep(0.0, u_foam_depth, thickness);
 	float surf_pulse = 0.7 + 0.3 * sin(u_time * 0.9 + v_param.x * 0.05);
-	float frag_cam_dist = length(v_world_pos - CAMERA_POSITION_WORLD);
-	float foam;
-	if (frag_cam_dist < 120.0) {
-		float streaks = foam_noise(v_param * 0.35 + vec2(u_time * 0.25, 0.0));
-		streaks = streaks * 0.6 + 0.4 * foam_noise(v_param * 1.4 - vec2(0.0, u_time * 0.4));
+	float shore_foam = clamp(foam_band * surf_pulse * smoothstep(0.35, 0.85, streaks) * 1.6, 0.0, 1.0);
+	shore_foam *= u_foam_strength;
 
-		// (a) Shoreline band: white where the water column thins at the sand,
-		// pulsing with the longest wave so the surf line breathes.
-		float shore_foam = clamp(foam_band * surf_pulse * smoothstep(0.35, 0.85, streaks) * 1.6, 0.0, 1.0);
-		shore_foam *= u_foam_strength;
+	// (b) Whitecaps: foam where the Gerstner field folds (Jacobian dips below
+	// coverage) — the breaking leeward face of a cresting wave. Modulated by
+	// the same streak noise so caps scatter instead of banding along crests.
+	float jac = gerstner_jacobian(v_param, u_time, u_amplitude_scale);
+	float caps = smoothstep(u_whitecap_coverage, u_whitecap_coverage - 0.35, jac);
+	float whitecaps = clamp(caps * smoothstep(0.3, 0.8, streaks) * u_whitecap_strength, 0.0, 1.0);
 
-		// (b) Whitecaps: foam where the Gerstner field folds (Jacobian dips
-		// below coverage) — the breaking leeward face of a cresting wave.
-		// Modulated by the same streak noise so caps scatter, not band.
-		float jac = gerstner_jacobian(v_param, u_time, u_amplitude_scale);
-		float caps = smoothstep(u_whitecap_coverage, u_whitecap_coverage - 0.35, jac);
-		float whitecaps = clamp(caps * smoothstep(0.3, 0.8, streaks) * u_whitecap_strength, 0.0, 1.0);
-
-		foam = clamp(shore_foam + whitecaps, 0.0, 1.0);
-	} else {
-		// Far field: cheap breathing shore band + crest-keyed whitecap proxy,
-		// no noise or Jacobian taps. Honour both strength knobs so distant
-		// water still answers to the same controls.
-		float shore_foam = clamp(foam_band * surf_pulse * 0.5, 0.0, 1.0) * u_foam_strength;
-		float whitecaps = clamp(crest * 0.35, 0.0, 1.0) * u_whitecap_strength;
-		foam = clamp(shore_foam + whitecaps, 0.0, 1.0);
-	}
+	float foam = clamp(shore_foam + whitecaps, 0.0, 1.0);
 	albedo = mix(albedo, u_foam_color.rgb, foam);
 	alpha = mix(alpha, 1.0, foam * 0.85);
 	ROUGHNESS = mix(u_roughness, 0.7, foam);
