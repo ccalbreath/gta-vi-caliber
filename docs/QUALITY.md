@@ -5,6 +5,25 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-13 (cont. 27) — load-masking: warm the world during the intro
+
+The boot→gameplay seam used to hitch: the menu's Play did a cold
+`change_scene_to_file(miami)`, loading the heavy world synchronously on the main
+thread. Now the intro **warms `miami.tscn` on a background thread** the moment it
+boots (`ResourceLoader.load_threaded_request`), polls it each frame, and on
+completion pins the `PackedScene` in a `static var` so it survives the
+intro→menu change and stays in the resource cache. When the player later presses
+Play, `change_scene_to_file` finds it cached → instant.
+
+Measured end-to-end (headless): the world warms in **~69 frames (~1.1 s)**, far
+inside the intro's ~6.7 s runtime, after which a `load(miami)` returns in **3 µs**
+(cache hit) vs a cold multi-hundred-ms load. Pure load-masking, exactly what AAA
+boots do at this seam — no visible cost, the heavy work hides behind the intro.
+
+Seams: `world_scene` is overridable (probe points it at a light scene to exercise
+the path fast; `""` disables); `intro probe` asserts the preload is requested at
+boot. Gate green: unit tests **2520 passed, 0 failed** + intro probe + 12 probes.
+
 ## 2026-06-13 (cont. 26) — shared backdrop: stars + sunset clouds (lifts both)
 
 Pivoted off intro-only polish to higher leverage: enhanced the **shared**

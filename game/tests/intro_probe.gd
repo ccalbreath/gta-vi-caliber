@@ -27,6 +27,9 @@ func _initialize() -> void:
 		return
 	_intro = _packed.instantiate()
 	_intro.suppress_scene_change = true
+	# Warm a LIGHT scene, not the heavy world, so the probe stays fast and
+	# decoupled while still exercising the background-preload code path.
+	_intro.world_scene = "res://scenes/ui/settings_panel.tscn"
 	root.add_child(_intro)
 
 
@@ -69,6 +72,11 @@ func _run_checks() -> PackedStringArray:
 				"boot did not apply audio settings (%.2f dB vs %.2f)" % [got_db, want_db]
 			)
 
+	# The world scene is warmed on a background thread at boot, so pressing Play
+	# later loads from cache instead of hitching.
+	if not _intro.is_world_preloading():
+		failures.append("world preload was not requested at boot")
+
 	# Beat 1 — the studio card peaks first while the title is still hidden.
 	_advance(_intro, 1.0)
 	if card.modulate.a < 0.9:
@@ -98,6 +106,7 @@ func _run_checks() -> PackedStringArray:
 	# Skip — a fresh intro must exit immediately on request.
 	var skipped: IntroSequence = _packed.instantiate()
 	skipped.suppress_scene_change = true
+	skipped.world_scene = ""  # no preload needed for the skip check
 	root.add_child(skipped)
 	skipped.skip()
 	if not skipped.is_finishing():

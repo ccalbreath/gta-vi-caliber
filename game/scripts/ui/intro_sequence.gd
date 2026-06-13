@@ -44,8 +44,17 @@ const _LETTERBOX_IN := 1.0
 ## Seconds the wordmark "ignites" (neon flicker) once the title beat begins.
 const _NEON_IGNITE := 0.75
 
+# Pin the warmed world PackedScene in a STATIC so it survives this node being
+# freed at the intro→menu change, keeping it in the resource cache until Play.
+static var _warmed_world: Resource = null
+
 ## Seconds for the fade-to-black handoff into the menu (and the fade-up on boot).
 @export var fade_time: float = 0.6
+
+## World scene to warm on a background thread during the intro, so the eventual
+## Play (menu → world) loads from cache instead of hitching. Overridable so a
+## probe can point it at a light scene (or "" to disable).
+@export var world_scene: String = "res://scenes/world/miami.tscn"
 
 ## Test seam: when set, the final [method change_scene_to_file] is suppressed so
 ## a probe can run the whole timeline without loading the menu scene.
@@ -54,6 +63,8 @@ var suppress_scene_change: bool = false
 var _time: float = 0.0
 var _finishing: bool = false
 var _fade_tween: Tween = null
+var _world_requested: bool = false
+var _world_ready: bool = false
 
 @onready var _card: Control = $Card
 @onready var _title: Control = $Title
@@ -81,9 +92,16 @@ func _ready() -> void:
 	_fade_tween = create_tween()
 	_fade_tween.tween_property(_fade, "color:a", 0.0, 0.5)
 
+	# Warm the heavy world scene on a background thread while the player watches
+	# the intro, so pressing Play later loads it from cache (no boot→play hitch).
+	if world_scene != "" and ResourceLoader.exists(world_scene):
+		ResourceLoader.load_threaded_request(world_scene)
+		_world_requested = true
+
 
 func _process(delta: float) -> void:
 	_time += delta
+	_poll_world_warm()
 
 	# Beat alphas: the card credit, then the wordmark, cross-fade on the clock.
 	_card.modulate.a = _beat_alpha(_time, 0.0, _CARD_IN, _CARD_HOLD, _CARD_OUT)
@@ -128,6 +146,26 @@ func skip() -> void:
 ## True once the intro has begun its exit (used by the probe).
 func is_finishing() -> bool:
 	return _finishing
+
+
+## True once the background world preload has been requested (probe diagnostic).
+func is_world_preloading() -> bool:
+	return _world_requested
+
+
+## True once the world scene is fully warmed in cache (probe diagnostic).
+func is_world_ready() -> bool:
+	return _world_ready
+
+
+## Promote the background world load into the resource cache once it finishes,
+## pinning it in the static so it survives the scene change into the menu.
+func _poll_world_warm() -> void:
+	if not _world_requested or _world_ready:
+		return
+	if ResourceLoader.load_threaded_get_status(world_scene) == ResourceLoader.THREAD_LOAD_LOADED:
+		_warmed_world = ResourceLoader.load_threaded_get(world_scene)
+		_world_ready = true
 
 
 func _finish() -> void:
