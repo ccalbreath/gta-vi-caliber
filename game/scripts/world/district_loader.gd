@@ -10,6 +10,13 @@ extends Node3D
 ## collision-free ribbon mesh laid just above the ground plane.
 
 signal district_built(building_count: int, road_count: int)
+## Emitted once per completed build stage so a loading screen can show real
+## progress; done counts up to total (the stage count for this district).
+signal build_progress(done: int, total: int)
+
+## Preloaded so the boot cover resolves without relying on the global class_name
+## registry being populated first (headless/CI import order is not guaranteed).
+const LOADING_SCREEN := preload("res://scripts/ui/loading_screen.gd")
 
 ## Streetlight pole every ~this many metres of road, capped scene-wide and
 ## kept near the district origin (where the player spawns) so the cap is not
@@ -64,6 +71,12 @@ var _sidewalk_mat: Material
 func _ready() -> void:
 	# TimeOfDay fades our building-window glow through set_night_amount().
 	add_to_group("night_emissive")
+	# Cover the main-thread district build with a loading screen on the spawn
+	# district only (background district streams must not flash a cover).
+	if place_player:
+		var loading := LOADING_SCREEN.new()
+		add_child(loading)
+		loading.bind(self)
 	_make_materials()
 	var data := _load_district(district_path)
 	if data.is_empty():
@@ -86,6 +99,13 @@ func _build_timesliced(data: Dictionary) -> void:
 
 	if spawn_ground:
 		_build_ground(data, proj)
+
+	# Place the player first, as soon as the ground exists, so the city streams
+	# in around an already-positioned, already-framed player instead of leaving
+	# him at the scene origin through the whole staged build and snapping him
+	# onto the road at the end. Placement only needs the parsed road data here.
+	if place_player:
+		_place_player_stage(data, proj)
 
 	# Buildings: extrude footprints a slice per frame, then weld once into a
 	# single MeshInstance3D + trimesh collider (one draw call, as before).
@@ -136,12 +156,11 @@ func _build_timesliced(data: Dictionary) -> void:
 	stages.append(func() -> void: _build_parked_cars(roads, proj))
 	stages.append(func() -> void: _build_trees(roads, proj))
 	stages.append(func() -> void: _build_street_furniture(roads, proj))
-	if place_player:
-		stages.append(func() -> void: _place_player_stage(data, proj))
-	for stage in stages:
+	for i in stages.size():
 		if not await _next_stage(tree):
 			return
-		stage.call()
+		stages[i].call()
+		build_progress.emit(i + 1, stages.size())
 
 	district_built.emit(buildings.size(), roads.size())
 
