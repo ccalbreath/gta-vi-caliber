@@ -41,13 +41,18 @@ func _draw() -> void:
 
 	var pois := _gather_pois()
 	var player := _player()
-	var pts: Array = pois.duplicate()
-	if player != null:
-		pts.append({"pos": player.global_position})
-	if pts.is_empty():
+	# Anchor the view to the POIs only, so the frame stays put as the player moves.
+	# A frame that re-fit every redraw to include the player would "breathe" — the
+	# dot would look stuck while the whole map slid and zoomed under it. With a
+	# fixed frame the blue dot tracks the player correctly. Fall back to a
+	# player-centred view only when there are no POIs to anchor to.
+	var frame_pts: Array = pois.duplicate()
+	if frame_pts.is_empty() and player != null:
+		frame_pts.append({"pos": player.global_position})
+	if frame_pts.is_empty():
 		return
 
-	var bounds := _bounds(pts)
+	var bounds := _bounds(frame_pts)
 	var center: Vector3 = bounds["center"]
 	var mpp := MapProjection.fit_meters_per_pixel(bounds["extent"], size, margin)
 	var view_center := size * 0.5
@@ -67,9 +72,8 @@ func _draw() -> void:
 			)
 
 	if player != null:
-		var pp := view_center + MapProjection.world_to_map(player.global_position, center, mpp)
-		draw_circle(pp, 6.0, Color(1, 1, 1))
-		draw_circle(pp, 6.0, Color(0.1, 0.5, 1.0))
+		var raw := view_center + MapProjection.world_to_map(player.global_position, center, mpp)
+		_draw_player_marker(_clamp_to_view(raw))
 
 	draw_string(
 		_font,
@@ -116,3 +120,30 @@ func _bounds(pts: Array) -> Dictionary:
 func _player() -> Node3D:
 	var players := get_tree().get_nodes_in_group("player")
 	return players[0] as Node3D if not players.is_empty() else null
+
+
+## Keep an out-of-frame player visible by pinning the dot to the screen edge.
+func _clamp_to_view(p: Vector2) -> Vector2:
+	var pad := 12.0
+	return Vector2(clampf(p.x, pad, size.x - pad), clampf(p.y, pad, size.y - pad))
+
+
+## A blue player dot with a white outline ring and a short heading tick. The map
+## is north-up, so world facing maps straight to screen (+x east → right, +z
+## south → down), matching MapProjection.world_to_map with no rotation.
+func _draw_player_marker(p: Vector2) -> void:
+	draw_circle(p, 8.0, Color(1, 1, 1))
+	draw_circle(p, 6.0, Color(0.1, 0.5, 1.0))
+	var heading := _player_heading()
+	if heading.length_squared() > 0.0001:
+		draw_line(p, p + heading * 16.0, Color(1, 1, 1), 2.5)
+
+
+## Player facing in map space from the active 3D camera, or zero if none.
+func _player_heading() -> Vector2:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return Vector2.ZERO
+	var fwd := -cam.global_transform.basis.z
+	var flat := Vector2(fwd.x, fwd.z)
+	return flat.normalized() if flat.length_squared() > 0.0001 else Vector2.ZERO

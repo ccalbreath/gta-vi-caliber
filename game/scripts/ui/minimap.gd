@@ -22,6 +22,7 @@ const POI_COLORS: Dictionary = {
 	"park": Color(0.38, 0.75, 0.38),
 	"restroom": Color(0.55, 0.85, 0.95),
 	"street": Color(0.7, 0.7, 0.76),
+	"garage": Color(0.1, 0.95, 0.9),
 }
 
 ## World metres mapped to one screen pixel's worth of zoom.

@@ -133,6 +133,8 @@ step "miami evade probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_evade_probe.gd
 step "miami property probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_property_probe.gd
+step "miami vehicle mod probe"
+"$GODOT_BIN" --headless --path game --script res://tests/miami_vehicle_mod_probe.gd
 step "miami citizen probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_citizen_probe.gd
 
