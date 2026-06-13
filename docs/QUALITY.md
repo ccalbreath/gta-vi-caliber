@@ -5,6 +5,39 @@ bar (trailer-fidelity coastal open world). Updated by whoever runs a
 playtest/capture pass; newest entry first. Captures referenced live in
 `/tmp/gta6_playtest/` locally — judge from a fresh run, not memory.
 
+## 2026-06-12 (cont. 21) — front-end: branded boot intro, Godot splash removed
+
+The first thing a player saw was the **Godot engine logo** (no `boot_splash`
+config), then a hard cut straight into `miami.tscn` — the `main_menu.tscn`
+front-end existed but was orphaned (`run/main_scene` pointed at the world). Two
+fixes, both verified green through the full gate:
+
+1. **Removed the engine splash.** `project.godot` now sets
+   `boot_splash/show_image=false` + a brand near-black `bg_color`, so the window
+   opens on the game's own colour, not the Godot mark.
+2. **Added a skippable cinematic intro** (`scenes/ui/intro.tscn` +
+   `scripts/ui/intro_sequence.gd`) and wired the real boot flow
+   **intro → main_menu → miami**. The intro plays a two-beat timeline (a
+   studio-credit card, then an animated VICE CITY wordmark with the sunset
+   underline + neon pulse) over the *same* procedural dusk skyline the menu uses,
+   so the visual language is continuous from frame one. Any key/click/pad skips;
+   it auto-advances otherwise.
+
+Deliberately **self-contained** — the intro carries its own copy of the brand
+palette and builds its own gradient bar instead of leaning on the in-flight
+`ui_palette.gd`, so it boots on a clean checkout regardless of uncommitted UI
+work. Confirmed the committed `main_menu.{gd,tscn}` depend only on committed
+files, so the new boot chain is clean-checkout safe. New CI step `intro probe`
+(`tests/intro_probe.gd`) drives the whole timeline headless (manual clock so it's
+deterministic) and asserts the beats cross-fade and the intro always reaches its
+exit — it never loads the menu scene, keeping the gate independent of the UI lane.
+
+**Honest limit:** the intro is a polished 2D-cinematic over the menu backdrop,
+not a 3D camera fly-through of the city — a real engine flyover would need the
+paged world + the still-gated day/night/fog work (see cont. 20) and reliable
+headless framing, neither of which is available in-lane yet. Good follow-on once
+the env owner unlocks time-of-day.
+
 ## 2026-06-12 (cont. 20) — pinned the exact night blocker (for the env owner)
 
 Probed why the night work doesn't show in-game and pinned it precisely (details

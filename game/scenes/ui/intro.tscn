@@ -1,0 +1,146 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/intro_sequence.gd" id="1_intro"]
+[ext_resource type="Script" path="res://scripts/ui/menu_backdrop.gd" id="2_back"]
+
+[node name="Intro" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_intro")
+
+[node name="Base" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.016, 0.02, 0.039, 1)
+
+[node name="Backdrop" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("2_back")
+
+[node name="Vignette" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.22)
+
+[node name="Card" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Center" type="CenterContainer" parent="Card"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="Card/Center"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CardKicker" type="Label" parent="Card/Center/VBox"]
+modulate = Color(0.22, 0.87, 0.96, 1)
+layout_mode = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 26
+text = "A COMMUNITY OPEN-SOURCE PRODUCTION"
+horizontal_alignment = 1
+
+[node name="CardSub" type="Label" parent="Card/Center/VBox"]
+modulate = Color(1, 1, 1, 0.6)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "built in the open · powered by Godot 4"
+horizontal_alignment = 1
+
+[node name="Title" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Center" type="CenterContainer" parent="Title"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="Title/Center"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Kicker" type="Label" parent="Title/Center/VBox"]
+modulate = Color(0.22, 0.87, 0.96, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "VI · CALIBER"
+horizontal_alignment = 1
+
+[node name="Wordmark" type="Label" parent="Title/Center/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.913, 0.098, 0.49, 0.85)
+theme_override_colors/font_shadow_color = Color(0.42, 0.16, 0.62, 0.55)
+theme_override_constants/outline_size = 8
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 6
+theme_override_font_sizes/font_size = 96
+text = "VICE CITY"
+horizontal_alignment = 1
+
+[node name="Underline" type="TextureRect" parent="Title/Center/VBox"]
+custom_minimum_size = Vector2(420, 6)
+layout_mode = 2
+size_flags_horizontal = 4
+stretch_mode = 1
+
+[node name="Tag" type="Label" parent="Title/Center/VBox"]
+modulate = Color(1, 1, 1, 0.72)
+layout_mode = 2
+theme_override_constants/separation = 0
+theme_override_font_sizes/font_size = 18
+text = "an open world, built in the open"
+horizontal_alignment = 1
+
+[node name="SkipHint" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -360.0
+offset_top = -46.0
+offset_right = -28.0
+grow_horizontal = 0
+grow_vertical = 0
+modulate = Color(1, 1, 1, 0.4)
+theme_override_font_sizes/font_size = 15
+text = "Press any key to skip"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Fade" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)

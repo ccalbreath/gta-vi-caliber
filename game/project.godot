@@ -8,9 +8,13 @@ config_version=5
 
 config/name="GTA-VI-caliber"
 config/description="Community-driven open-source open-world game. AAA-trailer quality bar, built on Godot 4."
-run/main_scene="res://scenes/world/miami.tscn"
+run/main_scene="res://scenes/ui/intro.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
+boot_splash/bg_color=Color(0.016, 0.02, 0.039, 1)
+boot_splash/show_image=false
+boot_splash/fullsize=false
+boot_splash/use_filter=false
 
 [input]
 

@@ -92,6 +92,10 @@ step "headless import"
 step "smoke test"
 "$GODOT_BIN" --headless --path game --script res://tests/smoke_test.gd
 
+# --- 4.5 boot intro probe (branded intro builds + runs its timeline) ---------
+step "intro probe"
+"$GODOT_BIN" --headless --path game --script res://tests/intro_probe.gd
+
 # --- 5. unit tests ------------------------------------------------------------
 step "unit tests"
 "$GODOT_BIN" --headless --path game --script res://tests/run_tests.gd
