@@ -20,9 +20,18 @@ quirk that would need a real rabbit-hole to pin down; (2) even ignoring framing,
 flat-shaded primitive boxes read as cheap next to the finished 2D intro (sun
 emblem + neon wordmark + grain). Shipping it would have *degraded* a complete,
 polished sequence — so per "don't ship something worse," the attempt was deleted,
-not committed. Recorded here so it isn't blindly re-attempted; a 3D hero is only
-worth it with a real vehicle GLB (not primitives) and the SubViewport framing
-solved first.
+not committed. Recorded here so it isn't blindly re-attempted.
+
+**Follow-up diagnosis (decisive):** a 3D hero is **unverifiable in this
+headless/windowed harness**. A bare sphere at origin — proper
+`SubViewportContainer`, `look_at_from_position(eye, ZERO, UP)` — still captures to
+the bottom-right corner. 2D content screenshots perfectly via
+`root.get_texture()`, but **3D rendered through a SubViewport does not composite
+into that captured frame correctly here** (the main-window texture misses the
+SubViewport's render). So I can neither frame nor quality-check a 3D hero before
+shipping it. That puts it in the same bucket as the day/night cycle: an
+**in-editor task** a human verifies live, NOT something to ship blind from this
+loop. Don't re-attempt a 3D intro element autonomously here.
 
 **State:** the intro deliverable is COMPLETE (cont. 21–27: splash removal + flow,
 neon/letterbox, boot settings, sun emblem, grain, backdrop stars/clouds,
