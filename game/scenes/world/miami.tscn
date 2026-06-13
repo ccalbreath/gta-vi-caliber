@@ -1,4 +1,4 @@
-[gd_scene load_steps=58 format=3]
+[gd_scene load_steps=61 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -55,6 +55,9 @@
 [ext_resource type="Script" path="res://scripts/systems/crime_reaction_director.gd" id="48_crimereact"]
 [ext_resource type="Script" path="res://scripts/systems/ambient_event_director.gd" id="49_ambient"]
 [ext_resource type="Script" path="res://scripts/world/contraband_dealer.gd" id="50_contraband"]
+[ext_resource type="Script" path="res://scripts/world/race_controller.gd" id="51_race"]
+[ext_resource type="Script" path="res://scripts/npc/crowd_panic_director.gd" id="52_crowdpanic"]
+[ext_resource type="Script" path="res://scripts/npc/loot_drop_director.gd" id="53_lootdrop"]
 
 [sub_resource type="BoxShape3D" id="payspray_shape"]
 size = Vector3(12, 6, 12)
@@ -351,6 +354,30 @@ script = ExtResource("48_crimereact")
 
 [node name="AmbientEventDirector" type="Node" parent="."]
 script = ExtResource("49_ambient")
+
+[node name="CrowdPanicDirector" type="Node" parent="."]
+script = ExtResource("52_crowdpanic")
+
+[node name="LootDropDirector" type="Node" parent="."]
+script = ExtResource("53_lootdrop")
+medkit_scene = ExtResource("26_medkit")
+armor_scene = ExtResource("27_armor")
+
+[node name="StreetRace" type="Node3D" parent="." groups=["race"]]
+script = ExtResource("51_race")
+base_reward = 2500
+
+[node name="CP0" type="Marker3D" parent="StreetRace"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 0.5, 22)
+
+[node name="CP1" type="Marker3D" parent="StreetRace"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.5, 22)
+
+[node name="CP2" type="Marker3D" parent="StreetRace"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.5, 62)
+
+[node name="CP3" type="Marker3D" parent="StreetRace"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 0.5, 62)
 
 [node name="MissionCampaign" type="Node" parent="."]
 script = ExtResource("30_campaign")

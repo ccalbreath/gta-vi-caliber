@@ -139,6 +139,12 @@ step "miami citizen probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_citizen_probe.gd
 step "contraband market probe"
 "$GODOT_BIN" --headless --path game --script res://tests/contraband_market_probe.gd
+step "race probe"
+"$GODOT_BIN" --headless --path game --script res://tests/race_probe.gd
+step "crowd panic probe"
+"$GODOT_BIN" --headless --path game --script res://tests/crowd_panic_probe.gd
+step "loot drop probe"
+"$GODOT_BIN" --headless --path game --script res://tests/loot_drop_probe.gd
 
 # --- 7. systems wiring probes (scene-free: self-wiring nodes in a mock tree) --
 step "market event probe"
