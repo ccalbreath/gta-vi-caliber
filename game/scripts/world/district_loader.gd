@@ -17,8 +17,15 @@ signal district_built(building_count: int, road_count: int)
 const STREETLIGHT_SPACING_M: float = 45.0
 const MAX_STREETLIGHTS: int = 60
 const STREETLIGHT_RADIUS_M: float = 250.0
-const STREET_VISUAL_Y: float = 0.32
-const SIDEWALK_VISUAL_Y: float = 0.28
+# The player/vehicles/props rest on the ground collider whose top is at y=0, so
+# every visual walking surface sits at (or a hair above) y=0 too — otherwise the
+# character stands on the collider and the feet sink below the visible street.
+# Roads ride 2 cm under the floor (feet never sink into them); the spawn vista's
+# hero road then sits exactly at the floor (see DistrictSpawnVista).
+const STREET_VISUAL_Y: float = -0.02
+# Gutter base; the sidewalk's walking top is base + curb height (0.15), so this
+# lands the walkable top flush with the road instead of a foot-sinking curb.
+const SIDEWALK_VISUAL_Y: float = -0.17
 ## Footprints extruded per build slice. Sized so one slice stays a small
 ## fraction of a 60 Hz frame; a 1500-building district pages in across ~7
 ## slices instead of one giant hitch.
@@ -738,7 +745,9 @@ func _build_ground(data: Dictionary, proj: GeoProjection) -> void:
 	body.position = centre
 	var mi := MeshInstance3D.new()
 	mi.mesh = ground_mesh
-	mi.position.y = 0.36
+	# Sit the tile top just under the collider top (y=0) so the player rests on
+	# the visible ground; the 0.08-thick slab is centred at -0.08 → top -0.04.
+	mi.position.y = -0.08
 	body.add_child(mi)
 	var col := CollisionShape3D.new()
 	var box := BoxShape3D.new()

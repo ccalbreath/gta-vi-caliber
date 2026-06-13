@@ -11,7 +11,12 @@ static func build(parent: Node3D, spawn: Vector3, yaw: float, street_y: float) -
 	var root := Node3D.new()
 	root.name = "SpawnVistaStreet"
 	var forward := Vector3(-sin(yaw), 0.0, -cos(yaw))
-	root.position = Vector3(spawn.x, street_y + 0.12, spawn.z) + forward * 4.0
+	# The hero road box (0.12 thick) is centred on the root, so dropping the root
+	# 0.06 below street_y puts the road's TOP exactly at street_y + 0.06 = the
+	# floor (street_y is -0.02), so the player spawns standing on the asphalt
+	# instead of sunk into it. It also rides just above the district road ribbons
+	# (at street_y) so the two don't z-fight where they overlap.
+	root.position = Vector3(spawn.x, street_y - 0.04, spawn.z) + forward * 4.0
 	root.rotation.y = yaw
 	parent.add_child(root)
 
