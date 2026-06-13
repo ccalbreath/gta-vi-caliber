@@ -85,6 +85,22 @@ func has_waypoint() -> bool:
 	return _has_waypoint
 
 
+# --- Persistence (SaveManager) ---------------------------------------------
+
+
+func serialize() -> Dictionary:
+	return {"money": money, "armor": armor}
+
+
+## Rebuild from a serialize() snapshot; malformed/missing fields keep current
+## values. Emits the change signals so the HUD redraws the restored wallet.
+func restore(data: Dictionary) -> void:
+	money = maxi(int(SaveData.number_or(data.get("money"), money)), 0)
+	armor = clampf(SaveData.number_or(data.get("armor"), armor), 0.0, max_armor)
+	money_changed.emit(money)
+	armor_changed.emit(armor, max_armor)
+
+
 # --- Pure helpers (unit-tested) -------------------------------------------
 
 

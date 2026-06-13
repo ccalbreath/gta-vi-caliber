@@ -7,12 +7,28 @@ extends RefCounted
 ## round-trip + malformed-input handling is unit-tested (tests/unit/
 ## test_save_data.gd). Decode never throws: bad input yields an empty snapshot.
 
-const VERSION: int = 1
+## v2 added stats (money/armor), progression XP, property ownership and
+## boat/bike vehicle entries on top of v1's position/health/wanted/cars.
+const VERSION: int = 2
 
 
 ## Wrap a state snapshot with a version header and serialise to JSON text.
 static func encode(snapshot: Dictionary) -> String:
 	return JSON.stringify({"version": VERSION, "data": snapshot})
+
+
+## Bring an older snapshot up to the current shape. v1 saves predate the
+## stats/progression/properties keys — they're normalised to empty dictionaries
+## (every restore() treats {} as "keep scene defaults"), so a v1 save loads
+## cleanly instead of being rejected. Unknown future versions pass through
+## untouched (best effort). Pure: returns a new Dictionary.
+static func migrate(snapshot: Dictionary, from_version: int) -> Dictionary:
+	var out := snapshot.duplicate(true)
+	if from_version < 2:
+		for key in ["stats", "progression", "properties"]:
+			if not out.get(key) is Dictionary:
+				out[key] = {}
+	return out
 
 
 ## Parse save text back to the inner snapshot. Returns {} for anything that
