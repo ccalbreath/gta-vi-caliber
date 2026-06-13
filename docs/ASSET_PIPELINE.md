@@ -247,11 +247,26 @@ driven entirely over the bridge — zero Blender clicks:
   from group-node sockets, which survive the version migration; don't
   "fix" them; (c) one muted Frame node — cosmetic, ignore; (d) the roof
   `Set Material` node arrives genuinely unbound — rebind it.
-- **Density warning:** Buildify output is arch-viz density (~200k+ tris
-  for an 18-floor tower after removing branded modules and a conservative
-  limited dissolve). Fine for one hero/POC asset; bulk city use needs an
-  optimization lane (module simplification, LODs, or Godot-side MultiMesh
-  from module GLBs + transform lists) before it ships at scale.
+- **Density recipe (REQUIRED before any building ships — Tier C).**
+  Buildify output is arch-viz density (the POC tower realized at ~422k
+  tris). Budget: **hero/tower < 80k tris, standard building < 40k.** The
+  proven two-step reduction (per Tier C, validated on the POC tower
+  421k → 72k and applied to all 18 library buildings):
+  1. **Limited dissolve** (bmesh `dissolve_limit`, 5°, delimit by
+     material+normal): merges coplanar facade faces, ~50% off, lossless
+     on flat walls. Follow with `dissolve_degenerate` to clear the
+     decimation's non-manifold slivers (else glTF logs "mesh not valid").
+  2. **Collapse decimate** to the tri budget. Collapse is imprecise on
+     constrained geometry — target ~10-15% under the cap (e.g. 62k to
+     land a tower under 80k).
+  Result for the library: houses ~4-5k, businesses ~10k, mid-rise
+  ~28-37k, towers ~67-70k tris.
+- **Textures stay OUT of building GLBs.** Embedding 2K facade maps per
+  building blew a single GLB to 51 MB. Instead export geometry-only with
+  NAMED slot materials (WALL/TRIM/GLASS/ROOF/DETAIL/ACC*) and apply the
+  shared ambientCG sets in Godot via `scripts/props/building_facade.gd`
+  (per-building wall set + tint + glass colour). GLBs drop to 0.5-9 MB
+  and the textures live once in `game/assets/materials/`.
 - **Branded content warning:** Buildify's detail collections include
   street-sign modules modeled as Blender-logo boards (logo + wordmark as
   GEOMETRY, so no image audit catches them). Delete `street_sign_a/b`
