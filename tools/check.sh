@@ -153,5 +153,7 @@ step "contraband heat probe"
 "$GODOT_BIN" --headless --path game --script res://tests/contraband_heat_probe.gd
 step "player bounty probe"
 "$GODOT_BIN" --headless --path game --script res://tests/player_bounty_probe.gd
+step "interaction chain probe"
+"$GODOT_BIN" --headless --path game --script res://tests/interaction_chain_probe.gd
 
 printf '\nAll checks passed ✔\n'
