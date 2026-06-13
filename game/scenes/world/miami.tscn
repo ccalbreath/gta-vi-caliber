@@ -1,4 +1,4 @@
-[gd_scene load_steps=46 format=3]
+[gd_scene load_steps=49 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -44,6 +44,9 @@
 [ext_resource type="Script" path="res://scripts/world/sky_controller.gd" id="39_skyctl"]
 [ext_resource type="Script" path="res://scripts/world/rain.gd" id="40_rain"]
 [ext_resource type="Script" path="res://scripts/world/floating_origin.gd" id="41_origin"]
+[ext_resource type="Script" path="res://scripts/npc/city_director.gd" id="42_city"]
+[ext_resource type="Script" path="res://scripts/world/city_poi_seeder.gd" id="43_poi"]
+[ext_resource type="PackedScene" path="res://scenes/npc/citizen.tscn" id="44_citizen"]
 
 [sub_resource type="BoxShape3D" id="payspray_shape"]
 size = Vector3(12, 6, 12)
@@ -263,8 +266,16 @@ shape = SubResource("trigger_shape")
 [node name="BarkDirector" type="Node" parent="."]
 script = ExtResource("14_bark")
 
+[node name="CityDirector" type="Node3D" parent="."]
+script = ExtResource("42_city")
+
+[node name="CityPoiSeeder" type="Node3D" parent="."]
+script = ExtResource("43_poi")
+
 [node name="CrowdDirector" type="Node3D" parent="."]
 script = ExtResource("15_crowd")
+citizen_scene = ExtResource("44_citizen")
+citizen_fraction = 0.35
 target_count = 40
 spawn_max_radius = 54.0
 cull_radius = 70.0
