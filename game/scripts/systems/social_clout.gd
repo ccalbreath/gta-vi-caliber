@@ -94,6 +94,14 @@ func record_act(severity: float, witnesses: int, flashiness: float = 1.0) -> Dic
 	return {"reach": reach, "viral": viral, "followers_gained": gained, "heat_tip": heat}
 
 
+## Grow the following from a non-crime source (a banger Snapmatic post, a
+## sponsorship shout-out). Returns the new follower count.
+func add_followers(amount: int) -> int:
+	if amount > 0:
+		_followers += amount
+	return _followers
+
+
 ## Audiences drift when you go quiet: shed a small fraction of followers per day.
 func decay(days: float = 1.0) -> int:
 	if days <= 0.0 or _followers <= 0:

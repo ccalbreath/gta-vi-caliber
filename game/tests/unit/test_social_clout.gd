@@ -89,6 +89,13 @@ func test_recognizability() -> bool:
 	)
 
 
+func test_add_followers_grows_non_crime() -> bool:
+	var sc := SocialClout.new(1000)
+	sc.add_followers(500)
+	sc.add_followers(-9)  # ignored
+	return sc.followers() == 1500
+
+
 func test_decay_bleeds_followers() -> bool:
 	var sc := SocialClout.new(10000)
 	sc.decay(1.0)  # lose floor(10000*0.01) = 100
