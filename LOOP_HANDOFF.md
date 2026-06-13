@@ -26,26 +26,34 @@ autonomously. **Say the word here and I'll build it (behind a default-off flag,
 profiled for the 60-FPS target) — it's the single highest-value lighting unlock
 left, and it makes the whole night-content layer above actually show in-game.**
 
-## Open: a batch of tested systems is ready to wire into `miami.tscn`
+## Open: a tested systems layer is ready to wire into `miami.tscn`
 
-The loop has shipped several pure, fully unit-tested gameplay systems that are
-**reachable in code but not yet in the live scene**, because `miami.tscn` (and the
-UI suite: `main_menu.tscn`, `pause_menu.tscn`, `pause_map_panel.gd`, `ui_palette.gd`)
-has carried an uncommitted working-tree integration for the whole session — per the
-process rule, I won't path-commit a shared scene while it holds someone else's
-uncommitted work. **Please commit or revert that integration** so the following can
-be wired (each is documented in `docs/SYSTEMS.md` with its exact wiring note):
+The loop (gameplay-systems agent) has shipped a deep, fully unit-tested simulation
+layer (2386 tests green) that is **reachable in code but not in the live scene**,
+because `miami.tscn` + the UI suite (`main_menu.tscn`, `pause_menu.tscn`,
+`pause_map_panel.gd`, `ui_palette.gd`) has carried an uncommitted working-tree
+integration all session — per the process rule I won't path-commit a shared scene
+holding someone else's uncommitted work. **Please commit or revert that UI
+integration** and I'll wire the below + add `miami_*_probe`s myself. All catalogued
+in `docs/SYSTEMS.md`.
 
-- `StockMarket` + `HitContract` + `MarketEventCoordinator` — the assassinate→stock
-  loop. `MarketEventCoordinator` is a self-wiring node (cf. `PaySprayShop`), runtime
-  CI-probed by `tests/market_event_probe.gd`; **dropping that node into miami.tscn is
-  the only remaining step** to make the stock-market loop live.
-- `PlayerSkills` (activity proficiency), `Disguise` (feeds `WantedEvasion` speedup),
-  `DistrictEconomy` (turf/crime → real-estate, pairs with `GangTerritory`),
-  `WeaponLoadout` (attachments around `WeaponBallistics`).
+**Trivial wins — 4 self-wiring nodes, each one line in `miami.tscn`, each already
+CI-probed (no other change needed):**
 
-I can do the miami.tscn wiring + add the `miami_*_probe`s myself the moment the scene
-is clean — just commit/revert the in-flight UI work and delete this note.
+| Node | Add to miami.tscn | Effect | Probe |
+|---|---|---|---|
+| `MarketEventCoordinator` | `[node name="StockMarket" type="Node"]` + script | wanted spike rallies defense stocks; `apply_hit_effect` for hits | `market_event_probe.gd` |
+| `CrimeReactionDirector` | one Node | crime → reactive `NewsBulletin` headline + `DistrictEconomy` heat (cools over time) | `crime_reaction_probe.gd` |
+| `CharacterSwitcher` | one Node | dual-protagonist wallet sync through `player_stats` | `character_switch_probe.gd` |
+| `AmbientEventDirector` | one Node | timer-rolled freeroam encounters (mugging/race/heist) by stars+district | `ambient_event_probe.gd` |
+
+**Models needing a trigger/UI to surface (logic + tests done):** `HitContract`
+(assassination board → moves `StockMarket`), `PlayerSkills`, `Disguise` (feeds
+`WantedEvasion` speedup), `WeaponLoadout` (around `WeaponBallistics`), `StuntScore`,
+`ChopShop` (vehicle resale), `ContactServices` (phone favours), `CharacterRoster`.
+
+I can do all the miami.tscn wiring the moment the scene is clean — commit/revert the
+in-flight UI work and delete this note.
 
 ## ✅ RESOLVED 2026-06-10 evening (kept brief for process memory)
 

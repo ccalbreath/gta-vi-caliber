@@ -33,6 +33,7 @@ Groups the live scene already publishes: `player`, `player_health`,
 | `PoliceEscalation` | response tier per star | `response_units`, `has_swat/helicopter/military`, `aggression`, `weapon_tier` | feed `PoliceSpawner`: pick the scene + count per `response_units(stars)` |
 | `PursuitTactics` | chase tactics | `intercept_point`, `should_ram`, `pit_side`, `choose_tactic` | drive `Police`/traffic-cop movement when chasing |
 | `GangTerritory` | turf control | `add_influence`, `take_over`, `controlled_fraction` | a per-district influence tracker + a turf-war trigger |
+| `FactionStanding` | per-faction reputation (-100 hostile..+100 allied) | `adjust`, `tier_of`, `will_attack`, `will_assist`, `to_dict` | adjust on player actions (rivalry bleeds onto enemies); NPC AI reads `will_attack`/`will_assist`; faction ids align with `GangTerritory` |
 
 ## Combat
 
