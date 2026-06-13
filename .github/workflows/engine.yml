@@ -120,9 +120,13 @@ jobs:
       - name: Unit tests with native module (asserts WorldCore loads)
         run: |
           GODOT=~/godot-bin/"${{ matrix.godot-bin }}"
-          out=$("$GODOT" --headless --path game --script res://tests/run_tests.gd)
+          # gdUnit4-discovered suites, run with the freshly built native lib present.
+          "$GODOT" --headless --path game --script res://tests/run_tests.gd
+          # The WorldCore-loaded assertion lives in test_worldcore.gd, a legacy
+          # RefCounted suite that gdUnit4's discoverer skips — so it only runs via
+          # run_legacy_tests.gd. The native lib was just built, so it must NOT skip.
+          out=$("$GODOT" --headless --path game --script res://tests/run_legacy_tests.gd)
           echo "$out"
-          # The native lib was just built, so the WorldCore test must NOT skip.
           echo "$out" | grep -q "WorldCore .* loaded from native module"
 
       - name: Native module integration probes (benchmarks, crowd capacity)
