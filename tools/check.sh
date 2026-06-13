@@ -147,5 +147,7 @@ step "interaction district probe"
 "$GODOT_BIN" --headless --path game --script res://tests/interaction_district_probe.gd
 step "disguise evasion probe"
 "$GODOT_BIN" --headless --path game --script res://tests/disguise_evasion_probe.gd
+step "rival retaliation probe"
+"$GODOT_BIN" --headless --path game --script res://tests/rival_retaliation_probe.gd
 
 printf '\nAll checks passed ✔\n'

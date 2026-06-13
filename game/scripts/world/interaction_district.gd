@@ -108,6 +108,8 @@ func _ensure_controllers() -> void:
 	_ensure_controller("contraband", ContrabandController.new())
 	_ensure_controller("gang_territory", GangTerritoryController.new())
 	_ensure_controller("stock_market", MarketEventCoordinator.new())
+	# After gang_territory so it can bind to that turf source (it also self-binds).
+	_ensure_controller("rival_retaliation", RivalRetaliationController.new())
 
 
 func _ensure_controller(group_name: String, node: Node) -> void:
