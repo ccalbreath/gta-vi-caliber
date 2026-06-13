@@ -35,6 +35,11 @@ var _controller: SkyController
 var _camera: Camera3D
 var _shot_dir := ""
 var _built := false
+## CHAR=1 wraps the asset in the real player rig (UAL retarget + state
+## machine) and adds an animation-sanity lens: mid-walk frames, judged for
+## mesh tearing by eye.
+var _rig: Node3D = null
+var _walking := false
 
 
 func _initialize() -> void:
@@ -54,7 +59,12 @@ func _initialize() -> void:
 		push_error("gauntlet: cannot load asset %s" % asset_path)
 		quit(1)
 		return
-	stage.get_node("AssetAnchor").add_child(asset_scene.instantiate())
+	if OS.get_environment("CHAR") == "1":
+		_rig = (load("res://scenes/player/character_rig.tscn") as PackedScene).instantiate()
+		_rig.set("visual_scene", asset_scene)
+		stage.get_node("AssetAnchor").add_child(_rig)
+	else:
+		stage.get_node("AssetAnchor").add_child(asset_scene.instantiate())
 
 	if stage.get_node_or_null("ReflectionProbe") == null:
 		push_error("gauntlet: stage is missing its ReflectionProbe")
@@ -76,6 +86,9 @@ func _process(_delta: float) -> bool:
 	if not _built:
 		_build_steps()
 		_built = true
+	if _rig != null:
+		var speed: float = _rig.get("walk_speed") if _walking else 0.0
+		_rig.call("animate", Vector3(0.0, 0.0, speed), true, 0.0, false, _delta)
 	if _pair_name != "":
 		_finish_pair()
 		return false
@@ -103,6 +116,9 @@ func _process(_delta: float) -> bool:
 			_pair_image = root.get_texture().get_image()
 			_pair_lumas = _sample_lumas(_pair_image)
 			_wait = 1
+		"walk":
+			_walking = s.on
+			_wait = SETTLE_POSE
 	return false
 
 
@@ -123,6 +139,20 @@ func _build_steps() -> void:
 		Vector2(radius_xz + 50.0, 0.6),  # mid
 		Vector2(radius_xz + 220.0, 0.9),  # far
 	]
+	if _rig != null:
+		# skinned-mesh AABBs are animation-padded; use known human metrics
+		center = Vector3(0.0, 0.95, 0.0)
+		radius_xz = 0.5
+		radius = 1.0
+		# human-scale ranges: conversation, across-the-street, down-the-block
+		street = center + dir * (radius_xz + 3.0)
+		street.y = EYE
+		gaze = Vector3(center.x, center.y, center.z)
+		shots_dist = [
+			Vector2(radius_xz + 1.8, 1.0),
+			Vector2(radius_xz + 8.0, 1.0),
+			Vector2(radius_xz + 30.0, 1.0),
+		]
 
 	# --- noon: time anchor, distance sweep, glass sweep ---
 	_steps.append({"kind": "time", "hour": 12.0})
@@ -145,11 +175,22 @@ func _build_steps() -> void:
 				sweep[i].look
 			)
 
+	# --- animation sanity (characters only): idle + two mid-walk frames ---
+	if _rig != null:
+		var anim_pos := center + dir * (radius_xz + 2.2)
+		anim_pos.y = EYE
+		var anim_look := Vector3(center.x, center.y, center.z)
+		_add_shot("05_anim_idle", anim_pos, anim_look)
+		_steps.append({"kind": "walk", "on": true})
+		_add_shot("05_anim_walk_a", anim_pos, anim_look)
+		_add_shot("05_anim_walk_b", anim_pos, anim_look)
+		_steps.append({"kind": "walk", "on": false})
+
 	# --- golden hour (grazing sun, known worst case): hero shot + motion arc ---
 	_steps.append({"kind": "time", "hour": 17.8})
 	_add_shot("06_time_golden", street, gaze)
-	var arc_start := center + dir * (radius_xz + 55.0)
-	var arc_end := center + dir * (radius_xz + 10.0)
+	var arc_start := center + dir * (radius_xz + (12.0 if _rig != null else 55.0))
+	var arc_end := center + dir * (radius_xz + (2.5 if _rig != null else 10.0))
 	arc_start.y = EYE
 	arc_end.y = EYE
 	var arc := GauntletChecks.arc_poses(8, arc_start, arc_end, gaze, 35.0)
