@@ -25,6 +25,15 @@ Format: `Asset — Author — Source URL — CC0 1.0`
 - Universal Animation Library (45 humanoid clips) — Quaternius —
   https://quaternius.com/packs/universalanimationlibrary.html — CC0 1.0
 
+## Required attribution (CC-BY 4.0) — character library
+
+- NPC + main-character-candidate wardrobe skins (`game/assets/characters/
+  npc_variants/`) — recolored by project contributors from Tripo Studio
+  base character textures (CC BY 4.0) and Quaternius UBC textures (CC0) —
+  CC BY 4.0. Note: the base Tripo coastal-resident characters they derive
+  from (`coastal_residents/`, added in PR #34) are themselves CC BY 4.0
+  but are not yet listed here — a pre-existing CREDITS gap to close.
+
 ## Data
 
 - Map data © OpenStreetMap contributors —
