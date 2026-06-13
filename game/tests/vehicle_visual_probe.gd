@@ -2,14 +2,20 @@ extends SceneTree
 
 const SCENE_PATH: String = "res://scenes/world/miami.tscn"
 const WARMUP_FRAMES: int = 180
+const STREAMED_SETTLE_FRAMES: int = 120
+const MAX_WAIT_MSEC: int = 30_000
 const ROAD_SURFACE_Y: float = 0.32
 const SURFACE_TOLERANCE: float = 0.08
 
 var _scene: Node = null
 var _frames: int = 0
+var _started_msec: int = 0
+var _streamed_frames: int = 0
 
 
 func _initialize() -> void:
+	Engine.max_fps = 120
+	_started_msec = Time.get_ticks_msec()
 	var packed_scene: PackedScene = load(SCENE_PATH) as PackedScene
 	if packed_scene == null:
 		_fail("Could not load %s" % SCENE_PATH)
@@ -23,9 +29,36 @@ func _process(_delta: float) -> bool:
 	_frames += 1
 	if _frames < WARMUP_FRAMES:
 		return false
+	if _runtime_visuals_ready():
+		_streamed_frames += 1
+		if _streamed_frames < STREAMED_SETTLE_FRAMES:
+			return false
+	elif Time.get_ticks_msec() - _started_msec < MAX_WAIT_MSEC:
+		_streamed_frames = 0
+		return false
 
 	_run_checks()
 	return true
+
+
+func _runtime_visuals_ready() -> bool:
+	var has_parked := false
+	var has_traffic := false
+	var stack: Array[Node] = [_scene]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		if (
+			node is MultiMeshInstance3D
+			and (node.name == &"ParkedSportCoupes" or node.name == &"ParkedClassicSedans")
+		):
+			has_parked = true
+		elif node is TrafficCar:
+			has_traffic = true
+		if has_parked and has_traffic:
+			return true
+		for child: Node in node.get_children():
+			stack.push_back(child)
+	return false
 
 
 func _run_checks() -> void:

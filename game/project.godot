@@ -135,3 +135,4 @@ anti_aliasing/quality/use_taa=false
 scaling_3d/mode=2
 scaling_3d/scale=0.85
 mesh_lod/lod_change/threshold_pixels=2.0
+occlusion_culling/use_occlusion_culling=true

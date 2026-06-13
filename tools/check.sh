@@ -105,6 +105,8 @@ step "miami wiring probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_wiring_probe.gd
 step "miami facade probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_facade_probe.gd
+step "streaming route probe"
+"$GODOT_BIN" --headless --path game --script res://tests/streaming_route_probe.gd
 step "vehicle visual probe"
 "$GODOT_BIN" --headless --path game --script res://tests/vehicle_visual_probe.gd
 step "player ground probe"

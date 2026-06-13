@@ -16,7 +16,8 @@ static func resolve(
 	districts: Array,
 	load_radius: float,
 	unload_radius: float,
-	resident: Dictionary
+	resident: Dictionary,
+	velocity_xz: Vector2 = Vector2.ZERO
 ) -> Dictionary:
 	var load_candidates: Array[Dictionary] = []
 	var to_unload: Array[String] = []
@@ -24,11 +25,23 @@ static func resolve(
 		var dist := camera_xz.distance_to(d["offset"])
 		var is_resident := resident.has(d["name"])
 		if not is_resident and dist <= load_radius:
-			load_candidates.append({"name": d["name"], "distance": dist})
+			var offset: Vector2 = d["offset"] - camera_xz
+			var alignment := 0.0
+			if dist > 0.001 and velocity_xz.length() > 0.1:
+				alignment = velocity_xz.normalized().dot(offset / dist)
+			(
+				load_candidates
+				. append(
+					{
+						"name": d["name"],
+						"priority": dist - alignment * TileMath.LOOKAHEAD_WEIGHT * 4.0,
+					}
+				)
+			)
 		elif is_resident and dist > unload_radius:
 			to_unload.append(d["name"])
 	load_candidates.sort_custom(
-		func(a: Dictionary, b: Dictionary) -> bool: return a["distance"] < b["distance"]
+		func(a: Dictionary, b: Dictionary) -> bool: return a["priority"] < b["priority"]
 	)
 	var to_load: Array[String] = []
 	for candidate in load_candidates:
