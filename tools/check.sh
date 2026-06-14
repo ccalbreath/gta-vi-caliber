@@ -167,5 +167,7 @@ step "training zone probe"
 "$GODOT_BIN" --headless --path game --script res://tests/training_zone_probe.gd
 step "smuggling route probe"
 "$GODOT_BIN" --headless --path game --script res://tests/smuggling_route_probe.gd
+step "parole probe"
+"$GODOT_BIN" --headless --path game --script res://tests/parole_probe.gd
 
 printf '\nAll checks passed ✔\n'
