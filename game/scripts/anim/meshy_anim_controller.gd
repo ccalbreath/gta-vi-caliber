@@ -57,8 +57,9 @@ const LOOPING := ["idle", "walk", "run", "run_alt", "fall", "walk_back"]
 
 ## Planar speed (m/s) at or below which the character reads as standing.
 @export var idle_speed: float = 0.2
-## Planar speed (m/s) at which locomotion switches from walk to run.
-@export var run_speed: float = 3.0
+## Planar speed (m/s) at which locomotion switches from walk to run. Set
+## between the character's walk and sprint speeds (player walks 5.0, sprints 8.5).
+@export var run_speed: float = 6.5
 ## Crossfade time (s) between locomotion states.
 @export var locomotion_blend: float = 0.18
 ## Default crossfade time (s) into a one-shot action.

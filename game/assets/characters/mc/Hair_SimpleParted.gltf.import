@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c1e4ci4napygw"
-path="res://.godot/imported/Hair_SimpleParted.gltf-4ff904029bf8660f96131b40de474f42.scn"
+path="res://.godot/imported/Hair_SimpleParted.gltf-f27953563d6783100f5703be6a6a58be.scn"
 
 [deps]
 
 source_file="res://assets/characters/mc/Hair_SimpleParted.gltf"
-dest_files=["res://.godot/imported/Hair_SimpleParted.gltf-4ff904029bf8660f96131b40de474f42.scn"]
+dest_files=["res://.godot/imported/Hair_SimpleParted.gltf-f27953563d6783100f5703be6a6a58be.scn"]
 
 [params]
 
