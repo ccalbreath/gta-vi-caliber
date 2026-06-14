@@ -201,5 +201,7 @@ step "informant probe"
 "$GODOT_BIN" --headless --path game --script res://tests/informant_probe.gd
 step "romance probe"
 "$GODOT_BIN" --headless --path game --script res://tests/romance_probe.gd
+step "property flip probe"
+"$GODOT_BIN" --headless --path game --script res://tests/property_flip_probe.gd
 
 printf '\nAll checks passed ✔\n'
