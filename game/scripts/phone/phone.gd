@@ -21,6 +21,9 @@ signal active_changed(active: bool)
 ## Emitted the moment a call connects to a friend, with their display name. Lets
 ## a Pedestrian of the same name in the world react (wave, stop) if one is near.
 signal friend_called(name: String)
+## Emitted when a connected service contact successfully takes a paid request.
+## Player handles the immediate effect; future systems can listen for drops/spawns.
+signal service_requested(id: String, kind: String, contact: String, cost: int)
 
 ## Fixed seeds so the generated feeds are stable across a session/run.
 const PHOTO_SEED: int = 20260610
@@ -69,8 +72,13 @@ var _moved: bool = false
 var _call_state: int = PhoneModel.Call.IDLE
 var _call_elapsed: float = 0.0
 var _call_contact: Dictionary = {}
+var _call_service_id: String = ""
+var _service_fired_for_call: bool = false
+var _service_message: String = ""
+var _service_message_ok: bool = false
 var _anim_clock: float = 0.0
 var _shake: float = 0.0
+var _services: ContactServices
 
 # Layout, recomputed each frame so draw and hit-testing share one geometry.
 var _screen_rect: Rect2 = Rect2()
@@ -81,6 +89,7 @@ var _hotspots: Array[Dictionary] = []
 
 func _ready() -> void:
 	layer = 30
+	_services = ContactServices.new()
 	_font = ThemeDB.fallback_font
 	_view = Control.new()
 	_view.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -203,6 +212,10 @@ func _start_call(roster_index: int) -> void:
 	if roster_index < 0 or roster_index >= roster.size():
 		return
 	_call_contact = roster[roster_index]
+	_call_service_id = _services.id_for_contact(String(_call_contact.get("name", "")))
+	_service_fired_for_call = false
+	_service_message = ""
+	_service_message_ok = false
 	_call_state = PhoneModel.Call.DIALING
 	_call_elapsed = 0.0
 	_shake = 0.6
@@ -212,6 +225,9 @@ func _start_call(roster_index: int) -> void:
 func _end_call() -> void:
 	_call_state = PhoneModel.Call.IDLE
 	_call_elapsed = 0.0
+	_call_service_id = ""
+	_service_fired_for_call = false
+	_service_message = ""
 
 
 func _advance_call(delta: float) -> void:
@@ -226,7 +242,68 @@ func _advance_call(delta: float) -> void:
 		_call_elapsed = 0.0
 		_shake = 0.5
 		if next == PhoneModel.Call.CONNECTED:
-			friend_called.emit(_call_contact.get("name", ""))
+			_on_call_connected()
+
+
+func _on_call_connected() -> void:
+	friend_called.emit(_call_contact.get("name", ""))
+	_try_request_service()
+
+
+func _try_request_service() -> void:
+	if _call_service_id.is_empty() or _service_fired_for_call:
+		return
+	_service_fired_for_call = true
+	var stats := _player_stats()
+	var balance := int(stats.money) if stats != null and ("money" in stats) else 0
+	var result := _services.request(_call_service_id, _service_now(), balance, true)
+	if not bool(result.get("success", false)):
+		_service_message = String(result.get("reason", "service unavailable"))
+		_service_message_ok = false
+		return
+	var cost := int(result.get("cost", 0))
+	if stats == null or not stats.has_method("spend_money") or not stats.spend_money(cost):
+		_service_message = "wallet unavailable"
+		_service_message_ok = false
+		return
+	var kind := String(result.get("kind", ""))
+	var contact := String(_call_contact.get("name", ""))
+	_apply_service_effect(kind)
+	service_requested.emit(_call_service_id, kind, contact, cost)
+	_service_message = _service_success_line(kind, contact, cost)
+	_service_message_ok = true
+
+
+func _player_stats() -> Node:
+	return get_tree().get_first_node_in_group("player_stats")
+
+
+func _service_now() -> float:
+	return float(Time.get_ticks_msec()) / 1000.0
+
+
+func _apply_service_effect(kind: String) -> void:
+	match kind:
+		"heat":
+			var tracker := get_tree().get_first_node_in_group("wanted")
+			if tracker != null and tracker.has_method("clear"):
+				tracker.clear()
+
+
+func _service_success_line(kind: String, contact: String, cost: int) -> String:
+	match kind:
+		"heat":
+			return "%s cooled the heat ($%d)." % [contact, cost]
+		"vehicle":
+			return "%s is sending a ride ($%d)." % [contact, cost]
+		"weapons":
+			return "%s marked a drop ($%d)." % [contact, cost]
+		"transport":
+			return "%s is lining up transport ($%d)." % [contact, cost]
+		"combat":
+			return "%s is calling backup ($%d)." % [contact, cost]
+		_:
+			return "%s is handling it ($%d)." % [contact, cost]
 
 
 # ---------------------------------------------------------------- process -----
@@ -663,7 +740,7 @@ func _draw_contact_row(rect: Rect2, contact: Dictionary) -> void:
 	var online: bool = contact["status"] == PhoneContacts.ONLINE
 	_text(
 		rect.position + Vector2(64.0 * _scale, rect.size.y * 0.72),
-		PhoneContacts.presence_label(contact),
+		_contact_subtitle(contact),
 		int(11 * _scale),
 		Color(0.4, 0.85, 0.45) if online else Color(1, 1, 1, 0.45)
 	)
@@ -671,6 +748,32 @@ func _draw_contact_row(rect: Rect2, contact: Dictionary) -> void:
 	var dial := rect.position + Vector2(rect.size.x - 28.0 * _scale, rect.size.y * 0.5)
 	_view.draw_circle(dial, 14.0 * _scale, Color(0.2, 0.75, 0.35))
 	_text(dial + Vector2(-5.0 * _scale, 5.0 * _scale), "☎", int(13 * _scale), Color(1, 1, 1, 0.95))
+
+
+func _contact_subtitle(contact: Dictionary) -> String:
+	var label := PhoneContacts.presence_label(contact)
+	if _services == null:
+		return label
+	var id := _services.id_for_contact(String(contact.get("name", "")))
+	if id.is_empty():
+		return label
+	return "%s · %s $%d" % [label, _service_label(_services.kind_of(id)), _services.cost_of(id)]
+
+
+func _service_label(kind: String) -> String:
+	match kind:
+		"heat":
+			return "clear heat"
+		"vehicle":
+			return "mechanic"
+		"weapons":
+			return "drop"
+		"transport":
+			return "ride"
+		"combat":
+			return "backup"
+		_:
+			return "favor"
 
 
 # ------------------------------------------------------------------ call ------
@@ -731,6 +834,15 @@ func _render_call() -> void:
 		HORIZONTAL_ALIGNMENT_CENTER,
 		area.size.x
 	)
+	if not _service_message.is_empty():
+		_text(
+			Vector2(area.position.x + 24.0 * _scale, center.y + base_r + 104.0 * _scale),
+			_service_message,
+			int(12 * _scale),
+			Color(0.45, 1.0, 0.62, 0.9) if _service_message_ok else Color(1.0, 0.72, 0.58, 0.9),
+			HORIZONTAL_ALIGNMENT_CENTER,
+			area.size.x - 48.0 * _scale
+		)
 	# Red hang-up button.
 	var hang := Vector2(area.position.x + area.size.x * 0.5, area.end.y - 70.0 * _scale)
 	var hang_rect := Rect2(
