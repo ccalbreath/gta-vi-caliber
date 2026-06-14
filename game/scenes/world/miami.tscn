@@ -1,4 +1,4 @@
-[gd_scene load_steps=84 format=3]
+[gd_scene load_steps=88 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -70,6 +70,8 @@
 [ext_resource type="Script" path="res://scripts/world/turf_claim.gd" id="63_turf"]
 [ext_resource type="Script" path="res://scripts/world/brokerage_terminal.gd" id="64_brokerage"]
 [ext_resource type="Script" path="res://scripts/world/robbery_target.gd" id="65_robbery"]
+[ext_resource type="Script" path="res://scripts/world/hit_contract_board.gd" id="66_hit"]
+[ext_resource type="Script" path="res://scripts/world/heist_planning_board.gd" id="67_heist"]
 
 [sub_resource type="BoxShape3D" id="payspray_shape"]
 size = Vector3(12, 6, 12)
@@ -115,6 +117,12 @@ size = Vector3(2, 2.2, 1)
 
 [sub_resource type="BoxMesh" id="robbery_mesh"]
 size = Vector3(3, 3, 3)
+
+[sub_resource type="BoxMesh" id="hit_mesh"]
+size = Vector3(1.5, 2, 0.4)
+
+[sub_resource type="BoxMesh" id="heist_mesh"]
+size = Vector3(2, 1.2, 1)
 
 [sub_resource type="ShaderMaterial" id="sky_mat"]
 shader = ExtResource("38_sky")
@@ -549,6 +557,22 @@ script = ExtResource("65_robbery")
 [node name="Body" type="MeshInstance3D" parent="RobberyTarget"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 mesh = SubResource("robbery_mesh")
+
+[node name="HitContractBoard" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 40)
+script = ExtResource("66_hit")
+
+[node name="Body" type="MeshInstance3D" parent="HitContractBoard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("hit_mesh")
+
+[node name="HeistPlanningBoard" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 34)
+script = ExtResource("67_heist")
+
+[node name="Body" type="MeshInstance3D" parent="HeistPlanningBoard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("heist_mesh")
 
 [node name="VehicleModGarage" type="Area3D" parent="." groups=["vehicle_mod_shop"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62, 1, 44)

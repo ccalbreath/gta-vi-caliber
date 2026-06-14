@@ -169,6 +169,10 @@ step "brokerage terminal probe"
 "$GODOT_BIN" --headless --path game --script res://tests/brokerage_terminal_probe.gd
 step "robbery target probe"
 "$GODOT_BIN" --headless --path game --script res://tests/robbery_target_probe.gd
+step "hit contract board probe"
+"$GODOT_BIN" --headless --path game --script res://tests/hit_contract_board_probe.gd
+step "heist planning board probe"
+"$GODOT_BIN" --headless --path game --script res://tests/heist_planning_board_probe.gd
 
 # --- 7. systems wiring probes (scene-free: self-wiring nodes in a mock tree) --
 step "market event probe"
