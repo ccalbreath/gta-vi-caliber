@@ -139,6 +139,8 @@ step "miami citizen probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_citizen_probe.gd
 step "contraband market probe"
 "$GODOT_BIN" --headless --path game --script res://tests/contraband_market_probe.gd
+step "contraband bust probe"
+"$GODOT_BIN" --headless --path game --script res://tests/contraband_bust_probe.gd
 step "race probe"
 "$GODOT_BIN" --headless --path game --script res://tests/race_probe.gd
 step "crowd panic probe"
