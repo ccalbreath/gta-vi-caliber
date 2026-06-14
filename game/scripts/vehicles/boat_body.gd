@@ -47,7 +47,12 @@ func _gelcoat() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = hull_color
 	mat.metallic = 0.2
-	mat.roughness = 0.22
+	mat.roughness = 0.18
+	# Marine gelcoat is a glossy clear lacquer over the hull pigment — a clearcoat
+	# layer gives it the wet, sky-reflecting sheen a fibreglass hull has.
+	mat.clearcoat_enabled = true
+	mat.clearcoat = 0.8
+	mat.clearcoat_roughness = 0.06
 	mat.rim_enabled = true
 	mat.rim = 0.2
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
