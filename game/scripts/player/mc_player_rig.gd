@@ -15,6 +15,17 @@ signal foot_planted(is_left: bool)
 ## Static yaw correction (degrees) for the model's authored forward axis. If the
 ## MC faces away from its travel direction, set this to 180.
 @export var model_yaw_offset_deg: float = 0.0
+## Carried-weapon attachment. The owner scene (player.tscn) parents a `GunMount`
+## under this node; when true we move it onto the MC's right-hand bone so the gun
+## tracks the hand through every clip instead of floating at a fixed body offset
+## (which read as "gun behind the player" once the MC model replaced the old rig).
+## Offset/rotation are exported because the imported hand bone's local axes are
+## only knowable once posed; bullets come from the camera, so an imperfect held
+## pose never affects aim.
+@export var attach_weapon_to_hand: bool = true
+@export var weapon_hand_bone: StringName = &"RightHand"
+@export var weapon_hand_offset: Vector3 = Vector3(0.0, 0.0, -0.04)
+@export var weapon_hand_rotation_deg: Vector3 = Vector3(-90.0, 0.0, 0.0)
 
 var _ctrl: MeshyAnimController = null
 var _facing: float = 0.0
@@ -42,6 +53,50 @@ func _ready() -> void:
 	_ctrl.name = "AnimController"
 	_ctrl.animation_player = ap
 	add_child(_ctrl)
+	_attach_weapon_to_hand(model)
+
+
+## Move the carried GunMount onto the MC's right-hand bone so the gun follows the
+## hand instead of hanging at the authored chest/hip offset. No-op when disabled,
+## when no GunMount is parented under this rig, or when the model has no skeleton /
+## hand bone — the gun then keeps its scene mount.
+func _attach_weapon_to_hand(model: Node3D) -> void:
+	if not attach_weapon_to_hand or model == null:
+		return
+	var gun_mount := get_node_or_null("GunMount") as Node3D
+	if gun_mount == null:
+		return
+	var skel: Skeleton3D = null
+	for node in model.find_children("*", "Skeleton3D", true, false):
+		skel = node as Skeleton3D
+		break
+	if skel == null or skel.find_bone(weapon_hand_bone) < 0:
+		return
+	var attachment := BoneAttachment3D.new()
+	attachment.name = "WeaponHand"
+	skel.add_child(attachment)
+	attachment.bone_name = weapon_hand_bone
+	# The imported MC skeleton is authored at 0.01 scale, which a BoneAttachment
+	# inherits and would shrink the gun ~100x (invisible) with offsets in the wrong
+	# units. Cancel it with an intermediate node so the held gun renders at world
+	# scale and the offset/rotation below stay in normal metres/degrees.
+	var bone_scale := skel.global_transform.basis.get_scale()
+	var unscale := Node3D.new()
+	unscale.name = "WeaponScale"
+	attachment.add_child(unscale)
+	unscale.scale = Vector3(
+		1.0 / maxf(bone_scale.x, 0.0001),
+		1.0 / maxf(bone_scale.y, 0.0001),
+		1.0 / maxf(bone_scale.z, 0.0001)
+	)
+	var rotation_rad := Vector3(
+		deg_to_rad(weapon_hand_rotation_deg.x),
+		deg_to_rad(weapon_hand_rotation_deg.y),
+		deg_to_rad(weapon_hand_rotation_deg.z)
+	)
+	gun_mount.get_parent().remove_child(gun_mount)
+	unscale.add_child(gun_mount)
+	gun_mount.transform = Transform3D(Basis.from_euler(rotation_rad), weapon_hand_offset)
 
 
 ## Drive locomotion from the player body. Signature matches the old AnimatedRig so

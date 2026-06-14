@@ -204,17 +204,20 @@ step "systems integration probe"
 step "phone contact services probe"
 "$GODOT_BIN" --headless --path game --script res://tests/phone_contact_services_probe.gd
 
-# --- 8. combat audio + death-pose probes -------------------------------------
+# --- 8. combat audio + death-pose + weapon-mount probes ----------------------
 # The CC0 weapon/footstep samples all resolve and the audio nodes voice known /
 # fallback / bogus events without error; the rig's death/hit reactions are
-# one-shots (LOOP_NONE) so they hold their last frame instead of looping; and a
-# downed NPC topples over and rests flat on the floor instead of freezing upright
-# in the air (the "corpse flying" bug).
+# one-shots (LOOP_NONE) so they hold their last frame instead of looping; a downed
+# NPC topples over and rests flat on the floor instead of freezing upright in the
+# air (the "corpse flying / upside-down" bug); and the player's gun is moved onto
+# the MC right-hand bone at world scale instead of floating behind the player.
 step "audio assets probe"
 "$GODOT_BIN" --headless --path game --script res://tests/audio_assets_probe.gd
 step "anim loop probe"
 "$GODOT_BIN" --headless --path game --script res://tests/anim_loop_probe.gd
 step "corpse settle probe"
 "$GODOT_BIN" --headless --path game --script res://tests/corpse_settle_probe.gd
+step "mc weapon mount probe"
+"$GODOT_BIN" --headless --path game --script res://tests/mc_weapon_mount_probe.gd
 
 printf '\nAll checks passed ✔\n'
