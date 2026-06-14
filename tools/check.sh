@@ -159,5 +159,7 @@ step "store counter probe"
 "$GODOT_BIN" --headless --path game --script res://tests/store_counter_probe.gd
 step "safehouse zone probe"
 "$GODOT_BIN" --headless --path game --script res://tests/safehouse_zone_probe.gd
+step "fence loop probe"
+"$GODOT_BIN" --headless --path game --script res://tests/fence_loop_probe.gd
 
 printf '\nAll checks passed ✔\n'
