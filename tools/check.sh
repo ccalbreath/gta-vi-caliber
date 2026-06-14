@@ -189,5 +189,7 @@ step "protection racket probe"
 "$GODOT_BIN" --headless --path game --script res://tests/protection_racket_probe.gd
 step "pawn shop probe"
 "$GODOT_BIN" --headless --path game --script res://tests/pawn_shop_probe.gd
+step "bribe official probe"
+"$GODOT_BIN" --headless --path game --script res://tests/bribe_official_probe.gd
 
 printf '\nAll checks passed ✔\n'
