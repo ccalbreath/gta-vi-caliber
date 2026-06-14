@@ -1,20 +1,17 @@
 class_name TrafficRouting
 extends RefCounted
-## Pure road-following router for ambient traffic (issue #61). Given a built
-## RoadNetwork and where a car is (plus the way it faces), it walks the graph
-## segment -> segment, picking a continuation at each junction (never an immediate
-## U-turn, biased toward going straight), until the route is at least `min_length`
-## metres long. Every waypoint is pushed `lane_half_width` metres to the RIGHT of
-## travel, so opposing cars keep to opposite sides of a two-way street.
+## Pure road-following router for ambient traffic (issue #61). Each car gets a
+## DESTINATION and the A* shortest path to it along the road graph, so it drives
+## somewhere on purpose instead of wandering turn-by-turn. The node path becomes a
+## string of waypoints ~WAYPOINT_STEP apart, each pushed a half-lane to the RIGHT
+## of travel so opposing cars keep to opposite sides of a two-way street.
 ##
 ## Returns ABSOLUTE world waypoints (the caller shifts them into the engine frame
-## via FloatingOrigin.origin_offset). Scene-free and deterministic given the same
-## RNG, so it unit-tests headless (tests/unit/test_traffic_routing.gd).
+## via FloatingOrigin.origin_offset). Scene-free and deterministic, so it
+## unit-tests headless (tests/unit/test_traffic_routing.gd).
 
-const MAX_SEGMENTS := 256
-## Waypoint spacing (m) along a segment. OSM polylines can run far between
-## vertices, so subdivide them — one long segment still yields a string of
-## on-road points the car can follow, not a single distant node.
+## Waypoint spacing (m) along the path. OSM polylines run far between vertices, so
+## subdivide them — a long edge still yields followable on-road points.
 const WAYPOINT_STEP := 9.0
 
 
@@ -25,54 +22,52 @@ static func right_of(heading: Vector3) -> Vector3:
 	return r.normalized() if r.length() > 0.0001 else Vector3.ZERO
 
 
-## Build a right-lane route along the road graph from `anchor_pos`, heading the
-## way `heading_hint` points. Returns absolute waypoints (the node ahead first,
-## then each junction onward). Empty if the graph has no roads.
-static func route_points(
+## Right-lane route from `start_pos` to the road nearest `goal_pos`, via the graph's
+## A* shortest path. `heading_hint` sets the initial travel direction so the car
+## sets off forward rather than reversing. Returns absolute waypoints, or empty if
+## no path connects the two.
+static func route_to(
 	net: RoadNetwork,
-	anchor_pos: Vector3,
+	start_pos: Vector3,
+	goal_pos: Vector3,
 	heading_hint: Vector3,
-	min_length: float,
-	rng: RandomNumberGenerator,
 	lane_half_width: float
 ) -> PackedVector3Array:
 	var out := PackedVector3Array()
 	if net.segment_count() == 0:
 		return out
-	var np := net.nearest_point(anchor_pos)
-	if np.is_empty():
+	var np := net.nearest_point(start_pos)
+	var gp := net.nearest_point(goal_pos)
+	if np.is_empty() or gp.is_empty():
 		return out
-	# Start along the directed segment that matches the way the car is facing, so
-	# it continues forward instead of reversing onto the road it came from. The
-	# start offset is where the car sits on that segment, so the first waypoint
-	# lands just ahead of it rather than back at the segment's start node.
-	var seg: int = np["seg"]
+	# Begin along the directed segment matching the car's facing, so it heads
+	# toward that segment's end node rather than reversing onto the road behind it.
+	var start_seg: int = np["seg"]
 	var start_off: float = np["offset"]
 	if heading_hint.length() > 0.001 and heading_hint.dot(np["heading"]) < 0.0:
-		var rev := _reverse_segment(net, seg)
+		var rev := _reverse_segment(net, start_seg)
 		if rev >= 0:
-			start_off = net.seg_len[seg] - start_off
-			seg = rev
-	var travelled := 0.0
-	var guard := 0
-	while travelled < min_length and guard < MAX_SEGMENTS:
-		guard += 1
-		var seg_length: float = net.seg_len[seg]
-		var right := right_of(net.point_on_segment(seg, 0.0)["heading"]) * lane_half_width
-		var off := start_off
-		while off < seg_length - 0.01:
-			off = minf(off + WAYPOINT_STEP, seg_length)
-			out.append(net.point_on_segment(seg, off)["pos"] + right)
-		travelled += maxf(seg_length - start_off, 0.0)
-		start_off = 0.0
-		seg = _next_segment(net, seg, rng)
-		if seg < 0:
-			break
+			start_off = net.seg_len[start_seg] - start_off
+			start_seg = rev
+	var start_node: int = net.seg_b[start_seg]
+	# Aim at whichever end of the goal's segment sits closer to the destination.
+	var ga: int = net.seg_a[gp["seg"]]
+	var gb: int = net.seg_b[gp["seg"]]
+	var to_a := net.nodes[ga].distance_to(goal_pos)
+	var to_b := net.nodes[gb].distance_to(goal_pos)
+	var path := net.find_path(start_node, ga if to_a <= to_b else gb)
+	if path.is_empty():
+		return out
+	# Partial first leg: from where the car sits to its segment's end node.
+	_emit_edge(
+		net.nodes[net.seg_a[start_seg]], net.nodes[start_node], start_off, lane_half_width, out
+	)
+	for i in range(path.size() - 1):
+		_emit_edge(net.nodes[path[i]], net.nodes[path[i + 1]], 0.0, lane_half_width, out)
 	return out
 
 
-## The segment that retraces `seg` (its end node back to its start), or -1 if the
-## graph has no reverse (it normally does — polylines are added both ways).
+## The segment retracing `seg` (its end node back to its start), or -1 if none.
 static func _reverse_segment(net: RoadNetwork, seg: int) -> int:
 	var a := net.seg_a[seg]
 	var b := net.seg_b[seg]
@@ -82,32 +77,16 @@ static func _reverse_segment(net: RoadNetwork, seg: int) -> int:
 	return -1
 
 
-## Pick a continuation leaving the end node of `seg`, excluding the immediate
-## U-turn (the reverse segment). Returns -1 at a dead end. Weights straighter
-## continuations more heavily so cars mostly go straight and only sometimes turn.
-static func _next_segment(net: RoadNetwork, seg: int, rng: RandomNumberGenerator) -> int:
-	var end_node := net.seg_b[seg]
-	var came_from := net.seg_a[seg]
-	var heading: Vector3 = net.point_on_segment(seg, 0.0)["heading"]
-	var options := PackedInt32Array()
-	for cand in net.segments_from(end_node):
-		if net.seg_b[cand] != came_from:
-			options.append(cand)
-	if options.is_empty():
-		# Dead end: allow the U-turn rather than freezing the car.
-		return net.segments_from(end_node)[0] if net.segments_from(end_node).size() > 0 else -1
-	var weights := PackedFloat32Array()
-	var total := 0.0
-	for cand in options:
-		var ch: Vector3 = net.point_on_segment(cand, 0.0)["heading"]
-		# 1.0 dead-straight .. ~0.05 hairpin; squared so straight is strongly favoured.
-		var straight := maxf(0.05, 0.5 + 0.5 * heading.dot(ch))
-		var w := straight * straight
-		weights.append(w)
-		total += w
-	var pick := rng.randf() * total
-	for i in options.size():
-		pick -= weights[i]
-		if pick <= 0.0:
-			return options[i]
-	return options[options.size() - 1]
+## Append right-lane waypoints every WAYPOINT_STEP metres along the straight edge
+## a->b, starting `start_off` metres in (so the first lands ahead of the car).
+static func _emit_edge(
+	a: Vector3, b: Vector3, start_off: float, lane_half_width: float, out: PackedVector3Array
+) -> void:
+	var length := a.distance_to(b)
+	if length < 0.001:
+		return
+	var right := right_of((b - a) / length) * lane_half_width
+	var off := start_off
+	while off < length - 0.01:
+		off = minf(off + WAYPOINT_STEP, length)
+		out.append(a.lerp(b, off / length) + right)

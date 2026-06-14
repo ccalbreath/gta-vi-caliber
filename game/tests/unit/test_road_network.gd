@@ -97,3 +97,36 @@ func test_nearest_point_heading_along_road() -> bool:
 
 func test_nearest_point_empty_on_blank_graph() -> bool:
 	return RoadNetwork.new(1.0).nearest_point(Vector3(5, 0, 5)).is_empty()
+
+
+func _node_at(net: RoadNetwork, p: Vector3) -> int:
+	for i in net.node_count():
+		if net.nodes[i].is_equal_approx(p):
+			return i
+	return -1
+
+
+func test_find_path_connects_across_junction() -> bool:
+	var net := RoadNetwork.new(1.0)
+	net.add_polyline(_line(Vector3(0, 0, 0), Vector3(10, 0, 0)))
+	net.add_polyline(_line(Vector3(10, 0, 0), Vector3(10, 0, 10)))
+	var start := _node_at(net, Vector3(0, 0, 0))
+	var goal := _node_at(net, Vector3(10, 0, 10))
+	var path := net.find_path(start, goal)
+	# 0,0,0 -> 10,0,0 -> 10,0,10
+	return path.size() == 3 and path[0] == start and path[path.size() - 1] == goal
+
+
+func test_find_path_same_node_is_singleton() -> bool:
+	var net := RoadNetwork.new(1.0)
+	net.add_polyline(_line(Vector3(0, 0, 0), Vector3(10, 0, 0)))
+	return net.find_path(0, 0) == PackedInt32Array([0])
+
+
+func test_find_path_unreachable_is_empty() -> bool:
+	var net := RoadNetwork.new(1.0)
+	net.add_polyline(_line(Vector3(0, 0, 0), Vector3(10, 0, 0)))  # component A
+	net.add_polyline(_line(Vector3(100, 0, 0), Vector3(110, 0, 0)))  # disjoint B
+	var a := _node_at(net, Vector3(0, 0, 0))
+	var b := _node_at(net, Vector3(100, 0, 0))
+	return net.find_path(a, b).is_empty()

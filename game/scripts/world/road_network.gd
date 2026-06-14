@@ -157,6 +157,49 @@ func nearest_point(pos: Vector3) -> Dictionary:
 	return best
 
 
+## A* shortest node path from `start` to `goal` over the directed graph (edge cost
+## = segment length, heuristic = straight-line distance), inclusive of both ends.
+## Empty if unreachable or the search budget is exceeded. Pure — lets ambient cars
+## drive to a destination instead of wandering. Covered by test_road_network.
+func find_path(start: int, goal: int) -> PackedInt32Array:
+	if start < 0 or goal < 0 or start >= nodes.size() or goal >= nodes.size():
+		return PackedInt32Array()
+	if start == goal:
+		return PackedInt32Array([start])
+	var goal_pos := nodes[goal]
+	var came := {}
+	var cost := {start: 0.0}
+	var open := {start: nodes[start].distance_to(goal_pos)}
+	var guard := 0
+	while not open.is_empty() and guard < 1500:
+		guard += 1
+		var cur := -1
+		var best := INF
+		for n in open:
+			if open[n] < best:
+				best = open[n]
+				cur = n
+		if cur == goal:
+			break
+		open.erase(cur)
+		for seg in segments_from(cur):
+			var nb: int = seg_b[seg]
+			var tentative: float = cost[cur] + seg_len[seg]
+			if not cost.has(nb) or tentative < cost[nb]:
+				came[nb] = cur
+				cost[nb] = tentative
+				open[nb] = tentative + nodes[nb].distance_to(goal_pos)
+	if not came.has(goal):
+		return PackedInt32Array()
+	var path := PackedInt32Array([goal])
+	var c := goal
+	while c != start:
+		c = came[c]
+		path.append(c)
+	path.reverse()
+	return path
+
+
 ## Closest point on one segment to `pos`, projected on the flat (XZ). The y is
 ## interpolated along the segment so callers get a sensible road height.
 func _project_to_segment(seg: int, pos: Vector3) -> Dictionary:

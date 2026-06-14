@@ -255,9 +255,18 @@ func _cull(center: Vector3) -> void:
 ## Give any car that has finished its route a fresh destination, so traffic keeps
 ## flowing instead of parking at the end of each trip.
 func _repath(center: Vector3) -> void:
+	var survivors: Array[TrafficCar] = []
 	for car in _cars:
-		if is_instance_valid(car) and car.is_done():
-			_route_car(car, center, car.heading())
+		if not is_instance_valid(car):
+			continue
+		# A finished car that can't get a fresh road route is stranded at a dead
+		# end — cull it so it never sits in the road blocking the fleet behind it
+		# (a new car respawns on open road next tick).
+		if car.is_done() and not _route_car(car, center, car.heading()):
+			car.queue_free()
+		else:
+			survivors.append(car)
+	_cars = survivors
 
 
 func _spawn(center: Vector3) -> void:
@@ -274,8 +283,12 @@ func _spawn(center: Vector3) -> void:
 		var car := _make_car()
 		add_child(car)
 		car.global_position = spot["pos"]
-		_cars.append(car)
-		_route_car(car, center, spot["heading"])
+		# Only keep it if it can actually set off on the road; otherwise drop it so
+		# it doesn't sit at the spawn point as an instant roadblock.
+		if _route_car(car, center, spot["heading"]):
+			_cars.append(car)
+		else:
+			car.queue_free()
 
 
 func _make_car() -> TrafficCar:
@@ -341,29 +354,37 @@ func _road_spawn_point(center: Vector3) -> Dictionary:
 	return {}
 
 
-## Give a car a route. Primary: walk the road graph (right lane) for trip_radius
-## metres so it follows real streets and turns at junctions. Fallback (no road
-## graph): _assign_route's NavGrid/straight path. `heading_hint` keeps a moving
-## car going forward instead of reversing onto the road behind it.
-func _route_car(car: TrafficCar, center: Vector3, heading_hint: Vector3) -> void:
+## Route a car along the road graph (right lane) for trip_radius metres, following
+## real streets and turning at junctions. Returns false when roads exist but no
+## route can be built from where the car sits (a dead-end stub) — the caller culls
+## it so a stuck car never sits in the road blocking the cars queued behind it.
+## With no road graph it takes the NavGrid/straight sandbox fallback and is kept.
+## `heading_hint` keeps a moving car going forward, not reversing behind itself.
+func _route_car(car: TrafficCar, center: Vector3, heading_hint: Vector3) -> bool:
 	if _roads == null:
-		_assign_route(car, center)  # no road data: NavGrid/straight sandbox fallback
-		return
-	# Roads are up: route along them and NEVER fall back to the off-road cruise.
-	var abs_pts := TrafficRouting.route_points(
-		_roads,
-		car.global_position - _origin_offset,
-		heading_hint,
-		trip_radius,
-		_rng,
-		lane_half_width
+		_assign_route(car, center)
+		return true
+	var car_abs := car.global_position - _origin_offset
+	var abs_pts := TrafficRouting.route_to(
+		_roads, car_abs, _pick_goal(car_abs, heading_hint), heading_hint, lane_half_width
 	)
 	if abs_pts.size() < 2:
-		return  # degenerate stub (dead end); leave the car, it retries on repath
+		return false
 	var route := PackedVector3Array()
 	for p in abs_pts:
 		route.append(Vector3(p.x + _origin_offset.x, car.global_position.y, p.z + _origin_offset.z))
 	car.set_route(route)
+	return true
+
+
+## A destination roughly trip_radius..1.8x ahead of the car (a forward arc, so it
+## never picks somewhere behind it), in absolute coords. The car A*-routes here and
+## picks a fresh one on arrival, so it always drives somewhere on purpose.
+func _pick_goal(car_abs: Vector3, heading: Vector3) -> Vector3:
+	var fwd := Vector3(heading.x, 0.0, heading.z)
+	fwd = fwd.normalized() if fwd.length() > 0.1 else Vector3.FORWARD
+	var dir := fwd.rotated(Vector3.UP, _rng.randf_range(-PI * 0.6, PI * 0.6))
+	return car_abs + dir * _rng.randf_range(trip_radius, trip_radius * 1.8)
 
 
 ## A point in the annulus [min_r, max_r] around center that sits on an open nav
