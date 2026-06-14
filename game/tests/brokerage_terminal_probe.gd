@@ -1,23 +1,25 @@
 extends SceneTree
 ## Runtime wiring + economy probe for the live BrokerageTerminal in miami.tscn.
 ##
-## Boots the real map, asserts the terminal is a registered interactable owning a
-## StockMarket, then drives the trade loop against the LIVE player_stats wallet:
-## interact once to BUY a lot (wallet drops by the buy cost, position opens), drift
-## the market deterministically so the price moves, interact again to SELL the whole
-## position (wallet credited by the proceeds, position back to flat). Asserts the
-## full buy->hold->sell round-trip moves the wallet coherently with no leakage.
-## Self-contained. Run:
+## Boots the real map, asserts the terminal is a registered interactable that trades
+## the world's ONE LIVE market (the StockMarket owned by MarketEventCoordinator, the
+## same market HitContractBoard shocks), then drives the trade loop against the LIVE
+## player_stats wallet: interact once to BUY a lot (wallet drops by the buy cost,
+## position opens), then move the LIVE price by feeding a market event to that SAME
+## live market (proving the brokerage and the world share one market), interact again
+## to SELL the whole position (wallet credited by the proceeds, position back to flat).
+## Asserts the full buy->pump->sell round-trip moves the wallet coherently with no
+## leakage. Self-contained. Run:
 ##   godot --headless --path game --script res://tests/brokerage_terminal_probe.gd
 
 const SCENE_PATH: String = "res://scenes/world/miami.tscn"
 const WARMUP_FRAMES: int = 90
-## Deterministic drift seed for the terminal's price walk.
-const SEED: int = 1337
 ## Cash fronted so the probe exercises the buy path, not the can't-afford branch.
 const FRONT_MONEY: int = 200000
-## Real-time drift steps applied between buy and sell so the price wanders.
-const DRIFT_STEPS: int = 12
+## Positive shock fed to the live market so the held position gains before the sell.
+const PUMP_MAGNITUDE: float = 0.5
+## Spillover used when pumping via the coordinator's apply_hit_effect path.
+const PUMP_SPILLOVER: float = 0.0
 
 var _scene: Node = null
 var _frames: int = 0
@@ -57,10 +59,11 @@ func _verify() -> String:
 	return _verify_loop(term)
 
 
-## The terminal is live, owns a market, is a registered interactable, starts flat.
+## The terminal is live, trades the shared LIVE market, is a registered interactable,
+## starts flat.
 func _verify_wiring(term: BrokerageTerminal) -> String:
-	if term.market == null:
-		return "BrokerageTerminal / its market not present in miami.tscn"
+	if term._market() == null:
+		return "BrokerageTerminal found no live market (MarketEventCoordinator) in miami.tscn"
 	if not term.is_in_group("interactables"):
 		return "terminal not in group 'interactables'"
 	if not term.has_method("interact") or not term.has_method("interact_prompt"):
@@ -70,7 +73,7 @@ func _verify_wiring(term: BrokerageTerminal) -> String:
 	return ""
 
 
-## buy -> drift -> sell round trip against the live wallet, no leakage.
+## buy -> pump the LIVE price -> sell round trip against the live wallet, no leakage.
 func _verify_loop(term: BrokerageTerminal) -> String:
 	var player := get_first_node_in_group("player")
 	var stats := get_first_node_in_group("player_stats")
@@ -78,10 +81,10 @@ func _verify_loop(term: BrokerageTerminal) -> String:
 		return "no live player / player_stats node"
 	if stats.has_method("add_money"):
 		stats.add_money(FRONT_MONEY)
-	term.set_seed(SEED)
 
+	var market: StockMarket = term._market()
 	var money0: int = int(stats.money)
-	var buy_unit: int = term.market.price(term.stock_id)
+	var buy_unit: int = market.price(term.stock_id)
 	term.interact(player)
 	if term.position() <= 0:
 		return "buy did not open a position (position %d)" % term.position()
@@ -90,11 +93,31 @@ func _verify_loop(term: BrokerageTerminal) -> String:
 	if not leak.is_empty():
 		return leak
 
-	for _i in range(DRIFT_STEPS):
-		term.tick_market(term.drift_seconds)
-	# Guarantee a price move regardless of the random walk's direction.
-	term.market.apply_company_event(term.stock_id, 0.5)
+	# Move the LIVE price the brokerage trades on by feeding the world its own market
+	# event — the brokerage and the world share ONE market, so this changes the sell.
+	if not _pump_live_market(market, term.stock_id):
+		return "could not move the live market price"
 	return _verify_sell(term, player, stats, after_buy)
+
+
+## Pump the SAME live market the brokerage trades: prefer the coordinator's
+## apply_hit_effect (the real world->market path), else apply a company event directly.
+func _pump_live_market(market: StockMarket, id: String) -> bool:
+	var coord := _coordinator_for(market)
+	if coord != null:
+		var effect := {"company_id": id, "magnitude": PUMP_MAGNITUDE, "spillover": PUMP_SPILLOVER}
+		if bool(coord.apply_hit_effect(effect)):
+			return true
+	return market.apply_company_event(id, PUMP_MAGNITUDE)
+
+
+## The scene node whose `market` IS this exact live StockMarket (MarketEventCoordinator),
+## so the probe shocks the very market the brokerage trades. Null if none matches.
+func _coordinator_for(market: StockMarket) -> Node:
+	for node: Node in root.find_children("*", "Node", true, false):
+		if node.get("market") == market and node.has_method("apply_hit_effect"):
+			return node
+	return null
 
 
 ## The buy debit equals price * lot_size exactly (wallet drops, no extra leak).
@@ -111,7 +134,7 @@ func _verify_buy_charge(
 ## Selling the full position empties it and credits the wallet by the proceeds.
 func _verify_sell(term: BrokerageTerminal, player: Node, stats: Node, after_buy: int) -> String:
 	var held: int = term.position()
-	var sell_unit: int = term.market.price(term.stock_id)
+	var sell_unit: int = term._market().price(term.stock_id)
 	var expected_proceeds: int = sell_unit * held
 	term.interact(player)
 	if term.position() != 0:
