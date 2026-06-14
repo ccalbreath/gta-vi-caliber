@@ -169,5 +169,7 @@ step "smuggling route probe"
 "$GODOT_BIN" --headless --path game --script res://tests/smuggling_route_probe.gd
 step "parole probe"
 "$GODOT_BIN" --headless --path game --script res://tests/parole_probe.gd
+step "protagonist bond probe"
+"$GODOT_BIN" --headless --path game --script res://tests/protagonist_bond_probe.gd
 
 printf '\nAll checks passed ✔\n'
