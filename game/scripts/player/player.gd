@@ -13,6 +13,7 @@ extends CharacterBody3D
 signal footstep(surface: String, is_left: bool)
 
 const DISGUISE_TRACKER_SCRIPT := preload("res://scripts/systems/disguise_tracker.gd")
+const SKILLS_COORDINATOR_SCRIPT := preload("res://scripts/systems/skills_coordinator.gd")
 
 @export var walk_speed: float = 5.0
 @export var sprint_speed: float = 8.5
@@ -98,6 +99,8 @@ func _ready() -> void:
 	_rig.foot_planted.connect(_on_foot_planted)
 	var disguise_tracker := DISGUISE_TRACKER_SCRIPT.new()
 	add_child(disguise_tracker)
+	var skills_coordinator := SKILLS_COORDINATOR_SCRIPT.new()
+	add_child(skills_coordinator)
 	# The phone (UI + its own input + holding pose) is likewise code-spawned so
 	# the feature is self-contained and doesn't touch player.tscn.
 	_phone_ui = Phone.new()
