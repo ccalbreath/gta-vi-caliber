@@ -177,5 +177,7 @@ step "vehicle supplier probe"
 "$GODOT_BIN" --headless --path game --script res://tests/vehicle_supplier_probe.gd
 step "social clout probe"
 "$GODOT_BIN" --headless --path game --script res://tests/social_clout_probe.gd
+step "recognizability evasion probe"
+"$GODOT_BIN" --headless --path game --script res://tests/recognizability_evasion_probe.gd
 
 printf '\nAll checks passed ✔\n'

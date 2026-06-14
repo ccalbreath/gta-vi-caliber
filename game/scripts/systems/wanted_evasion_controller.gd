@@ -5,7 +5,14 @@ extends Node
 ## the heat holds; once the player breaks line of sight, a search countdown runs
 ## and the wanted level clears when the player has stayed unseen long enough
 ## ("go cold"). Drives the pure, tested WantedEvasion model from live police
-## sightlines. Self-wires by group (player, wanted, police) — no scene plumbing.
+## sightlines. Self-wires by group (player, wanted, police, social_clout) — no scene
+## plumbing. A FAMOUS player (SocialClout.recognizability) is recognized on sight, so the
+## search gives up SLOWER — the price of going viral.
+
+## Go-cold drain multiplier at full recognizability: a maximally viral player drains the
+## search countdown at this rate while unseen (0.5 = takes ~twice as long to shake the
+## cops). 1.0 would mean fame has no effect.
+const MIN_FAME_DRAIN: float = 0.5
 
 ## Officers beyond this planar range can't see the player.
 @export var sight_radius: float = 50.0
@@ -18,6 +25,7 @@ var _evasion: WantedEvasion
 var _tracker: Node = null
 var _player: Node3D = null
 var _disguise: Node = null
+var _clout: Node = null
 var _was_seen: bool = false
 
 
@@ -43,8 +51,9 @@ func _physics_process(delta: float) -> void:
 		_disguise.log_sighting()
 	_was_seen = seen
 	# A disguised player drains the "go cold" countdown faster (Disguise.evasion_speedup,
-	# 1x..3x) — but only while unseen; being seen resets the timer regardless of step.
-	var step := delta if seen else delta * _disguise_speedup()
+	# 1x..3x); a famous one drains it slower (recognized on sight) — both only while
+	# unseen, since being seen resets the timer regardless of step.
+	var step := delta if seen else delta * _disguise_speedup() * _recognizability_slowdown()
 	_evasion.update(seen, step)
 	if _evasion.is_cold() and _tracker.has_method("clear"):
 		_tracker.clear()
@@ -58,6 +67,19 @@ func _physics_process(delta: float) -> void:
 func _disguise_speedup() -> float:
 	if _disguise != null and _disguise.has_method("evasion_speedup"):
 		return clampf(float(_disguise.evasion_speedup()), 1.0, Disguise.MAX_EVASION_SPEEDUP)
+	return 1.0
+
+
+## Go-cold SLOWDOWN from the player's public fame (group "social_clout"): 1.0 when none is
+## wired (no effect — fully behaviour-preserving), down to MIN_FAME_DRAIN when fully
+## recognizable, since a viral player is spotted on sight so the search takes longer to give
+## up. Clamped so a stray node can't speed evasion up or stall the timer dead.
+func _recognizability_slowdown() -> float:
+	if _clout != null and _clout.has_method("recognizability"):
+		var fame := clampf(float(_clout.recognizability()), 0.0, 1.0)
+		# Floor the result so a mis-set MIN_FAME_DRAIN of 0 can't freeze the cold timer (a
+		# soft-lock) — symmetric to the 1.0 floor _disguise_speedup keeps on its side.
+		return maxf(lerpf(1.0, MIN_FAME_DRAIN, fame), 0.01)
 	return 1.0
 
 
@@ -77,6 +99,8 @@ func _bind() -> void:
 		_tracker = get_tree().get_first_node_in_group("wanted")
 	if _disguise == null or not is_instance_valid(_disguise):
 		_disguise = get_tree().get_first_node_in_group("player_disguise")
+	if _clout == null or not is_instance_valid(_clout):
+		_clout = get_tree().get_first_node_in_group("social_clout")
 
 
 ## True if any living officer is within range and has an unobstructed sightline
