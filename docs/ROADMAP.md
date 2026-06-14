@@ -42,6 +42,8 @@ Goal: moving around is *fun* before there is anything to do.
 - [x] Footstep audio hooked to surface type
 - [x] Greybox "movement playground" scene with stairs, slopes, gaps, ladders
 - [ ] Gamepad support + rebindable input
+  - landed: gamepad default bindings + `InputRemap` save/load persistence.
+    TODO: expose binding controls in the settings UI.
 
 ## M2 — Vehicles
 

@@ -5,7 +5,8 @@ extends Control
 ## Exposes master volume, fullscreen and mouse-sensitivity controls and applies
 ## them to the live engine (AudioServer / DisplayServer). Settings persist to
 ## user://settings.cfg so they survive between sessions and across scene loads.
-## The audio/sensitivity maths live in static helpers so they can be unit-tested
+## Saved input remaps are applied at the same boot-time hook. The
+## audio/sensitivity maths live in static helpers so they can be unit-tested
 ## without a running tree (tests/unit/test_settings_panel.gd).
 
 signal closed
@@ -79,6 +80,7 @@ static func apply(cfg: Dictionary, tree: SceneTree = null) -> void:
 	)
 	DisplayServer.window_set_mode(mode)
 	apply_graphics(int(cfg.get("graphics", 1)), tree)
+	InputRemap.apply_saved()
 
 
 ## Applies the graphics quality presets.
