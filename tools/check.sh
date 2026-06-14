@@ -171,6 +171,8 @@ step "market event probe"
 "$GODOT_BIN" --headless --path game --script res://tests/market_event_probe.gd
 step "crime reaction probe"
 "$GODOT_BIN" --headless --path game --script res://tests/crime_reaction_probe.gd
+step "radio news probe"
+"$GODOT_BIN" --headless --path game --script res://tests/radio_news_probe.gd
 step "character switch probe"
 "$GODOT_BIN" --headless --path game --script res://tests/character_switch_probe.gd
 step "ambient event probe"
