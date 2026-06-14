@@ -201,5 +201,7 @@ step "systems integration probe"
 "$GODOT_BIN" --headless --path game --script res://tests/systems_integration_probe.gd
 step "phone contact services probe"
 "$GODOT_BIN" --headless --path game --script res://tests/phone_contact_services_probe.gd
+step "phone mechanic probe"
+"$GODOT_BIN" --headless --path game --script res://tests/phone_mechanic_probe.gd
 
 printf '\nAll checks passed ✔\n'
