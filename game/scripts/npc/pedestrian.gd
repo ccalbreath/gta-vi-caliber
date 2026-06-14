@@ -133,6 +133,12 @@ func scare(threat_pos: Vector3, seconds: float) -> void:
 	_state = NpcBrain.State.FLEE
 
 
+## Seconds of panic left on this pedestrian (0 when calm). Lets a crowd-panic
+## director read who is already bolting so panic can spread ped-to-ped.
+func fear() -> float:
+	return _fear
+
+
 func is_dead() -> bool:
 	return _dead
 
