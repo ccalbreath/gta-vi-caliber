@@ -24,19 +24,9 @@ const SPECS := {
 	"npc_player_v1": [CR + "/player.glb", "jpg", "", false],
 	"npc_player_v2": [CR + "/player.glb", "jpg", "", false],
 	"npc_ubc_male_v1":
-	[
-		"res://assets/characters/mc/Superhero_Male_FullBody.gltf",
-		"png",
-		"Superhero",
-		false
-	],
+	["res://assets/characters/mc/Superhero_Male_FullBody.gltf", "png", "Superhero", false],
 	"npc_ubc_male_v2":
-	[
-		"res://assets/characters/mc/Superhero_Male_FullBody.gltf",
-		"png",
-		"Superhero",
-		false
-	],
+	["res://assets/characters/mc/Superhero_Male_FullBody.gltf", "png", "Superhero", false],
 	"npc_ubc_female_v1":
 	[
 		"res://assets/characters/npc_female_01/Superhero_Female_FullBody.gltf",
@@ -55,12 +45,7 @@ const SPECS := {
 	"candidate_02": [CR + "/player.glb", "jpg", "", false],
 	"candidate_03": [CR + "/npc_man.glb", "jpg", "", false],
 	"candidate_04":
-	[
-		"res://assets/characters/mc/Superhero_Male_FullBody.gltf",
-		"png",
-		"Superhero",
-		true
-	],
+	["res://assets/characters/mc/Superhero_Male_FullBody.gltf", "png", "Superhero", true],
 	"candidate_05": [CR + "/npc_woman.glb", "jpg", "", false],
 }
 
