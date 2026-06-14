@@ -5,7 +5,7 @@ extends RefCounted
 
 const PLAYER_SCENE := "res://scenes/player/player.tscn"
 const RIG_SCENE := "res://scenes/player/mc_rig.tscn"
-const PLAYER_VISUAL := "res://assets/characters/mc/mc_dressed_full_anims.glb"
+const PLAYER_VISUAL := "res://assets/characters/mc/mc_shirtless_full_anims.glb"
 const LEATHER_TEX := "res://assets/textures/leather.png"
 
 

@@ -229,4 +229,5 @@ static func apply_quality(env: Environment, tier: int = Quality.MEDIUM) -> Envir
 ## `rendering/quality_tier` (int 0–3); otherwise MEDIUM — the safe default that
 ## ships SSAO/SSR but holds back the GI pair that tanks FPS on weaker GPUs.
 static func resolved_tier() -> int:
-	return GraphicsQuality.resolved_tier()
+	return GRAPHICS_QUALITY.resolved_tier()
+const GRAPHICS_QUALITY := preload("res://scripts/world/graphics_quality.gd")

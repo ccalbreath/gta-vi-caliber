@@ -2,6 +2,7 @@ class_name BenchmarkConfig
 extends RefCounted
 ## Parsed, testable configuration for the deterministic performance harness.
 
+const CINEMATIC_ENVIRONMENT := preload("res://scripts/world/cinematic_environment.gd")
 const SUBSYSTEMS: PackedStringArray = [
 	"districts",
 	"backdrop",
@@ -26,8 +27,9 @@ var require_release: bool = false
 var disabled_subsystems: Dictionary = {}
 
 
-static func from_environment() -> BenchmarkConfig:
-	var config := BenchmarkConfig.new()
+static func from_environment() -> Object:
+	var config_script: GDScript = load("res://scripts/performance/benchmark_config.gd")
+	var config = config_script.new()
 	config.scene_path = _env_string("BENCHMARK_SCENE", config.scene_path)
 	config.output_path = _env_string("BENCHMARK_OUTPUT", config.output_path)
 	config.resolution = parse_resolution(
@@ -71,13 +73,13 @@ func is_enabled(subsystem: String) -> bool:
 func quality_tier() -> int:
 	match quality:
 		"low":
-			return CinematicEnvironment.Quality.LOW
+			return CINEMATIC_ENVIRONMENT.Quality.LOW
 		"high":
-			return CinematicEnvironment.Quality.HIGH
+			return CINEMATIC_ENVIRONMENT.Quality.HIGH
 		"ultra":
-			return CinematicEnvironment.Quality.ULTRA
+			return CINEMATIC_ENVIRONMENT.Quality.ULTRA
 		_:
-			return CinematicEnvironment.Quality.MEDIUM
+			return CINEMATIC_ENVIRONMENT.Quality.MEDIUM
 
 
 func apply_before_ready(scene: Node) -> void:

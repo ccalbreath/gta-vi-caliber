@@ -12,6 +12,8 @@ extends CharacterBody3D
 ## audio stays locked to the visible steps; surface logic is in Footsteps.
 signal footstep(surface: String, is_left: bool)
 
+const DISGUISE_TRACKER_SCRIPT := preload("res://scripts/systems/disguise_tracker.gd")
+
 @export var walk_speed: float = 5.0
 @export var sprint_speed: float = 8.5
 @export var acceleration: float = 30.0
@@ -94,6 +96,8 @@ func _ready() -> void:
 	add_child(footstep_audio)
 	footstep.connect(footstep_audio.on_footstep)
 	_rig.foot_planted.connect(_on_foot_planted)
+	var disguise_tracker := DISGUISE_TRACKER_SCRIPT.new()
+	add_child(disguise_tracker)
 	# The phone (UI + its own input + holding pose) is likewise code-spawned so
 	# the feature is self-contained and doesn't touch player.tscn.
 	_phone_ui = Phone.new()

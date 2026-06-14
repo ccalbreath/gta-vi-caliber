@@ -1,4 +1,4 @@
-[gd_scene load_steps=70 format=3]
+[gd_scene load_steps=89 format=3]
 
 ; Miami / Vice City — THE game map. The streamer pages real Miami districts
 ; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
@@ -62,6 +62,16 @@
 [ext_resource type="Script" path="res://scripts/world/wardrobe_shop.gd" id="56_wardrobe"]
 [ext_resource type="Script" path="res://scripts/world/business_venture_hub.gd" id="57_business"]
 [ext_resource type="Script" path="res://scripts/world/roulette_table.gd" id="58_roulette"]
+[ext_resource type="Script" path="res://scripts/world/blackjack_table.gd" id="59_blackjack"]
+[ext_resource type="Script" path="res://scripts/world/taxi_stand.gd" id="60_taxi"]
+[ext_resource type="Script" path="res://scripts/world/savepoint.gd" id="61_savepoint"]
+[ext_resource type="Script" path="res://scripts/npc/responder_dispatcher.gd" id="62_responder"]
+[ext_resource type="Script" path="res://scripts/world/turf_claim.gd" id="63_turf"]
+[ext_resource type="Script" path="res://scripts/world/brokerage_terminal.gd" id="64_brokerage"]
+[ext_resource type="Script" path="res://scripts/world/robbery_target.gd" id="65_robbery"]
+[ext_resource type="Script" path="res://scripts/world/hit_contract_board.gd" id="66_hit"]
+[ext_resource type="Script" path="res://scripts/world/heist_planning_board.gd" id="67_heist"]
+[ext_resource type="Script" path="res://scripts/ai/traffic_signal_field.gd" id="68_signals"]
 
 [sub_resource type="BoxShape3D" id="payspray_shape"]
 size = Vector3(12, 6, 12)
@@ -89,6 +99,30 @@ size = Vector3(4, 3, 4)
 
 [sub_resource type="BoxMesh" id="roulette_mesh"]
 size = Vector3(2, 0.9, 1.2)
+
+[sub_resource type="BoxMesh" id="blackjack_mesh"]
+size = Vector3(2, 0.9, 1.2)
+
+[sub_resource type="BoxMesh" id="taxi_mesh"]
+size = Vector3(1, 2.2, 1)
+
+[sub_resource type="BoxMesh" id="savepoint_mesh"]
+size = Vector3(1, 1.6, 1)
+
+[sub_resource type="BoxMesh" id="turf_mesh"]
+size = Vector3(2, 2.5, 2)
+
+[sub_resource type="BoxMesh" id="brokerage_mesh"]
+size = Vector3(2, 2.2, 1)
+
+[sub_resource type="BoxMesh" id="robbery_mesh"]
+size = Vector3(3, 3, 3)
+
+[sub_resource type="BoxMesh" id="hit_mesh"]
+size = Vector3(1.5, 2, 0.4)
+
+[sub_resource type="BoxMesh" id="heist_mesh"]
+size = Vector3(2, 1.2, 1)
 
 [sub_resource type="ShaderMaterial" id="sky_mat"]
 shader = ExtResource("38_sky")
@@ -339,6 +373,9 @@ target_count = 20
 spawn_max_radius = 60.0
 cull_radius = 82.0
 
+[node name="TrafficSignalField" type="Node3D" parent="."]
+script = ExtResource("68_signals")
+
 [node name="PoliceSpawner" type="Node3D" parent="."]
 script = ExtResource("17_police_spawner")
 police_scene = ExtResource("18_police")
@@ -375,6 +412,9 @@ script = ExtResource("49_ambient")
 
 [node name="CrowdPanicDirector" type="Node" parent="."]
 script = ExtResource("52_crowdpanic")
+
+[node name="ResponderDispatcher" type="Node" parent="."]
+script = ExtResource("62_responder")
 
 [node name="LootDropDirector" type="Node" parent="."]
 script = ExtResource("53_lootdrop")
@@ -470,6 +510,70 @@ script = ExtResource("58_roulette")
 [node name="Body" type="MeshInstance3D" parent="RouletteTable"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
 mesh = SubResource("roulette_mesh")
+
+[node name="BlackjackTable" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -34, 0, 30)
+script = ExtResource("59_blackjack")
+
+[node name="Body" type="MeshInstance3D" parent="BlackjackTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+mesh = SubResource("blackjack_mesh")
+
+[node name="TaxiStand" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, 30)
+script = ExtResource("60_taxi")
+
+[node name="Body" type="MeshInstance3D" parent="TaxiStand"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+mesh = SubResource("taxi_mesh")
+
+[node name="Savepoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 8)
+script = ExtResource("61_savepoint")
+
+[node name="Body" type="MeshInstance3D" parent="Savepoint"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("savepoint_mesh")
+
+[node name="TurfClaim" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -20)
+script = ExtResource("63_turf")
+
+[node name="Body" type="MeshInstance3D" parent="TurfClaim"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("turf_mesh")
+
+[node name="BrokerageTerminal" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 44)
+script = ExtResource("64_brokerage")
+
+[node name="Body" type="MeshInstance3D" parent="BrokerageTerminal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+mesh = SubResource("brokerage_mesh")
+
+[node name="RobberyTarget" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0, 10)
+script = ExtResource("65_robbery")
+
+[node name="Body" type="MeshInstance3D" parent="RobberyTarget"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("robbery_mesh")
+
+[node name="HitContractBoard" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 40)
+script = ExtResource("66_hit")
+
+[node name="Body" type="MeshInstance3D" parent="HitContractBoard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("hit_mesh")
+
+[node name="HeistPlanningBoard" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 34)
+script = ExtResource("67_heist")
+
+[node name="Body" type="MeshInstance3D" parent="HeistPlanningBoard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("heist_mesh")
 
 [node name="VehicleModGarage" type="Area3D" parent="." groups=["vehicle_mod_shop"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62, 1, 44)

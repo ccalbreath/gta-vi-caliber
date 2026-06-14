@@ -69,17 +69,21 @@ func test_prepares_render_navigation_and_facade_inputs() -> void:
 	assert_bool(has_rooftops).is_true()
 
 
-func test_collision_commit_attaches_one_worker_batch_per_step() -> void:
-	var batches: Array[PackedVector3Array] = [
-		PackedVector3Array([Vector3.ZERO, Vector3.RIGHT, Vector3.FORWARD]),
-		PackedVector3Array([Vector3.UP, Vector3.RIGHT, Vector3.FORWARD]),
-	]
+func test_collision_commit_attaches_one_convex_building_per_step() -> void:
+	var district := _district_data()
 	var parent := Node3D.new()
-	var commit := DistrictCollisionCommit.new(batches)
+	var commit := DistrictCollisionCommit.new(
+		district["buildings"], GeoProjection.new(25.0, -80.0)
+	)
 	assert_bool(commit.step(parent)).is_false()
-	assert_int(parent.get_node("Collision").get_child_count()).is_equal(1)
+	var body := parent.get_node("Collision") as StaticBody3D
+	assert_int(body.collision_layer).is_equal(BuildingCollision.WORLD_LAYER)
+	assert_bool(body.is_in_group("world_buildings")).is_true()
+	assert_int(body.get_child_count()).is_equal(1)
+	var collision := body.get_child(0) as CollisionShape3D
+	assert_bool(collision.shape is ConvexPolygonShape3D).is_true()
 	assert_bool(commit.step(parent)).is_true()
-	assert_int(parent.get_node("Collision").get_child_count()).is_equal(2)
+	assert_int(body.get_child_count()).is_equal(2)
 	parent.free()
 
 

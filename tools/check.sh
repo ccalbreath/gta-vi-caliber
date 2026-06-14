@@ -161,6 +161,8 @@ step "smoke test"
 run_godot_checked "smoke test" "$GODOT_BIN" --headless --path game --script res://tests/smoke_test.gd
 step "menu startup probe"
 run_godot_checked "menu startup probe" "$GODOT_BIN" --headless --path game --script res://tests/menu_startup_probe.gd
+step "settings input remap probe"
+run_godot_checked "settings input remap probe" "$GODOT_BIN" --headless --path game --script res://tests/settings_input_remap_probe.gd
 
 # --- 5. gdUnit4 unit tests ----------------------------------------------------
 step "gdUnit4 unit tests"
@@ -209,6 +211,8 @@ step "miami vehicle mod probe"
 run_godot_checked "miami vehicle mod probe" "$GODOT_BIN" --headless --path game --script res://tests/miami_vehicle_mod_probe.gd
 step "miami citizen probe"
 run_godot_checked "miami citizen probe" "$GODOT_BIN" --headless --path game --script res://tests/miami_citizen_probe.gd
+step "miami traffic law probe"
+run_godot_checked "miami traffic law probe" "$GODOT_BIN" --headless --path game --script res://tests/miami_traffic_law_probe.gd
 step "contraband market probe"
 run_godot_checked "contraband market probe" "$GODOT_BIN" --headless --path game --script res://tests/contraband_market_probe.gd
 step "contraband bust probe"
@@ -225,23 +229,49 @@ step "food vendor probe"
 run_godot_checked "food vendor probe" "$GODOT_BIN" --headless --path game --script res://tests/food_vendor_probe.gd
 step "wardrobe shop probe"
 run_godot_checked "wardrobe shop probe" "$GODOT_BIN" --headless --path game --script res://tests/wardrobe_shop_probe.gd
+step "wardrobe disguise probe"
+run_godot_checked "wardrobe disguise probe" "$GODOT_BIN" --headless --path game --script res://tests/wardrobe_disguise_probe.gd
 step "business venture hub probe"
 run_godot_checked "business venture hub probe" "$GODOT_BIN" --headless --path game --script res://tests/business_venture_hub_probe.gd
 step "roulette table probe"
 run_godot_checked "roulette table probe" "$GODOT_BIN" --headless --path game --script res://tests/roulette_table_probe.gd
+step "blackjack table probe"
+run_godot_checked "blackjack table probe" "$GODOT_BIN" --headless --path game --script res://tests/blackjack_table_probe.gd
+step "taxi stand probe"
+run_godot_checked "taxi stand probe" "$GODOT_BIN" --headless --path game --script res://tests/taxi_stand_probe.gd
+step "savepoint probe"
+run_godot_checked "savepoint probe" "$GODOT_BIN" --headless --path game --script res://tests/savepoint_probe.gd
+step "turf claim probe"
+run_godot_checked "turf claim probe" "$GODOT_BIN" --headless --path game --script res://tests/turf_claim_probe.gd
+step "brokerage terminal probe"
+run_godot_checked "brokerage terminal probe" "$GODOT_BIN" --headless --path game --script res://tests/brokerage_terminal_probe.gd
+step "robbery target probe"
+run_godot_checked "robbery target probe" "$GODOT_BIN" --headless --path game --script res://tests/robbery_target_probe.gd
+step "hit contract board probe"
+run_godot_checked "hit contract board probe" "$GODOT_BIN" --headless --path game --script res://tests/hit_contract_board_probe.gd
+step "heist planning board probe"
+run_godot_checked "heist planning board probe" "$GODOT_BIN" --headless --path game --script res://tests/heist_planning_board_probe.gd
 
 # --- 7. systems wiring probes (scene-free: self-wiring nodes in a mock tree) --
 step "market event probe"
 run_godot_checked "market event probe" "$GODOT_BIN" --headless --path game --script res://tests/market_event_probe.gd
 step "crime reaction probe"
 run_godot_checked "crime reaction probe" "$GODOT_BIN" --headless --path game --script res://tests/crime_reaction_probe.gd
+step "radio news probe"
+run_godot_checked "radio news probe" "$GODOT_BIN" --headless --path game --script res://tests/radio_news_probe.gd
 step "character switch probe"
 run_godot_checked "character switch probe" "$GODOT_BIN" --headless --path game --script res://tests/character_switch_probe.gd
 step "ambient event probe"
 run_godot_checked "ambient event probe" "$GODOT_BIN" --headless --path game --script res://tests/ambient_event_probe.gd
 step "crowd contagion probe"
 run_godot_checked "crowd contagion probe" "$GODOT_BIN" --headless --path game --script res://tests/crowd_contagion_probe.gd
+step "disguise evasion probe"
+run_godot_checked "disguise evasion probe" "$GODOT_BIN" --headless --path game --script res://tests/disguise_evasion_probe.gd
+step "responder dispatcher probe"
+run_godot_checked "responder dispatcher probe" "$GODOT_BIN" --headless --path game --script res://tests/responder_dispatcher_probe.gd
 step "systems integration probe"
 run_godot_checked "systems integration probe" "$GODOT_BIN" --headless --path game --script res://tests/systems_integration_probe.gd
+step "phone contact services probe"
+run_godot_checked "phone contact services probe" "$GODOT_BIN" --headless --path game --script res://tests/phone_contact_services_probe.gd
 
 printf '\nAll checks passed ✔\n'

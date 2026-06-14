@@ -10,7 +10,16 @@ extends Node3D
 
 signal foot_planted(is_left: bool)
 
+## Yaw turn rate (rad/s) when reorienting toward travel/aim direction.
+@export var turn_rate: float = 12.0
+## Static yaw correction (degrees) for the model's authored forward axis. If the
+## MC faces away from its travel direction, set this to 180.
+@export var model_yaw_offset_deg: float = 0.0
+
 var _ctrl: MeshyAnimController = null
+var _facing: float = 0.0
+var _aim_facing: bool = false
+var _weapon_controller: Node = null
 var _was_floor: bool = true
 var _step_accum: float = 0.0
 var _left_foot: bool = false
@@ -24,6 +33,11 @@ func _ready() -> void:
 		for node in model.find_children("*", "AnimationPlayer", true, false):
 			ap = node as AnimationPlayer
 			break
+	if model != null and absf(model_yaw_offset_deg) > 0.01:
+		model.rotation.y = deg_to_rad(model_yaw_offset_deg)
+	_facing = rotation.y
+	var body := get_parent()
+	_aim_facing = body != null and body.is_in_group("player")
 	_ctrl = MeshyAnimController.new()
 	_ctrl.name = "AnimController"
 	_ctrl.animation_player = ap
@@ -45,9 +59,36 @@ func animate(
 	if _was_floor and not on_floor and vertical_velocity > 0.1:
 		_ctrl.jump()
 	_was_floor = on_floor
+	_update_facing(planar_velocity, delta)
 	var speed := planar_velocity.length()
 	_ctrl.update_locomotion(speed, on_floor)
 	_tick_footsteps(speed, on_floor, delta)
+
+
+## Turn the rig toward the weapon aim when armed, otherwise the travel direction,
+## smoothly at turn_rate. The GunMount under this node follows the same yaw so the
+## gun keeps pointing where the player aims. Ported from the old AnimatedRig.
+func _update_facing(planar_velocity: Vector3, delta: float) -> void:
+	var target := AnimRouter.facing_target(planar_velocity, _aim_yaw())
+	if is_nan(target):
+		return
+	_facing = AnimRouter.rotate_toward_angle(_facing, target, turn_rate * delta)
+	rotation.y = _facing
+
+
+## Aim yaw from the player's WeaponController, NAN while holstered or for non-player
+## owners (which then face their travel direction).
+func _aim_yaw() -> float:
+	if not _aim_facing:
+		return NAN
+	if _weapon_controller == null:
+		var found := get_tree().get_nodes_in_group("weapon_controller")
+		if found.is_empty():
+			return NAN
+		_weapon_controller = found[0]
+	if _weapon_controller.has_method("facing_override"):
+		return _weapon_controller.facing_override()
+	return NAN
 
 
 ## Phone gesture. Raising plays the phone clip; lowering lets locomotion resume on

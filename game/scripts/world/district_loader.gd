@@ -271,7 +271,7 @@ func _stream_active_tile_step() -> String:
 			if build_collision:
 				if _active_collision_commit == null:
 					_active_collision_commit = DistrictCollisionCommit.new(
-						_active_data["collision_face_batches"]
+						_active_data["buildings"] as Array, _projection
 					)
 				advance_stage = _active_collision_commit.step(_active_chunk)
 				if advance_stage:

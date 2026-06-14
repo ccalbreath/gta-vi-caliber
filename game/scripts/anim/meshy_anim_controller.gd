@@ -58,7 +58,7 @@ const LOOPING := ["idle", "walk", "run", "run_alt", "fall", "walk_back"]
 ## Planar speed (m/s) at or below which the character reads as standing.
 @export var idle_speed: float = 0.2
 ## Planar speed (m/s) at which locomotion switches from walk to run.
-@export var run_speed: float = 3.0
+@export var run_speed: float = 6.5
 ## Crossfade time (s) between locomotion states.
 @export var locomotion_blend: float = 0.18
 ## Default crossfade time (s) into a one-shot action.
@@ -69,6 +69,7 @@ const LOOPING := ["idle", "walk", "run", "run_alt", "fall", "walk_back"]
 var _ap: AnimationPlayer = null
 var _mode: int = Mode.GROUND
 var _loco: String = ""  # canonical locomotion clip currently requested
+var _resolved: Dictionary = {}  # canonical -> actual AnimationPlayer clip name
 
 
 func _ready() -> void:
@@ -76,6 +77,7 @@ func _ready() -> void:
 	if _ap == null:
 		push_warning("MeshyAnimController: no AnimationPlayer found under owner")
 		return
+	_resolve_clips()
 	_apply_loops()
 	_ap.animation_finished.connect(_on_finished)
 	_play("idle")
@@ -125,9 +127,7 @@ func jump() -> void:
 
 ## True when the loaded model actually carries the clip behind a canonical name.
 func has_clip(canonical: String) -> bool:
-	if not CLIPS.has(canonical):
-		return false
-	return _ap != null and _ap.has_animation(CLIPS[canonical])
+	return _resolved.has(canonical)
 
 
 func _ground(speed: float) -> void:
@@ -142,9 +142,9 @@ func _ground(speed: float) -> void:
 
 
 func _play(canonical: String, blend: float = -1.0) -> bool:
-	if not has_clip(canonical):
+	if not _resolved.has(canonical):
 		return false
-	_ap.play(CLIPS[canonical], blend)
+	_ap.play(_resolved[canonical], blend)
 	return true
 
 
@@ -156,18 +156,36 @@ func _on_finished(_anim: String) -> void:
 
 
 func _apply_loops() -> void:
-	for canonical in CLIPS:
-		var clip := _ap.get_animation(CLIPS[canonical])
+	for canonical in _resolved:
+		var clip := _ap.get_animation(_resolved[canonical])
 		if clip == null:
 			continue
 		clip.loop_mode = Animation.LOOP_LINEAR if canonical in LOOPING else Animation.LOOP_NONE
 
 
 func _canonical_of(clip_name: String) -> String:
-	for canonical in CLIPS:
-		if CLIPS[canonical] == clip_name:
+	for canonical in _resolved:
+		if _resolved[canonical] == clip_name:
 			return canonical
 	return clip_name
+
+
+## Resolve each canonical name to the actual clip on the AnimationPlayer. Godot
+## may import glTF clips under a library prefix ("Lib/Idle_4"), so match by exact
+## name or by suffix. Warns with the available list if nothing matches, which is
+## the signal that the import named them differently than the CLIPS table.
+func _resolve_clips() -> void:
+	var names := _ap.get_animation_list()
+	for canonical in CLIPS:
+		var want: String = CLIPS[canonical]
+		for actual in names:
+			if actual == want or actual.ends_with("/" + want):
+				_resolved[canonical] = actual
+				break
+	if _resolved.is_empty():
+		push_warning(
+			"MeshyAnimController: no clips matched. AnimationPlayer has: " + ", ".join(names)
+		)
 
 
 func _find_player() -> AnimationPlayer:

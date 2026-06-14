@@ -3,9 +3,12 @@ extends Node
 ## build, scene, resolution, quality, AA, VSync, time of day, route, and seed.
 ## Results are written as a reviewable Markdown profile.
 
+const BENCHMARK_CONFIG := preload("res://scripts/performance/benchmark_config.gd")
+const BENCHMARK_METRICS := preload("res://scripts/performance/benchmark_metrics.gd")
+const CINEMATIC_ENVIRONMENT := preload("res://scripts/world/cinematic_environment.gd")
 const ROUTE_NAME := "miami_district_loop_v1"
 
-var _config: BenchmarkConfig
+var _config: Object
 var _scene: Node
 var _camera: Camera3D
 var _player: Node3D
@@ -41,7 +44,7 @@ var _vram_bytes := PackedFloat64Array()
 
 func _ready() -> void:
 	_startup_started_usec = Time.get_ticks_usec()
-	_config = BenchmarkConfig.from_environment()
+	_config = BENCHMARK_CONFIG.from_environment()
 	if _config.require_release and (OS.has_feature("editor") or OS.has_feature("debug")):
 		push_error("benchmark: BENCHMARK_REQUIRE_RELEASE=1 but this is not a release export")
 		get_tree().quit(1)
@@ -119,7 +122,7 @@ func _apply_render_settings() -> void:
 
 	var world_environment := _scene.find_child("WorldEnvironment", true, false) as WorldEnvironment
 	if world_environment != null and _config.is_enabled("post_processing"):
-		CinematicEnvironment.apply_quality(world_environment.environment, _config.quality_tier())
+		CINEMATIC_ENVIRONMENT.apply_quality(world_environment.environment, _config.quality_tier())
 
 
 func _mount_camera() -> void:
@@ -188,14 +191,14 @@ func _resident_signature() -> String:
 
 
 func _report() -> void:
-	var wall := BenchmarkMetrics.summarize(_wall_ms)
-	var cpu := BenchmarkMetrics.summarize(_render_cpu_ms)
-	var gpu := BenchmarkMetrics.summarize(_render_gpu_ms)
-	var physics := BenchmarkMetrics.summarize(_physics_ms)
-	var script := BenchmarkMetrics.summarize(_script_residual_ms)
-	var draws := BenchmarkMetrics.summarize(_draw_calls)
-	var primitive_stats := BenchmarkMetrics.summarize(_primitives)
-	var object_stats := BenchmarkMetrics.summarize(_objects)
+	var wall := BENCHMARK_METRICS.summarize(_wall_ms)
+	var cpu := BENCHMARK_METRICS.summarize(_render_cpu_ms)
+	var gpu := BENCHMARK_METRICS.summarize(_render_gpu_ms)
+	var physics := BENCHMARK_METRICS.summarize(_physics_ms)
+	var script := BENCHMARK_METRICS.summarize(_script_residual_ms)
+	var draws := BENCHMARK_METRICS.summarize(_draw_calls)
+	var primitive_stats := BENCHMARK_METRICS.summarize(_primitives)
+	var object_stats := BENCHMARK_METRICS.summarize(_objects)
 	var build_type := _build_type()
 	var memory := OS.get_memory_info()
 	var ram_gb := float(memory.get("physical", 0)) / 1_073_741_824.0
@@ -244,7 +247,7 @@ func _report() -> void:
 			"",
 		]
 	)
-	for subsystem in BenchmarkConfig.SUBSYSTEMS:
+	for subsystem in BENCHMARK_CONFIG.SUBSYSTEMS:
 		lines.append(
 			(
 				"- **%s:** %s"
@@ -275,7 +278,7 @@ func _report() -> void:
 					"| Worst wall frame | %.2f ms / %.1f FPS |"
 					% [wall["worst"], _fps(float(wall["worst"]))]
 				),
-				"| 1%% low | %.1f FPS |" % BenchmarkMetrics.one_percent_low_fps(_wall_ms),
+				"| 1%% low | %.1f FPS |" % BENCHMARK_METRICS.one_percent_low_fps(_wall_ms),
 				(
 					"| Render CPU p50 / p95 / p99 / worst | %.2f / %.2f / %.2f / %.2f ms |"
 					% [cpu["p50"], cpu["p95"], cpu["p99"], cpu["worst"]]
@@ -306,7 +309,7 @@ func _report() -> void:
 				),
 				(
 					"| Peak video memory | %.0f MB |"
-					% (BenchmarkMetrics.peak(_vram_bytes) / 1_048_576.0)
+					% (BENCHMARK_METRICS.peak(_vram_bytes) / 1_048_576.0)
 				),
 				(
 					"| Streaming hitch peak | %.2f ms (%d residency changes) |"

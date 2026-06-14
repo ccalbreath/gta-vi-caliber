@@ -55,8 +55,8 @@ Between **L1 and L2**. A vertical slice exists; the breadth above it does not.
 
 **L0 Foundation, nearly done, loose ends (Phase A):** land the Vice City pivot
 fully (retire legacy `los_angeles_*`/demo scenes), `main_menu` Play straight into
-`miami.tscn`, gamepad **button** bindings + a rebindable-input persistence layer,
-and route the premium cinematic lighting in behind a quality setting.
+`miami.tscn`, and route the premium cinematic lighting in behind a quality
+setting.
 
 **L1 World substrate, partial and the real bottleneck:** a GDScript tile
 streamer and floating origin exist, but city-scale streaming is **not proven**,
@@ -81,9 +81,8 @@ cinematic capture tooling that lives in the atmosphere/polish layers.
 
 ### 1. Close the foundation (L0 / Phase A)
 Everything rests on it, so finish it before widening. Land the pivot, wire
-`main_menu` to `miami.tscn`, add gamepad button bindings and rebind persistence,
-and gate the cinematic lighting in for the dense district with a measured budget.
-See `plan.md` Phase A for the exact list.
+`main_menu` to `miami.tscn`, and gate the cinematic lighting in for the dense
+district with a measured budget. See `plan.md` Phase A for the exact list.
 
 ### 2. Wire the parts bin (L2 / Phase C): needs no streaming, so do it now
 Ordered by dependency, each wired with the `SYSTEMS.md` self-wiring-coordinator
@@ -101,7 +100,7 @@ pattern and a runtime probe (repo rule: no probe, it does not count):
    `MeleeCombat`.
 4. **Activities:** `StreetRace`, `HeistCrew` (`SideJob` is already wired).
 5. **Support polish:** `GpsNavigation` into the minimap, `LootTable` on
-   death/crates, `RadioScheduler` programming for vehicle radio.
+   death/crates, `RadioNewsDirector` readout for vehicle/HUD radio.
 
 ### 3. Prove streaming at city scale (L1 / Phase B / M3): in parallel, the bottleneck
 This is what gates content volume. Build it GDScript-first; the native
