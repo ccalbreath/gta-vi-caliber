@@ -161,5 +161,7 @@ step "safehouse zone probe"
 "$GODOT_BIN" --headless --path game --script res://tests/safehouse_zone_probe.gd
 step "fence loop probe"
 "$GODOT_BIN" --headless --path game --script res://tests/fence_loop_probe.gd
+step "heist board probe"
+"$GODOT_BIN" --headless --path game --script res://tests/heist_board_probe.gd
 
 printf '\nAll checks passed ✔\n'
