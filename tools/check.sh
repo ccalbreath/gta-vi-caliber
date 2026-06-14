@@ -193,5 +193,7 @@ step "bribe official probe"
 "$GODOT_BIN" --headless --path game --script res://tests/bribe_official_probe.gd
 step "collectibles probe"
 "$GODOT_BIN" --headless --path game --script res://tests/collectibles_probe.gd
+step "stakeout probe"
+"$GODOT_BIN" --headless --path game --script res://tests/stakeout_probe.gd
 
 printf '\nAll checks passed ✔\n'
