@@ -15,7 +15,10 @@ const SHOTS: Array = [
 ## Frames for the district build + first shot, and between shots (lets glow,
 ## shadows and exposure settle after each time jump).
 const BOOT_FRAMES := 90
-const SETTLE_FRAMES := 30
+## Big time jumps need the sky's radiance/ambient probe and auto-exposure to
+## re-converge before the shot, or a night frame still carries the previous
+## hour's dusk glow. 60 frames clears it.
+const SETTLE_FRAMES := 60
 
 var _frame := 0
 var _shot_index := 0

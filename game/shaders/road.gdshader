@@ -16,6 +16,11 @@ uniform sampler2D detail_tex : source_color, hint_default_white, filter_linear_m
 // Rain wetness published by the WeatherController (0 dry .. 1 soaked): wet
 // asphalt darkens and turns glossy so streets gleam after a front passes.
 global uniform float world_wetness;
+// Night level published by the SkyController (0 day .. 1 deep night). A humid
+// subtropical night leaves even rain-free asphalt with a faint dew sheen that
+// catches the neon, so the streets read damp-glossy after dark — the Vice City
+// look — without waiting on a weather front. Rain layers its full soak on top.
+global uniform float world_night_amount;
 
 varying vec2 v_uv;
 
@@ -100,15 +105,21 @@ void fragment() {
 	col *= 1.0 - 0.30 * curb;
 
 	float wet = clamp(world_wetness, 0.0, 1.0);
-	ALBEDO = col * mix(1.0, 0.62, wet);
-	ROUGHNESS = mix(0.92 - 0.25 * paint, 0.16, wet);
+	// After-dark dew sheen, capped well below a full rain soak (0.5) so the night
+	// street gleams with neon but never looks flooded. `gloss` is the combined
+	// wet-look response: rain (wet) and dew (night_sheen) take the stronger of
+	// the two, so daytime asphalt stays dry-matte and rain still wins at night.
+	float night_sheen = clamp(world_night_amount, 0.0, 1.0) * 0.5;
+	float gloss = max(wet, night_sheen);
+	ALBEDO = col * mix(1.0, 0.62, max(wet, night_sheen * 0.7));
+	ROUGHNESS = mix(0.92 - 0.25 * paint, 0.16, gloss);
 	float dist = length(VERTEX);
 	float aa = clamp((dist - 30.0) / 100.0, 0.0, 1.0);
-	// Grain-gradient normal, distance-faded, gives wet roads readable specular.
+	// Grain-gradient normal, distance-faded, gives wet/dewy roads readable specular.
 	NORMAL = normalize(abs(det) * NORMAL - (0.04 * asphalt_area * (1.0 - aa)) * grain_grad);
 	METALLIC = 0.0;
-	// Dry asphalt dims with distance; wet asphalt reads glossy.
-	SPECULAR = mix(mix(0.35, 0.15, aa), 0.72, wet);
+	// Dry asphalt dims with distance; wet/dewy asphalt reads glossy.
+	SPECULAR = mix(mix(0.35, 0.15, aa), 0.72, gloss);
 
 	// Aggregate micro-relief: a smooth value-noise height perturbs the normal
 	// (tangent-free Mikkelsen surface gradient — road meshes carry no tangents)
@@ -126,7 +137,7 @@ void fragment() {
 		vec3 r2 = cross(NORMAL, sx);
 		float det = dot(sx, r1);
 		vec3 grad = sign(det) * (dFdx(h) * r1 + dFdy(h) * r2);
-		NORMAL = normalize(abs(det) * NORMAL - (0.06 * micro * (1.0 - 0.7 * wet)) * grad);
-		ROUGHNESS = clamp(ROUGHNESS + (h - 0.45) * 0.13 * micro * (1.0 - wet), 0.08, 1.0);
+		NORMAL = normalize(abs(det) * NORMAL - (0.06 * micro * (1.0 - 0.7 * gloss)) * grad);
+		ROUGHNESS = clamp(ROUGHNESS + (h - 0.45) * 0.13 * micro * (1.0 - gloss), 0.08, 1.0);
 	}
 }
