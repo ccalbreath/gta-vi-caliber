@@ -153,6 +153,8 @@ step "food vendor probe"
 "$GODOT_BIN" --headless --path game --script res://tests/food_vendor_probe.gd
 step "wardrobe shop probe"
 "$GODOT_BIN" --headless --path game --script res://tests/wardrobe_shop_probe.gd
+step "wardrobe disguise probe"
+"$GODOT_BIN" --headless --path game --script res://tests/wardrobe_disguise_probe.gd
 step "business venture hub probe"
 "$GODOT_BIN" --headless --path game --script res://tests/business_venture_hub_probe.gd
 step "roulette table probe"
@@ -183,6 +185,8 @@ step "ambient event probe"
 "$GODOT_BIN" --headless --path game --script res://tests/ambient_event_probe.gd
 step "crowd contagion probe"
 "$GODOT_BIN" --headless --path game --script res://tests/crowd_contagion_probe.gd
+step "disguise evasion probe"
+"$GODOT_BIN" --headless --path game --script res://tests/disguise_evasion_probe.gd
 step "responder dispatcher probe"
 "$GODOT_BIN" --headless --path game --script res://tests/responder_dispatcher_probe.gd
 step "systems integration probe"

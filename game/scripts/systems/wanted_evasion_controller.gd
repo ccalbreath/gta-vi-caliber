@@ -17,6 +17,7 @@ extends Node
 var _evasion: WantedEvasion
 var _tracker: Node = null
 var _player: Node3D = null
+var _disguise: Node = null
 var _police: GroupCache = null
 
 
@@ -34,7 +35,8 @@ func _physics_process(delta: float) -> void:
 		# Not wanted: nothing to evade, keep the timer primed for next time.
 		_evasion.reset()
 		return
-	_evasion.update(_seen_by_police(delta), delta)
+	var seen := _seen_by_police(delta)
+	_evasion.update(seen, _search_delta(seen, delta))
 	if _evasion.is_cold() and _tracker.has_method("clear"):
 		_tracker.clear()
 		_evasion.reset()
@@ -54,6 +56,8 @@ func _bind() -> void:
 		_player = get_tree().get_first_node_in_group("player") as Node3D
 	if _tracker == null or not is_instance_valid(_tracker):
 		_tracker = get_tree().get_first_node_in_group("wanted")
+	if _disguise == null or not is_instance_valid(_disguise):
+		_disguise = get_tree().get_first_node_in_group("player_disguise")
 
 
 ## True if any living officer is within range and has an unobstructed sightline
@@ -77,3 +81,13 @@ func _seen_by_police(delta: float) -> bool:
 		if space.intersect_ray(query).is_empty():
 			return true
 	return false
+
+
+func _search_delta(seen: bool, delta: float) -> float:
+	if seen or _disguise == null:
+		return delta
+	if not _disguise.has_method("has_description") or not _disguise.has_description():
+		return delta
+	if _disguise.has_method("evasion_speedup"):
+		return delta * maxf(float(_disguise.evasion_speedup()), 1.0)
+	return delta
