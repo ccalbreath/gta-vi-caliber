@@ -17,6 +17,7 @@ signal build_progress(done: int, total: int)
 ## Preloaded so the boot cover resolves without relying on the global class_name
 ## registry being populated first (headless/CI import order is not guaranteed).
 const LOADING_SCREEN := preload("res://scripts/ui/loading_screen.gd")
+const GROUND_MATERIAL := preload("res://scripts/world/ground_material.gd")
 
 ## Streetlight pole every ~this many metres of road, capped scene-wide and
 ## kept near the district origin (where the player spawns) so the cap is not
@@ -59,7 +60,6 @@ const BUILDINGS_PER_SLICE: int = 220
 @export var place_player: bool = true
 ## Extra ground beyond the district footprint, in metres.
 @export var ground_margin: float = 90.0
-@export var road_layer: int = 0  # streamer-set; per-district road z-bias index
 
 var _building_mat: Material
 var _facade_glass_mat: StandardMaterial3D
@@ -722,7 +722,6 @@ func _build_roads(roads: Array, proj: GeoProjection) -> void:
 	var mi := MeshInstance3D.new()
 	mi.name = "Roads"
 	mi.mesh = mesh
-	mi.position.y = float(road_layer) * 0.0025  # sub-visible per-district anti z-fight nudge
 	add_child(mi)
 
 
@@ -784,11 +783,7 @@ func _build_ground(data: Dictionary, proj: GeoProjection) -> void:
 	var size_z := (max_z - min_z) + ground_margin * 2.0
 	var centre := Vector3((min_x + max_x) * 0.5, 0.0, (min_z + max_z) * 0.5)
 
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.035, 0.045, 0.045)
-	mat.roughness = 1.0
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var mat := GROUND_MATERIAL.build()
 	var ground_mesh := BoxMesh.new()
 	ground_mesh.size = Vector3(size_x, 0.08, size_z)
 	ground_mesh.material = mat
