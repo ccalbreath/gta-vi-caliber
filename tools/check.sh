@@ -133,8 +133,22 @@ step "miami evade probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_evade_probe.gd
 step "miami property probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_property_probe.gd
+step "miami vehicle mod probe"
+"$GODOT_BIN" --headless --path game --script res://tests/miami_vehicle_mod_probe.gd
 step "miami citizen probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_citizen_probe.gd
+step "contraband market probe"
+"$GODOT_BIN" --headless --path game --script res://tests/contraband_market_probe.gd
+step "race probe"
+"$GODOT_BIN" --headless --path game --script res://tests/race_probe.gd
+step "crowd panic probe"
+"$GODOT_BIN" --headless --path game --script res://tests/crowd_panic_probe.gd
+step "loot drop probe"
+"$GODOT_BIN" --headless --path game --script res://tests/loot_drop_probe.gd
+step "slot machine probe"
+"$GODOT_BIN" --headless --path game --script res://tests/slot_machine_probe.gd
+step "food vendor probe"
+"$GODOT_BIN" --headless --path game --script res://tests/food_vendor_probe.gd
 
 # --- 7. systems wiring probes (scene-free: self-wiring nodes in a mock tree) --
 step "market event probe"
@@ -145,6 +159,8 @@ step "character switch probe"
 "$GODOT_BIN" --headless --path game --script res://tests/character_switch_probe.gd
 step "ambient event probe"
 "$GODOT_BIN" --headless --path game --script res://tests/ambient_event_probe.gd
+step "crowd contagion probe"
+"$GODOT_BIN" --headless --path game --script res://tests/crowd_contagion_probe.gd
 step "systems integration probe"
 "$GODOT_BIN" --headless --path game --script res://tests/systems_integration_probe.gd
 

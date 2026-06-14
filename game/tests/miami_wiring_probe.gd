@@ -58,6 +58,13 @@ func _run_checks() -> void:
 		if _scene.find_child(director_name, true, false) == null:
 			_failures.append("missing director node: %s" % director_name)
 
+	# Reactive self-wiring directors must be live in the scene AND connected to the
+	# wanted signal: market rallies stocks, crime files news + heats districts,
+	# ambient rolls freeroam encounters. Their scene-free probes pass even when the
+	# node is absent from the scene, so assert the live connection here.
+	for reactor_name in ["MarketEventCoordinator", "CrimeReactionDirector", "AmbientEventDirector"]:
+		_expect_wired_reactor(reactor_name)
+
 	# The dynamic directors discover the player through the "player" group on
 	# _ready; a missing player would leave them inert. Confirm the group the
 	# directors and HUD both rely on resolves to the rig.
@@ -72,6 +79,21 @@ func _expect_one(group_name: String) -> void:
 	var count := get_nodes_in_group(group_name).size()
 	if count != 1:
 		_failures.append("group '%s': expected 1, found %d" % [group_name, count])
+
+
+## A self-wiring reactor must be present in the scene and have connected its
+## _on_stars_changed handler to the live `wanted` tracker. Its call_deferred wiring
+## has run by WARMUP_FRAMES, so a missing connection means the world is inert to crime.
+func _expect_wired_reactor(node_name: String) -> void:
+	var node := _scene.find_child(node_name, true, false)
+	if node == null:
+		_failures.append("missing reactive director: %s" % node_name)
+		return
+	var tracker := get_first_node_in_group("wanted")
+	if tracker == null:
+		return  # _expect_one("wanted") already reports a missing tracker
+	if not tracker.is_connected("stars_changed", Callable(node, "_on_stars_changed")):
+		_failures.append("%s not wired to wanted.stars_changed" % node_name)
 
 
 func _finish() -> bool:
