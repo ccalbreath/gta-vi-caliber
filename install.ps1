@@ -80,11 +80,30 @@ if (Test-Path (Join-Path $InstallDir '.git')) {
   Info "Updating existing copy in $InstallDir"
   git -C $InstallDir fetch --depth 1 origin $RepoBranch
   git -C $InstallDir reset --hard "origin/$RepoBranch"
-  git -C $InstallDir lfs pull
 } else {
-  Info "Cloning into $InstallDir (this pulls art assets too)"
+  Info "Cloning into $InstallDir"
+  # Skip the smudge filter during clone; LFS objects are pulled explicitly below
+  # so a missing global git-lfs config can't leave assets as pointer files.
+  $env:GIT_LFS_SKIP_SMUDGE = '1'
   git clone --depth 1 --branch $RepoBranch $RepoUrl $InstallDir
-  git -C $InstallDir lfs pull
+  Remove-Item Env:\GIT_LFS_SKIP_SMUDGE
+}
+# Register git-lfs for THIS repo, then fetch the real art assets. Without the
+# local registration, `git lfs pull` silently no-ops on a fresh clone.
+Info 'Fetching art assets via git-lfs'
+git -C $InstallDir lfs install --local *> $null
+git -C $InstallDir lfs pull
+
+# A fresh clone has no Godot import cache, so the first game run can't resolve
+# global class_name lookups (e.g. SettingsPanel) and fails to parse. One
+# headless editor pass builds the cache; --quit-after guarantees it exits.
+$gameDir = Join-Path $InstallDir 'game'
+if (-not (Test-Path (Join-Path $gameDir '.godot'))) {
+  Info 'First-run setup: importing assets (one time, ~1-2 min)...'
+  $p = Start-Process -FilePath $godotBin `
+    -ArgumentList '--headless','--editor','--path',$gameDir,'--quit-after','300' `
+    -NoNewWindow -PassThru
+  if (-not $p.WaitForExit(300000)) { $p.Kill() }
 }
 
 Write-Host ''

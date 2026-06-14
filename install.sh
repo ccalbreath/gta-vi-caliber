@@ -146,21 +146,48 @@ sync_repo() {
     info "Updating existing copy in $INSTALL_DIR"
     git -C "$INSTALL_DIR" fetch --depth 1 origin "$REPO_BRANCH"
     git -C "$INSTALL_DIR" reset --hard "origin/$REPO_BRANCH"
-    git -C "$INSTALL_DIR" lfs pull
   else
-    info "Cloning into $INSTALL_DIR (this pulls art assets too)"
-    git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$INSTALL_DIR"
-    git -C "$INSTALL_DIR" lfs pull
+    info "Cloning into $INSTALL_DIR"
+    # Skip the smudge filter during clone; we pull LFS objects explicitly below
+    # so a missing global git-lfs config can't leave assets as pointer files.
+    GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$INSTALL_DIR"
   fi
+  # Register git-lfs for THIS repo, then fetch the real art assets. Without the
+  # local registration, `git lfs pull` silently no-ops on a fresh clone.
+  info "Fetching art assets via git-lfs"
+  git -C "$INSTALL_DIR" lfs install --local >/dev/null 2>&1 || true
+  git -C "$INSTALL_DIR" lfs pull
+}
+
+# A fresh clone has no Godot import cache, so the first game run can't resolve
+# global class_name lookups (e.g. SettingsPanel) and fails to parse. One
+# headless editor pass builds the cache; --quit-after guarantees it exits. A
+# background watchdog kills it if it ever overruns.
+warm_cache() {
+  [ -d "$INSTALL_DIR/game/.godot" ] && return
+  info "First-run setup: importing assets (one time, ~1-2 min)..."
+  "$GODOT_BIN" --headless --editor --path "$INSTALL_DIR/game" --quit-after 300 \
+    >/dev/null 2>&1 &
+  local pid=$!
+  ( sleep 300; kill "$pid" 2>/dev/null ) >/dev/null 2>&1 &
+  local watch=$!
+  wait "$pid" 2>/dev/null || true
+  kill "$watch" 2>/dev/null || true
 }
 
 ensure_git_lfs
 ensure_godot
 sync_repo
+warm_cache
 
 bold ""
-bold "Done. Launching GTA-VI-caliber..."
 info "To play again later, just re-run the same command, or:"
 printf '       %s --path %s\n\n' "$GODOT_BIN" "$INSTALL_DIR/game"
 
+if [ -n "${GTA6_NO_LAUNCH:-}" ]; then
+  bold "Setup complete (GTA6_NO_LAUNCH set, not launching)."
+  exit 0
+fi
+
+bold "Done. Launching GTA-VI-caliber..."
 exec "$GODOT_BIN" --path "$INSTALL_DIR/game"
