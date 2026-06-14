@@ -105,8 +105,8 @@ Groups the live scene already publishes: `player`, `player_health`,
 | System | Purpose | Key API | Wiring |
 |---|---|---|---|
 | `GpsNavigation` | route progress/ETA/next-turn | `distance_remaining`, `progress`, `next_turn`, `has_arrived` | feed a NavGrid route into the minimap GPS line |
-| `RadioScheduler` | song/DJ/ad/news programming | `next_segment`, `pick_song`, `advance` | program a `VehicleRadio` station |
-| `NewsBulletin` | player deeds -> reactive radio/TV headlines | `report`, `next_bulletin`, `has_pending`, `recent` | `report` on crimes/heists/escapes (severity-tiered); when `RadioScheduler` yields a NEWS segment, read `next_bulletin()` for the anchor line |
+| `RadioScheduler` | song/DJ/ad/news programming | `next_segment`, `pick_song`, `advance` | bridged by `RadioNewsDirector`: advances the station program and emits a line for songs/DJ/ads/IDs/NEWS |
+| `NewsBulletin` | player deeds -> reactive radio/TV headlines | `report`, `next_bulletin`, `has_pending`, `recent` | `CrimeReactionDirector` reports crimes; `RadioNewsDirector` finds that queue and drains `next_bulletin()` when `RadioScheduler` yields a NEWS slot. CI-guarded by `tests/radio_news_probe.gd` |
 | `ContactServices` | call a contact for a favour (lower-wanted/mechanic/backup) | `request`, `can_use`, `cooldown_remaining`, `is_ready` | the phone UI gates `request` with `PhoneContacts.will_answer`, charges the wallet, and triggers the effect by `kind`; cost + cooldown per service |
 | `MusicDirector` | dynamic score intensity (calm→tension→combat→chase) | `update`, `current_tier`, `current_stem`, `is_intense` | an audio node calls `update({stars, in_combat, in_chase}, dt)` each frame and crossfades to `current_stem()`; escalates instantly, de-escalates on a hold |
 | `SwimStamina` | oxygen/stamina/drowning | `update`, `is_drowning`, `swim_speed`, `drown_damage` | the meter layer above the swim motion node |
@@ -140,8 +140,11 @@ live in `miami.tscn`** too: it owns a `NewsBulletin` + `DistrictEconomy` and, on
 wanted spike, files a severity-scaled headline and heats the active district
 (which cools over time via `_process`). The two directors split the signal cleanly
 — market vs news+real-estate. Node logic CI-gated by `tests/crime_reaction_probe.gd`;
-live connection asserted by `tests/miami_wiring_probe.gd`. Remaining: drain
-`news.next_bulletin()` into a radio NEWS slot.
+live connection asserted by `tests/miami_wiring_probe.gd`. `RadioNewsDirector`
+now joins group `radio_news`, finds this director through group `crime_reaction`,
+and drains `news.next_bulletin()` into a scheduled NEWS slot. Scene-free bridge
+CI-gated by `tests/radio_news_probe.gd`; remaining player-facing work is a HUD or
+vehicle-radio readout that subscribes to `program_line_aired`.
 
 `CharacterSwitcher` owns a `CharacterRoster` and syncs each lead's wallet through
 the live `player_stats` node on `request_switch()` (write the current wallet back,

@@ -101,7 +101,7 @@ pattern and a runtime probe (repo rule: no probe, it does not count):
    `MeleeCombat`.
 4. **Activities:** `StreetRace`, `HeistCrew` (`SideJob` is already wired).
 5. **Support polish:** `GpsNavigation` into the minimap, `LootTable` on
-   death/crates, `RadioScheduler` programming for vehicle radio.
+   death/crates, `RadioNewsDirector` readout for vehicle/HUD radio.
 
 ### 3. Prove streaming at city scale (L1 / Phase B / M3): in parallel, the bottleneck
 This is what gates content volume. Build it GDScript-first; the native

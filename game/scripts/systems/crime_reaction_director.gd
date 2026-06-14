@@ -35,6 +35,7 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	add_to_group("crime_reaction")
 	# The wanted node may be added after us; wire on the next idle frame.
 	call_deferred("_connect_wanted")
 
