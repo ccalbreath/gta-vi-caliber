@@ -8,6 +8,7 @@ extends Node3D
 
 const WATER_VOLUME_SCRIPT := preload("res://scripts/world/water_volume.gd")
 const OCEAN_SCRIPT := preload("res://scripts/world/ocean.gd")
+const SOUTH_BEACH_SURF_SCRIPT := preload("res://scripts/world/south_beach_surf.gd")
 @export var map_scale: float = 4.6
 @export var water_size_m: float = 12000.0
 @export var ocean_y: float = -0.18
@@ -49,6 +50,7 @@ func _ready() -> void:
 	_build_land()
 	_build_key_islands()
 	_build_coastline()
+	_build_south_beach_surf()
 	_build_routes()
 	_build_bridges()
 	_build_route_details()
@@ -304,6 +306,15 @@ func _build_coastline() -> void:
 		FloridaMapModel.closed_outline(map_scale), coastline_width_m, land_y + 0.035
 	)
 	_add_flat_mesh("SandCoastline", geo, _sand_mat)
+
+
+func _build_south_beach_surf() -> void:
+	var surf := Node3D.new()
+	surf.name = "SouthBeachSurf"
+	surf.set_script(SOUTH_BEACH_SURF_SCRIPT)
+	surf.set("map_scale", map_scale)
+	surf.set("surf_y", ocean_y + 0.045)
+	add_child(surf)
 
 
 func _build_routes() -> void:
