@@ -7,11 +7,18 @@ extends Area3D
 ## one state. The genre's gang-takeover loop, as a hold-the-ground activity rather
 ## than a transaction.
 ##
-## Self-wires by group (player / gang_territory). Needs a CollisionShape3D child;
-## watches the player's collision layer (2). Verified in tests/turf_zone_probe.gd.
+## A fitter player contests turf FASTER — the accrual scales with the player's
+## PlayerSkills.bonus("stamina"), so this CONSUMES the gym's stamina skill (you can keep
+## up the pressure longer). Self-wires by group (player / gang_territory / player_skills).
+## Needs a CollisionShape3D child; watches the player's collision layer (2). Verified in
+## tests/turf_zone_probe.gd + tests/turf_stamina_probe.gd.
 
 signal influence_changed(district_id: String, influence: float)
 signal captured(district_id: String, from_owner: String)
+
+## Max extra capture speed a maxed STAMINA skill adds: 1.0 = up to twice as fast at full
+## stamina, 0 added with no stamina wired in.
+const STAMINA_CAPTURE_BONUS: float = 1.0
 
 ## Influence gained per second the player holds the zone (1.0 captures it).
 @export var capture_rate: float = 0.2
@@ -49,7 +56,8 @@ func _process(delta: float) -> void:
 		return
 	if territory.owner_of(district_id) == GangTerritory.PLAYER_OWNER:
 		return  # already ours — nothing to take
-	territory.add_influence(district_id, capture_rate * delta)
+	var rate := capture_rate * (1.0 + _stamina_bonus() * STAMINA_CAPTURE_BONUS)
+	territory.add_influence(district_id, rate * delta)
 	var influence := territory.influence_in(district_id)
 	if influence >= 1.0:
 		# `captured` is the canonical completion event — don't also emit a
@@ -85,3 +93,12 @@ func _territory() -> GangTerritory:
 	if controller == null or not controller.has_method("territory"):
 		return null
 	return controller.territory()
+
+
+## The player's STAMINA proficiency as a 0..1 capture-speed add-on (group "player_skills");
+## 0 when none is wired, so the base capture rate is exactly unchanged.
+func _stamina_bonus() -> float:
+	var skills := get_tree().get_first_node_in_group("player_skills")
+	if skills != null and skills.has_method("bonus"):
+		return clampf(float(skills.bonus("stamina")), 0.0, 1.0)
+	return 0.0
