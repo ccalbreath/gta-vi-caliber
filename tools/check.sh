@@ -173,5 +173,7 @@ step "protagonist bond probe"
 "$GODOT_BIN" --headless --path game --script res://tests/protagonist_bond_probe.gd
 step "business venture probe"
 "$GODOT_BIN" --headless --path game --script res://tests/business_venture_probe.gd
+step "vehicle supplier probe"
+"$GODOT_BIN" --headless --path game --script res://tests/vehicle_supplier_probe.gd
 
 printf '\nAll checks passed ✔\n'
