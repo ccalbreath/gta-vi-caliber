@@ -183,5 +183,7 @@ step "burglary strength probe"
 "$GODOT_BIN" --headless --path game --script res://tests/burglary_strength_probe.gd
 step "turf stamina probe"
 "$GODOT_BIN" --headless --path game --script res://tests/turf_stamina_probe.gd
+step "loan shark probe"
+"$GODOT_BIN" --headless --path game --script res://tests/loan_shark_probe.gd
 
 printf '\nAll checks passed ✔\n'
