@@ -29,6 +29,12 @@ extends Node
 
 var _sky_material: ShaderMaterial
 var _weather: Node = null
+## The scene's authored fog densities, captured once so the per-hour haze ramp
+## scales from a stable base instead of compounding frame over frame. -1 until
+## cached. Captured after WorldQuality's one-shot grade has run (it readies
+## first), so these are the values the scene actually starts with.
+var _base_fog_density: float = -1.0
+var _base_volumetric_density: float = -1.0
 
 
 func _ready() -> void:
@@ -36,6 +42,7 @@ func _ready() -> void:
 	_resolve_sky_material()
 	add_to_group("graphics_quality_aware")
 	apply_graphics_quality(GraphicsQuality.resolved_tier())
+	_cache_base_fog()
 	_apply(time_of_day)
 
 
@@ -145,6 +152,16 @@ func _aim_light(light: DirectionalLight3D, forward: Vector3) -> void:
 	light.look_at_from_position(origin, origin + forward, up)
 
 
+## Snapshot the authored fog densities once, before the haze ramp starts scaling
+## them, so the ramp has a fixed reference and never compounds.
+func _cache_base_fog() -> void:
+	if world_environment == null or world_environment.environment == null:
+		return
+	var env := world_environment.environment
+	_base_fog_density = env.fog_density
+	_base_volumetric_density = env.volumetric_fog_density
+
+
 func _update_environment(tod: float) -> void:
 	if world_environment == null or world_environment.environment == null:
 		return
@@ -158,6 +175,13 @@ func _update_environment(tod: float) -> void:
 	# perspective matches the sky.
 	if env.fog_enabled:
 		env.fog_light_color = SkyModel.light_color(tod)
+	# Scale the authored haze by time of day: thin and clear at noon so the
+	# skyline keeps its depth, warm and milky at golden hour / dusk, moderate at
+	# night. One authored density, right at every hour. See SkyModel.haze_factor.
+	if _base_fog_density >= 0.0:
+		var haze := SkyModel.haze_factor(tod)
+		env.fog_density = _base_fog_density * haze
+		env.volumetric_fog_density = _base_volumetric_density * haze
 
 
 func _update_shader(sun_dir: Vector3, tod: float) -> void:

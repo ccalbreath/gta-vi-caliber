@@ -169,8 +169,13 @@ func drive(id: String, distance_m: float, intensity: float = 1.0) -> Dictionary:
 	var want_fuel: float = float(v["economy"]) * effort
 	var fuel_used: float = minf(want_fuel, float(v["fuel"]))
 	v["fuel"] = maxf(float(v["fuel"]) - want_fuel, 0.0)
-	v["engine_wear"] = clampf(float(v["engine_wear"]) + ENGINE_WEAR_PER_M * effort, 0.0, 1.0)
-	v["tire_wear"] = clampf(float(v["tire_wear"]) + TIRE_WEAR_PER_M * effort, 0.0, 1.0)
+	# Wear scales with the distance ACTUALLY driven: if the tank runs dry partway,
+	# the car only travels the fuelled fraction, so it shouldn't wear for the full
+	# requested distance.
+	var travel_fraction: float = 1.0 if want_fuel <= 0.0 else fuel_used / want_fuel
+	var driven: float = effort * travel_fraction
+	v["engine_wear"] = clampf(float(v["engine_wear"]) + ENGINE_WEAR_PER_M * driven, 0.0, 1.0)
+	v["tire_wear"] = clampf(float(v["tire_wear"]) + TIRE_WEAR_PER_M * driven, 0.0, 1.0)
 	return {
 		"fuel_used": fuel_used,
 		"stalled": float(v["fuel"]) <= 0.0,

@@ -61,6 +61,18 @@ const HORIZON_LIGHT_COLOR: Color = Color(1.0, 0.54, 0.26)
 const DAY_AMBIENT_COLOR: Color = Color(0.92, 0.76, 0.62)
 const NIGHT_AMBIENT_COLOR: Color = Color(0.34, 0.42, 0.66)
 
+## Atmospheric haze multipliers across the day, applied to the scene's authored
+## fog densities so one set of fog values reads right at every hour. Humid
+## coastal air scatters hardest when the sun is low — golden hour / dusk go warm
+## and milky (HAZE_DUSK, the look the neon scene was tuned around) — while high
+## noon is comparatively clear so the skyline reads with depth instead of
+## drowning in grey soup, and deep night settles to a moderate haze that lets
+## neon bloom without washing out (HAZE_NIGHT). The authored density is the dusk
+## peak, so all three multipliers sit at or below it.
+const HAZE_NOON: float = 0.3
+const HAZE_DUSK: float = 0.78
+const HAZE_NIGHT: float = 0.55
+
 
 ## Unit vector pointing from the world TO the sun at time `tod`.
 ## +X is east, +Y is up, -Z is north (Godot's forward), so the sun rises in the
@@ -132,6 +144,18 @@ static func sky_sun_energy(tod: float) -> float:
 ## cast shadows — pointless at night).
 static func is_sun_up(tod: float) -> bool:
 	return sun_direction(tod).y > -0.02
+
+
+## Time-of-day multiplier for the scene's authored fog densities (see HAZE_*).
+## Peaks around golden hour / dusk where low-angle scattering reads as warm
+## aerial perspective, eases toward HAZE_NOON as the sun climbs so the skyline
+## keeps its depth, and settles to HAZE_NIGHT after dark.
+static func haze_factor(tod: float) -> float:
+	var h := sun_direction(tod).y
+	# Clearer as the sun climbs: ~0 through the low-sun golden hour, ~1 near noon.
+	var noon_clear := smoothstep(0.1, 0.62, h)
+	var day_haze := lerpf(HAZE_DUSK, HAZE_NOON, noon_clear)
+	return lerpf(day_haze, HAZE_NIGHT, night_amount(tod))
 
 
 ## Solar hour-angle in radians, 0 at solar noon (12:00). Wraps `tod` into a day.

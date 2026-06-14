@@ -15,7 +15,10 @@ const SHOTS: Array = [
 ## Frames for the district build + first shot, and between shots (lets glow,
 ## shadows and exposure settle after each time jump).
 const BOOT_FRAMES := 90
-const SETTLE_FRAMES := 30
+## Big time jumps need the sky's radiance/ambient probe and auto-exposure to
+## re-converge before the shot, or a night frame still carries the previous
+## hour's dusk glow. 60 frames clears it.
+const SETTLE_FRAMES := 60
 
 var _frame := 0
 var _shot_index := 0
@@ -52,13 +55,22 @@ func _process(_delta: float) -> bool:
 
 
 func _set_hour(hour: float) -> void:
-	var tod := current_scene.get_node_or_null("TimeOfDay")
+	# The day/night clock is the SkyController (group "sky"); the old standalone
+	# TimeOfDay node it replaced is gone. Freeze it so the snapped hour holds
+	# while the shot settles.
+	var tod: Node = current_scene.get_node_or_null("SkyController")
 	if tod == null:
-		push_error("tod_capture: no TimeOfDay node in district scene")
+		for node in get_nodes_in_group("sky"):
+			if node.has_method("set_time_of_day"):
+				tod = node
+				break
+	if tod == null or not tod.has_method("set_time_of_day"):
+		push_error("tod_capture: no time-of-day controller in scene")
 		quit(1)
 		return
-	tod.set("paused", true)
-	tod.call("set_hour", hour)
+	if "day_length_seconds" in tod:
+		tod.set("day_length_seconds", 0.0)
+	tod.call("set_time_of_day", hour)
 	var lamps := get_nodes_in_group("streetlight")
 	var lit := 0
 	for lamp in lamps:

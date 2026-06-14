@@ -104,16 +104,20 @@ func _make_materials() -> void:
 	_tower_mat.albedo_color = Color(0.86, 0.62, 0.58)
 	_tower_mat.roughness = 0.6
 
+	# Coated curtain-wall glass: metallic + smooth so the skyline towers mirror
+	# the sky radiance probe (the env reflects the sky) and read as real glass
+	# instead of a flat tinted slab. Opaque — a distant silhouette needs the
+	# crisp reflection, not see-through alpha, and it's cheaper.
 	_glass_mat = StandardMaterial3D.new()
-	_glass_mat.albedo_color = Color(0.48, 0.8, 0.92, 0.86)
-	_glass_mat.metallic = 0.0
-	_glass_mat.roughness = 0.18
-	_glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_glass_mat.albedo_color = Color(0.34, 0.55, 0.7)
+	_glass_mat.metallic = 0.85
+	_glass_mat.metallic_specular = 0.6
+	_glass_mat.roughness = 0.12
 
 	_dark_glass_mat = StandardMaterial3D.new()
-	_dark_glass_mat.albedo_color = Color(0.06, 0.11, 0.16)
-	_dark_glass_mat.metallic = 0.0
-	_dark_glass_mat.roughness = 0.12
+	_dark_glass_mat.albedo_color = Color(0.08, 0.13, 0.18)
+	_dark_glass_mat.metallic = 0.9
+	_dark_glass_mat.roughness = 0.1
 
 	_neon_mat = StandardMaterial3D.new()
 	_neon_mat.albedo_color = Color(0.58, 0.86, 0.96)

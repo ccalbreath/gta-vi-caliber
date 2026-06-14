@@ -20,11 +20,10 @@ extends Node3D
 ## interleaved deterministically (CrowdDistribution.is_citizen_slot) so the
 ## street reads as a mix of commuters and drifters.
 @export var citizen_scene: PackedScene = null
-## Path to the citizen scene, loaded after startup like pedestrian_scene_path.
-## Wiring it as a path (not a PackedScene property in the .tscn) keeps the world
-## scene from holding a nested PackedScene reference, which leaks RefCounted
-## instances at exit. Empty disables citizens.
-@export_file("*.tscn") var citizen_scene_path: String = ""
+## Script-only production path: citizen.tscn adds no nodes, it only replaces
+## pedestrian.gd with citizen.gd. Swapping before _ready avoids holding the
+## nested Citizen -> Pedestrian PackedScene that leaks resources at exit.
+@export var citizen_script: Script = preload("res://scripts/npc/citizen.gd")
 @export_range(0.0, 1.0) var citizen_fraction: float = 0.0
 ## How many peds to keep alive around the player.
 @export var target_count: int = 12
@@ -125,7 +124,6 @@ func _trim_to_target() -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_pedestrian_scene(delta)
-	_update_citizen_scene()
 	_accum += delta
 	if _accum < tick_interval:
 		return
@@ -163,18 +161,6 @@ func _update_pedestrian_scene(delta: float) -> void:
 		push_error("CrowdDirector: failed loading %s" % pedestrian_scene_path)
 
 
-## Load the optional citizen scene from its path once the base crowd scene has
-## finished its own deferred load — so neither competes with the world
-## transition, and the world .tscn never holds the nested PackedScene reference
-## that leaks at exit. A direct load is fine this late in startup.
-func _update_citizen_scene() -> void:
-	if citizen_scene != null or citizen_scene_path.is_empty():
-		return
-	if pedestrian_scene == null:
-		return
-	citizen_scene = load(citizen_scene_path) as PackedScene
-
-
 ## Recycle peds that have drifted past the cull radius (or were freed elsewhere,
 ## e.g. by another system) so the active list stays tight.
 func _cull(center: Vector3) -> void:
@@ -199,7 +185,7 @@ func _spawn(center: Vector3) -> void:
 		var pos := _find_spawn(center)
 		if pos == Vector3.INF:
 			continue  # nowhere walkable this tick; try again next tick
-		var ped := _next_scene().instantiate() as Node3D
+		var ped := _instantiate_next()
 		if ped == null:
 			return
 		_spawn_slot += 1
@@ -209,12 +195,19 @@ func _spawn(center: Vector3) -> void:
 		_peds.append(ped)
 
 
-## The scene for the next successful spawn: a Citizen on citizen slots when a
-## citizen scene is wired, the plain pedestrian otherwise.
-func _next_scene() -> PackedScene:
-	if citizen_scene != null and CrowdDistribution.is_citizen_slot(_spawn_slot, citizen_fraction):
-		return citizen_scene
-	return pedestrian_scene
+## Build the next pedestrian. Tests may provide a full citizen_scene override;
+## production swaps the script on the deferred pedestrian scene because
+## citizen.tscn contains no additional nodes.
+func _instantiate_next() -> Node3D:
+	var use_citizen := (
+		(citizen_scene != null or citizen_script != null)
+		and CrowdDistribution.is_citizen_slot(_spawn_slot, citizen_fraction)
+	)
+	var source := citizen_scene if use_citizen and citizen_scene != null else pedestrian_scene
+	var ped := source.instantiate() as Node3D
+	if ped != null and use_citizen and citizen_scene == null:
+		ped.set_script(citizen_script)
+	return ped
 
 
 ## Raycast a coarse grid of the surrounding area into a NavGrid: every cell whose
