@@ -66,3 +66,34 @@ func test_offset_clamps_past_segment_end() -> bool:
 	net.add_polyline(_line(Vector3(0, 0, 0), Vector3(10, 0, 0)))
 	var p: Vector3 = net.point_on_segment(0, 999.0)["pos"]
 	return p.is_equal_approx(Vector3(10, 0, 0))
+
+
+func test_nearest_point_snaps_to_centreline() -> bool:
+	var net := RoadNetwork.new(1.0)
+	net.add_polyline(_line(Vector3(0, 0, 0), Vector3(20, 0, 0)))
+	# A point 3 m off the road's midpoint snaps back onto the centreline.
+	var np := net.nearest_point(Vector3(10, 0, 3))
+	return (
+		not np.is_empty()
+		and (np["pos"] as Vector3).is_equal_approx(Vector3(10, 0, 0))
+		and absf(float(np["dist"]) - 3.0) < 0.001
+	)
+
+
+func test_nearest_point_picks_closer_road() -> bool:
+	var net := RoadNetwork.new(1.0)
+	net.add_polyline(_line(Vector3(0, 0, 0), Vector3(20, 0, 0)))  # at z = 0
+	net.add_polyline(_line(Vector3(0, 0, 40), Vector3(20, 0, 40)))  # at z = 40
+	# Closer to the z = 0 road.
+	return absf((net.nearest_point(Vector3(10, 0, 5))["pos"] as Vector3).z) < 0.001
+
+
+func test_nearest_point_heading_along_road() -> bool:
+	var net := RoadNetwork.new(1.0)
+	net.add_polyline(_line(Vector3(0, 0, 0), Vector3(0, 0, 20)))  # north-south
+	var h: Vector3 = net.nearest_point(Vector3(2, 0, 10))["heading"]
+	return absf(absf(h.z) - 1.0) < 0.001 and absf(h.x) < 0.001
+
+
+func test_nearest_point_empty_on_blank_graph() -> bool:
+	return RoadNetwork.new(1.0).nearest_point(Vector3(5, 0, 5)).is_empty()
