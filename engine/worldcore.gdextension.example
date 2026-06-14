@@ -1,0 +1,18 @@
+; Copied to game/bin/worldcore.gdextension by the SCons build (game/bin/ is
+; gitignored — every developer builds their own native libraries).
+
+[configuration]
+
+entry_symbol = "worldcore_library_init"
+compatibility_minimum = "4.6"
+
+[libraries]
+
+macos.debug = "res://bin/libworldcore.macos.template_debug.framework"
+macos.release = "res://bin/libworldcore.macos.template_release.framework"
+linux.debug.x86_64 = "res://bin/libworldcore.linux.template_debug.x86_64.so"
+linux.release.x86_64 = "res://bin/libworldcore.linux.template_release.x86_64.so"
+linux.debug.arm64 = "res://bin/libworldcore.linux.template_debug.arm64.so"
+linux.release.arm64 = "res://bin/libworldcore.linux.template_release.arm64.so"
+windows.debug.x86_64 = "res://bin/libworldcore.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "res://bin/libworldcore.windows.template_release.x86_64.dll"

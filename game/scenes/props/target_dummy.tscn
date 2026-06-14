@@ -1,0 +1,38 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/props/hittable.gd" id="1_hittable"]
+
+[sub_resource type="StandardMaterial3D" id="target_mat"]
+albedo_color = Color(0.85, 0.3, 0.2, 1)
+roughness = 0.6
+
+[sub_resource type="CapsuleMesh" id="torso_mesh"]
+material = SubResource("target_mat")
+radius = 0.32
+height = 1.4
+
+[sub_resource type="SphereMesh" id="head_mesh"]
+material = SubResource("target_mat")
+radius = 0.22
+height = 0.44
+
+[sub_resource type="CapsuleShape3D" id="hit_shape"]
+radius = 0.34
+height = 1.9
+
+[node name="TargetDummy" type="StaticBody3D"]
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("1_hittable")
+
+[node name="Torso" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+mesh = SubResource("torso_mesh")
+
+[node name="Head" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+mesh = SubResource("head_mesh")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+shape = SubResource("hit_shape")

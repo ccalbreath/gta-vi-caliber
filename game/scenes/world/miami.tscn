@@ -1,0 +1,625 @@
+[gd_scene load_steps=89 format=3]
+
+; Miami / Vice City — THE game map. The streamer pages real Miami districts
+; (downtown, Brickell, South Beach, Mid-Beach, Wynwood) from the manifest at
+; their true offsets. Warm late-afternoon Vice City grade. No SDFGI (it flickers
+; as districts page in); sky-sourced ambient + SSR/SSIL carry the bounce.
+
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
+[ext_resource type="PackedScene" path="res://scenes/ui/debug_hud.tscn" id="2_hud"]
+[ext_resource type="Script" path="res://scripts/world/district_streamer.gd" id="3_streamer"]
+[ext_resource type="Script" path="res://scripts/world/florida_backdrop.gd" id="4_florida"]
+[ext_resource type="Script" path="res://scripts/world/weather_controller.gd" id="5_weather"]
+[ext_resource type="Script" path="res://scripts/world/world_quality.gd" id="6_quality"]
+[ext_resource type="PackedScene" path="res://scenes/ui/game_hud.tscn" id="7_gamehud"]
+[ext_resource type="Script" path="res://scripts/ui/streaming_hud.gd" id="9_shud"]
+[ext_resource type="Script" path="res://scripts/systems/player_health.gd" id="10_health"]
+[ext_resource type="Script" path="res://scripts/player/player_stats.gd" id="11_stats"]
+[ext_resource type="Script" path="res://scripts/systems/wanted_tracker.gd" id="12_wanted"]
+[ext_resource type="Script" path="res://scripts/missions/mission_controller.gd" id="13_mission"]
+[ext_resource type="Script" path="res://scripts/npc/bark_director.gd" id="14_bark"]
+[ext_resource type="Script" path="res://scripts/npc/crowd_director.gd" id="15_crowd"]
+[ext_resource type="Script" path="res://scripts/ai/traffic_director.gd" id="16_traffic"]
+[ext_resource type="Script" path="res://scripts/npc/police_spawner.gd" id="17_police_spawner"]
+[ext_resource type="PackedScene" path="res://scenes/npc/police.tscn" id="18_police"]
+[ext_resource type="PackedScene" path="res://scenes/vehicles/coastal_sport_coupe.tscn" id="19_car"]
+[ext_resource type="Script" path="res://scripts/systems/save_manager.gd" id="20_save"]
+[ext_resource type="Script" path="res://scripts/missions/mission_trigger.gd" id="21_trigger"]
+[ext_resource type="PackedScene" path="res://scenes/vehicles/bike.tscn" id="22_bike"]
+[ext_resource type="PackedScene" path="res://scenes/vehicles/coastal_classic_sedan.tscn" id="23_sedan"]
+[ext_resource type="Script" path="res://scripts/missions/mission_reward.gd" id="24_reward"]
+[ext_resource type="Script" path="res://scripts/systems/wanted_evasion_controller.gd" id="25_evade"]
+[ext_resource type="PackedScene" path="res://scenes/props/medkit.tscn" id="26_medkit"]
+[ext_resource type="PackedScene" path="res://scenes/props/armor.tscn" id="27_armor"]
+[ext_resource type="Script" path="res://scripts/systems/progression_tracker.gd" id="28_progress"]
+[ext_resource type="Script" path="res://scripts/systems/stats_coordinator.gd" id="29_stats"]
+[ext_resource type="Script" path="res://scripts/missions/mission_campaign.gd" id="30_campaign"]
+[ext_resource type="Script" path="res://scripts/world/pay_spray_shop.gd" id="31_payspray"]
+[ext_resource type="Script" path="res://scripts/systems/arrest_controller.gd" id="32_arrest"]
+[ext_resource type="Script" path="res://scripts/npc/police_helicopter.gd" id="33_heli"]
+[ext_resource type="Script" path="res://scripts/world/causeways.gd" id="34_causeways"]
+[ext_resource type="Script" path="res://scripts/world/bay_island_builder.gd" id="35_islands"]
+[ext_resource type="Script" path="res://scripts/world/property_hub.gd" id="36_property"]
+[ext_resource type="Script" path="res://scripts/world/armor_shop.gd" id="37_armorshop"]
+[ext_resource type="Shader" path="res://assets/shaders/sky.gdshader" id="38_sky"]
+[ext_resource type="Script" path="res://scripts/world/sky_controller.gd" id="39_skyctl"]
+[ext_resource type="Script" path="res://scripts/world/rain.gd" id="40_rain"]
+[ext_resource type="Script" path="res://scripts/world/floating_origin.gd" id="41_origin"]
+[ext_resource type="Script" path="res://scripts/npc/city_director.gd" id="42_city"]
+[ext_resource type="Script" path="res://scripts/world/city_poi_seeder.gd" id="43_poi"]
+[ext_resource type="PackedScene" path="res://scenes/npc/citizen.tscn" id="44_citizen"]
+[ext_resource type="Script" path="res://scripts/world/night_lights_switch.gd" id="45_nightlights"]
+[ext_resource type="Script" path="res://scripts/world/coastal_prop_placements.gd" id="40_coastal_props"]
+[ext_resource type="Script" path="res://scripts/world/vehicle_mod_garage.gd" id="46_modgarage"]
+[ext_resource type="Script" path="res://scripts/systems/market_event_coordinator.gd" id="47_marketevt"]
+[ext_resource type="Script" path="res://scripts/systems/crime_reaction_director.gd" id="48_crimereact"]
+[ext_resource type="Script" path="res://scripts/systems/ambient_event_director.gd" id="49_ambient"]
+[ext_resource type="Script" path="res://scripts/world/contraband_dealer.gd" id="50_contraband"]
+[ext_resource type="Script" path="res://scripts/world/race_controller.gd" id="51_race"]
+[ext_resource type="Script" path="res://scripts/npc/crowd_panic_director.gd" id="52_crowdpanic"]
+[ext_resource type="Script" path="res://scripts/npc/loot_drop_director.gd" id="53_lootdrop"]
+[ext_resource type="Script" path="res://scripts/world/slot_machine.gd" id="54_slot"]
+[ext_resource type="Script" path="res://scripts/world/food_vendor.gd" id="55_food"]
+[ext_resource type="Script" path="res://scripts/world/wardrobe_shop.gd" id="56_wardrobe"]
+[ext_resource type="Script" path="res://scripts/world/business_venture_hub.gd" id="57_business"]
+[ext_resource type="Script" path="res://scripts/world/roulette_table.gd" id="58_roulette"]
+[ext_resource type="Script" path="res://scripts/world/blackjack_table.gd" id="59_blackjack"]
+[ext_resource type="Script" path="res://scripts/world/taxi_stand.gd" id="60_taxi"]
+[ext_resource type="Script" path="res://scripts/world/savepoint.gd" id="61_savepoint"]
+[ext_resource type="Script" path="res://scripts/npc/responder_dispatcher.gd" id="62_responder"]
+[ext_resource type="Script" path="res://scripts/world/turf_claim.gd" id="63_turf"]
+[ext_resource type="Script" path="res://scripts/world/brokerage_terminal.gd" id="64_brokerage"]
+[ext_resource type="Script" path="res://scripts/world/robbery_target.gd" id="65_robbery"]
+[ext_resource type="Script" path="res://scripts/world/hit_contract_board.gd" id="66_hit"]
+[ext_resource type="Script" path="res://scripts/world/heist_planning_board.gd" id="67_heist"]
+[ext_resource type="Script" path="res://scripts/ai/traffic_signal_field.gd" id="68_signals"]
+
+[sub_resource type="BoxShape3D" id="payspray_shape"]
+size = Vector3(12, 6, 12)
+
+[sub_resource type="BoxShape3D" id="property_zone_shape"]
+size = Vector3(8, 6, 8)
+
+[sub_resource type="BoxShape3D" id="mod_garage_shape"]
+size = Vector3(14, 6, 14)
+
+[sub_resource type="SphereShape3D" id="trigger_shape"]
+radius = 6.0
+
+[sub_resource type="BoxMesh" id="slot_body_mesh"]
+size = Vector3(0.8, 1.8, 0.6)
+
+[sub_resource type="BoxMesh" id="food_cart_mesh"]
+size = Vector3(1.4, 1.0, 0.9)
+
+[sub_resource type="BoxMesh" id="wardrobe_mesh"]
+size = Vector3(3, 3, 2)
+
+[sub_resource type="BoxMesh" id="business_mesh"]
+size = Vector3(4, 3, 4)
+
+[sub_resource type="BoxMesh" id="roulette_mesh"]
+size = Vector3(2, 0.9, 1.2)
+
+[sub_resource type="BoxMesh" id="blackjack_mesh"]
+size = Vector3(2, 0.9, 1.2)
+
+[sub_resource type="BoxMesh" id="taxi_mesh"]
+size = Vector3(1, 2.2, 1)
+
+[sub_resource type="BoxMesh" id="savepoint_mesh"]
+size = Vector3(1, 1.6, 1)
+
+[sub_resource type="BoxMesh" id="turf_mesh"]
+size = Vector3(2, 2.5, 2)
+
+[sub_resource type="BoxMesh" id="brokerage_mesh"]
+size = Vector3(2, 2.2, 1)
+
+[sub_resource type="BoxMesh" id="robbery_mesh"]
+size = Vector3(3, 3, 3)
+
+[sub_resource type="BoxMesh" id="hit_mesh"]
+size = Vector3(1.5, 2, 0.4)
+
+[sub_resource type="BoxMesh" id="heist_mesh"]
+size = Vector3(2, 1.2, 1)
+
+[sub_resource type="ShaderMaterial" id="sky_mat"]
+shader = ExtResource("38_sky")
+shader_parameter/sun_direction = Vector3(0.41, 0.81, -0.42)
+shader_parameter/sun_energy = 1.0
+shader_parameter/moon_direction = Vector3(-0.41, -0.81, 0.42)
+shader_parameter/night_amount = 0.0
+shader_parameter/rayleigh_strength = 1.0
+shader_parameter/mie_strength = 1.0
+shader_parameter/mie_eccentricity = 0.76
+shader_parameter/sun_intensity = 22.0
+shader_parameter/exposure = 1.1
+shader_parameter/sun_angular_size = 1.2
+shader_parameter/sun_disk_color = Color(1, 0.95, 0.86, 1)
+shader_parameter/cloud_coverage = 0.5
+shader_parameter/cloud_density = 1.2
+shader_parameter/cloud_height = 1200.0
+shader_parameter/cloud_scale = 0.00055
+shader_parameter/cloud_wind = Vector2(0.014, 0.007)
+shader_parameter/cloud_base_color = Color(0.66, 0.69, 0.74, 1)
+shader_parameter/cloud_lit_color = Color(1, 0.97, 0.9, 1)
+shader_parameter/star_density = 0.18
+shader_parameter/night_zenith = Color(0.012, 0.016, 0.035, 1)
+shader_parameter/moon_color = Color(0.85, 0.88, 0.95, 1)
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+radiance_size = 2
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 3
+ambient_light_energy = 0.46
+ambient_light_color = Color(0.92, 0.76, 0.62, 1.0)
+tonemap_mode = 4
+tonemap_exposure = 1.05
+tonemap_white = 6.0
+ssr_enabled = true
+ssr_max_steps = 24
+ssao_enabled = true
+ssao_intensity = 1.0
+ssil_enabled = false
+glow_enabled = true
+glow_intensity = 0.5
+glow_strength = 0.45
+glow_bloom = 0.05
+glow_blend_mode = 1
+glow_hdr_threshold = 1.1
+fog_enabled = true
+fog_light_color = Color(1.0, 0.72, 0.5, 1.0)
+fog_density = 0.00012
+fog_sky_affect = 0.0
+fog_aerial_perspective = 0.12
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.001
+volumetric_fog_albedo = Color(1.0, 0.86, 0.72, 1.0)
+volumetric_fog_emission = Color(0.4, 0.28, 0.3, 1.0)
+volumetric_fog_emission_energy = 0.18
+volumetric_fog_length = 900.0
+volumetric_fog_detail_spread = 1.6
+volumetric_fog_ambient_inject = 0.05
+adjustment_enabled = true
+adjustment_contrast = 1.12
+adjustment_saturation = 1.12
+adjustment_brightness = 1.0
+
+[node name="Miami" type="Node3D" groups=["world"]]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+script = ExtResource("6_quality")
+minimum_tier = 2
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.94, 0.18, -0.29, 0, 0.85, 0.53, 0.34, -0.5, 0.8, 0, 80, 0)
+light_color = Color(1.0, 0.66, 0.4, 1.0)
+light_energy = 0.92
+light_angular_distance = 2.0
+light_volumetric_fog_energy = 1.6
+shadow_enabled = true
+shadow_blur = 0.8
+directional_shadow_max_distance = 350.0
+
+; Night key light. SkyController (resolves it by the name "Moon") aims it
+; opposite the sun and ramps its cool energy with night_amount, so moonlit
+; geometry reads cool and casts soft shadows instead of going pitch black.
+[node name="Moon" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 80, 0)
+light_color = Color(0.6, 0.7, 0.96, 1.0)
+light_energy = 0.0
+light_angular_distance = 1.0
+shadow_blur = 1.4
+directional_shadow_max_distance = 600.0
+
+[node name="SkyController" type="Node" parent="." groups=["sky"]]
+script = ExtResource("39_skyctl")
+time_of_day = 17.5
+day_length_seconds = 1200.0
+
+[node name="FloridaBackdrop" type="Node3D" parent="."]
+script = ExtResource("4_florida")
+
+; Switches the backdrop neon light clusters (group "night_lights") on at dusk
+; and off by day off the shared SkyController night clock — the legacy
+; DayNightCycle that used to own this group isn't in this scene.
+[node name="NightLightsSwitch" type="Node" parent="."]
+script = ExtResource("45_nightlights")
+
+[node name="CoastalProps" type="Node3D" parent="."]
+script = ExtResource("40_coastal_props")
+
+; Drivable bay crossings (MacArthur / Julia Tuttle / Venetian) that connect the
+; mainland districts to the beaches into one continuous Florida landmass.
+[node name="Causeways" type="Node3D" parent="."]
+script = ExtResource("34_causeways")
+
+; Biscayne Bay residential islands (Star/Palm/Hibiscus, Venetian chain) that the
+; causeways thread between — iconic Miami/Vice City landmarks.
+[node name="BayIslands" type="Node3D" parent="."]
+script = ExtResource("35_islands")
+
+[node name="Streamer" type="Node3D" parent="."]
+script = ExtResource("3_streamer")
+load_radius = 8500.0
+unload_radius = 9500.0
+
+; Districts sit up to ~6.5 km out; beyond ~2 km float32 jitter sets in, so the
+; world is teleported back around the player. The streamer and mission
+; waypoints reconstruct absolute coords from its origin_offset.
+[node name="FloatingOrigin" type="Node" parent="."]
+script = ExtResource("41_origin")
+
+; Live weather: a rolling front (clear -> overcast -> rain -> clearing) that
+; thickens the fog, darkens the sky-shader clouds, rains over the player, and
+; wets the streets (world_wetness shader global). Fog densities stay near the
+; authored Vice City air so clear weather keeps the warm golden-hour grade.
+[node name="Weather" type="Node3D" parent="."]
+script = ExtResource("5_weather")
+front_length_sec = 360.0
+start_cycle = 0.1
+environment_path = NodePath("../WorldEnvironment")
+rain_path = NodePath("Rain")
+clear_fog_density = 8e-05
+storm_fog_density = 0.006
+rain_fog_boost = 0.004
+
+[node name="Rain" type="Node3D" parent="Weather"]
+script = ExtResource("40_rain")
+intensity = 0.0
+
+[node name="SpawnPoint" type="Marker3D" parent="." groups=["spawn_points"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="Player" parent="." instance=ExtResource("1_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="DebugHud" parent="." instance=ExtResource("2_hud")]
+
+[node name="GameHud" parent="." instance=ExtResource("7_gamehud")]
+
+[node name="StreamingHud" type="CanvasLayer" parent="."]
+script = ExtResource("9_shud")
+
+; --- Gameplay simulation: self-wiring system nodes ---------------------------
+; These discover the player / weapon controller / each other through groups at
+; runtime (player_health, player_stats, wanted, mission, bark, player), so the
+; live HUD lights up and shooting in the city now has consequences. The dynamic
+; directors stream pedestrians, traffic, and a wanted-driven police response
+; around the player across the paged districts.
+
+[node name="PlayerHealth" type="Node" parent="."]
+script = ExtResource("10_health")
+
+[node name="PlayerStats" type="Node" parent="."]
+script = ExtResource("11_stats")
+
+[node name="WantedTracker" type="Node" parent="."]
+script = ExtResource("12_wanted")
+
+[node name="Mission" type="Node" parent="."]
+script = ExtResource("13_mission")
+title = "WELCOME TO VICE CITY"
+objective_defs = [{
+"id": "reach_car",
+"text": "Get in your car"
+}, {
+"id": "drive_strip",
+"text": "Drive down to the strip"
+}, {
+"id": "return_home",
+"text": "Head back to the start"
+}]
+waypoints = {
+"drive_strip": Vector3(72, 1, -48),
+"reach_car": Vector3(7, 1, 5),
+"return_home": Vector3(0, 1, 0)
+}
+time_limit = 0.0
+auto_start = false
+
+[node name="ReachCarTrigger" type="Area3D" parent="Mission"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 1, 5)
+script = ExtResource("21_trigger")
+objective_id = "reach_car"
+repeatable = true
+
+[node name="ReachCarShape" type="CollisionShape3D" parent="Mission/ReachCarTrigger"]
+shape = SubResource("trigger_shape")
+
+[node name="DriveStripTrigger" type="Area3D" parent="Mission"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 72, 1, -48)
+script = ExtResource("21_trigger")
+objective_id = "drive_strip"
+repeatable = true
+
+[node name="DriveStripShape" type="CollisionShape3D" parent="Mission/DriveStripTrigger"]
+shape = SubResource("trigger_shape")
+
+[node name="ReturnHomeTrigger" type="Area3D" parent="Mission"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+script = ExtResource("21_trigger")
+objective_id = "return_home"
+repeatable = true
+
+[node name="ReturnHomeShape" type="CollisionShape3D" parent="Mission/ReturnHomeTrigger"]
+shape = SubResource("trigger_shape")
+
+[node name="BarkDirector" type="Node" parent="."]
+script = ExtResource("14_bark")
+
+[node name="CityDirector" type="Node3D" parent="."]
+script = ExtResource("42_city")
+
+[node name="CityPoiSeeder" type="Node3D" parent="."]
+script = ExtResource("43_poi")
+
+[node name="CrowdDirector" type="Node3D" parent="."]
+script = ExtResource("15_crowd")
+citizen_scene = ExtResource("44_citizen")
+citizen_fraction = 0.35
+target_count = 40
+spawn_max_radius = 54.0
+cull_radius = 70.0
+
+[node name="TrafficDirector" type="Node3D" parent="."]
+script = ExtResource("16_traffic")
+bake_nav = true
+target_count = 20
+spawn_max_radius = 60.0
+cull_radius = 82.0
+
+[node name="TrafficSignalField" type="Node3D" parent="."]
+script = ExtResource("68_signals")
+
+[node name="PoliceSpawner" type="Node3D" parent="."]
+script = ExtResource("17_police_spawner")
+police_scene = ExtResource("18_police")
+
+[node name="Car" parent="." groups=["starter_vehicles"] instance=ExtResource("19_car")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.6, 5)
+
+[node name="Car2" parent="." groups=["starter_vehicles"] instance=ExtResource("23_sedan")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.6, 9)
+
+[node name="Bike" parent="." instance=ExtResource("22_bike")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.6, 6)
+
+[node name="SaveManager" type="Node" parent="."]
+script = ExtResource("20_save")
+
+[node name="MissionReward" type="Node" parent="."]
+script = ExtResource("24_reward")
+
+[node name="ProgressionTracker" type="Node" parent="."]
+script = ExtResource("28_progress")
+
+[node name="StatsCoordinator" type="Node" parent="."]
+script = ExtResource("29_stats")
+
+[node name="MarketEventCoordinator" type="Node" parent="."]
+script = ExtResource("47_marketevt")
+
+[node name="CrimeReactionDirector" type="Node" parent="."]
+script = ExtResource("48_crimereact")
+
+[node name="AmbientEventDirector" type="Node" parent="."]
+script = ExtResource("49_ambient")
+
+[node name="CrowdPanicDirector" type="Node" parent="."]
+script = ExtResource("52_crowdpanic")
+
+[node name="ResponderDispatcher" type="Node" parent="."]
+script = ExtResource("62_responder")
+
+[node name="LootDropDirector" type="Node" parent="."]
+script = ExtResource("53_lootdrop")
+medkit_scene = ExtResource("26_medkit")
+armor_scene = ExtResource("27_armor")
+
+[node name="StreetRace" type="Node3D" parent="." groups=["race"]]
+script = ExtResource("51_race")
+base_reward = 2500
+
+[node name="CP0" type="Marker3D" parent="StreetRace"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 0.5, 22)
+
+[node name="CP1" type="Marker3D" parent="StreetRace"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.5, 22)
+
+[node name="CP2" type="Marker3D" parent="StreetRace"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.5, 62)
+
+[node name="CP3" type="Marker3D" parent="StreetRace"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 0.5, 62)
+
+[node name="MissionCampaign" type="Node" parent="."]
+script = ExtResource("30_campaign")
+
+[node name="PaySprayShop" type="Area3D" parent="." groups=["pay_spray"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46, 1, 28)
+script = ExtResource("31_payspray")
+
+[node name="PaySprayShape" type="CollisionShape3D" parent="PaySprayShop"]
+shape = SubResource("payspray_shape")
+
+[node name="PropertyHub" type="Node3D" parent="." groups=["property_hub"]]
+script = ExtResource("36_property")
+property_id = "taxi_firm"
+seconds_per_day = 4.0
+
+[node name="BuyZone" type="Area3D" parent="PropertyHub"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 1, 40)
+
+[node name="BuyShape" type="CollisionShape3D" parent="PropertyHub/BuyZone"]
+shape = SubResource("property_zone_shape")
+
+[node name="CollectZone" type="Area3D" parent="PropertyHub"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 1, 56)
+
+[node name="CollectShape" type="CollisionShape3D" parent="PropertyHub/CollectZone"]
+shape = SubResource("property_zone_shape")
+
+[node name="ArmorShop" type="Area3D" parent="." groups=["armor_shop"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1, 44)
+script = ExtResource("37_armorshop")
+
+[node name="ArmorShopShape" type="CollisionShape3D" parent="ArmorShop"]
+shape = SubResource("property_zone_shape")
+
+[node name="SlotMachine" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, 38)
+script = ExtResource("54_slot")
+
+[node name="Body" type="MeshInstance3D" parent="SlotMachine"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("slot_body_mesh")
+
+[node name="FoodVendor" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 50)
+script = ExtResource("55_food")
+
+[node name="Cart" type="MeshInstance3D" parent="FoodVendor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("food_cart_mesh")
+
+[node name="WardrobeShop" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -42, 0, 52)
+script = ExtResource("56_wardrobe")
+
+[node name="Body" type="MeshInstance3D" parent="WardrobeShop"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("wardrobe_mesh")
+
+[node name="BusinessVentureHub" type="Node3D" parent="." groups=["interactables"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, 32)
+script = ExtResource("57_business")
+
+[node name="Body" type="MeshInstance3D" parent="BusinessVentureHub"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("business_mesh")
+
+[node name="RouletteTable" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -42, 0, 34)
+script = ExtResource("58_roulette")
+
+[node name="Body" type="MeshInstance3D" parent="RouletteTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+mesh = SubResource("roulette_mesh")
+
+[node name="BlackjackTable" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -34, 0, 30)
+script = ExtResource("59_blackjack")
+
+[node name="Body" type="MeshInstance3D" parent="BlackjackTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+mesh = SubResource("blackjack_mesh")
+
+[node name="TaxiStand" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, 30)
+script = ExtResource("60_taxi")
+
+[node name="Body" type="MeshInstance3D" parent="TaxiStand"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+mesh = SubResource("taxi_mesh")
+
+[node name="Savepoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 8)
+script = ExtResource("61_savepoint")
+
+[node name="Body" type="MeshInstance3D" parent="Savepoint"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("savepoint_mesh")
+
+[node name="TurfClaim" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -20)
+script = ExtResource("63_turf")
+
+[node name="Body" type="MeshInstance3D" parent="TurfClaim"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("turf_mesh")
+
+[node name="BrokerageTerminal" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 44)
+script = ExtResource("64_brokerage")
+
+[node name="Body" type="MeshInstance3D" parent="BrokerageTerminal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+mesh = SubResource("brokerage_mesh")
+
+[node name="RobberyTarget" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0, 10)
+script = ExtResource("65_robbery")
+
+[node name="Body" type="MeshInstance3D" parent="RobberyTarget"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("robbery_mesh")
+
+[node name="HitContractBoard" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 40)
+script = ExtResource("66_hit")
+
+[node name="Body" type="MeshInstance3D" parent="HitContractBoard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("hit_mesh")
+
+[node name="HeistPlanningBoard" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 34)
+script = ExtResource("67_heist")
+
+[node name="Body" type="MeshInstance3D" parent="HeistPlanningBoard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("heist_mesh")
+
+[node name="VehicleModGarage" type="Area3D" parent="." groups=["vehicle_mod_shop"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62, 1, 44)
+script = ExtResource("46_modgarage")
+
+[node name="ModGarageShape" type="CollisionShape3D" parent="VehicleModGarage"]
+shape = SubResource("mod_garage_shape")
+
+[node name="ContrabandDealer" type="Node3D" parent="." groups=["contraband_dealer"]]
+script = ExtResource("50_contraband")
+
+[node name="DealZone" type="Area3D" parent="ContrabandDealer"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 1, 30)
+
+[node name="DealShape" type="CollisionShape3D" parent="ContrabandDealer/DealZone"]
+shape = SubResource("property_zone_shape")
+
+[node name="FenceZone" type="Area3D" parent="ContrabandDealer"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1, 56)
+
+[node name="FenceShape" type="CollisionShape3D" parent="ContrabandDealer/FenceZone"]
+shape = SubResource("property_zone_shape")
+
+[node name="WantedEvasion" type="Node" parent="."]
+script = ExtResource("25_evade")
+search_duration = 6.0
+
+[node name="ArrestController" type="Node" parent="."]
+script = ExtResource("32_arrest")
+
+[node name="PoliceHelicopter" type="Node3D" parent="."]
+script = ExtResource("33_heli")
+
+[node name="Pickups" type="Node3D" parent="."]
+
+[node name="Medkit1" parent="Pickups" instance=ExtResource("26_medkit")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.5, -6)
+
+[node name="Medkit2" parent="Pickups" instance=ExtResource("26_medkit")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0.5, 14)
+
+[node name="Armor1" parent="Pickups" instance=ExtResource("27_armor")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.5, -10)
+
+[node name="Armor2" parent="Pickups" instance=ExtResource("27_armor")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0.5, 18)

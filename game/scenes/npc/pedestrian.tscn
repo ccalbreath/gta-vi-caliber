@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/npc/pedestrian.gd" id="1_ped"]
+[ext_resource type="PackedScene" path="res://scenes/npc/civilian_rig.tscn" id="2_rig"]
+
+[sub_resource type="CapsuleShape3D" id="body_shape"]
+radius = 0.4
+height = 1.8
+
+[node name="Pedestrian" type="CharacterBody3D" groups=["pedestrians"]]
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("1_ped")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("body_shape")
+
+[node name="Rig" parent="." instance=ExtResource("2_rig")]

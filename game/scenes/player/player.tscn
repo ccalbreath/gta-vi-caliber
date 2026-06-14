@@ -1,0 +1,74 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/camera/orbit_camera.gd" id="2_camera"]
+[ext_resource type="PackedScene" path="res://scenes/player/mc_rig.tscn" id="3_rig"]
+[ext_resource type="Script" path="res://scripts/weapons/weapon_controller.gd" id="5_weapon"]
+[ext_resource type="Script" path="res://scripts/combat/melee_controller.gd" id="6_melee"]
+[ext_resource type="Script" path="res://scripts/weapons/grenade_thrower.gd" id="7_grenade"]
+
+[sub_resource type="CapsuleShape3D" id="body_shape"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="gunmetal_mat"]
+albedo_color = Color(0.12, 0.12, 0.14, 1)
+metallic = 0.6
+roughness = 0.45
+
+[sub_resource type="BoxMesh" id="gun_body_mesh"]
+material = SubResource("gunmetal_mat")
+size = Vector3(0.08, 0.16, 0.34)
+
+[sub_resource type="BoxMesh" id="gun_barrel_mesh"]
+material = SubResource("gunmetal_mat")
+size = Vector3(0.05, 0.05, 0.3)
+
+[node name="Player" type="CharacterBody3D" groups=["player"]]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_player")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("body_shape")
+
+[node name="Rig" parent="." instance=ExtResource("3_rig")]
+
+[node name="GunMount" type="Node3D" parent="Rig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22, 1.07, -0.28)
+visible = false
+
+[node name="GunBody" type="MeshInstance3D" parent="Rig/GunMount"]
+mesh = SubResource("gun_body_mesh")
+
+[node name="Barrel" type="MeshInstance3D" parent="Rig/GunMount"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -0.28)
+mesh = SubResource("gun_barrel_mesh")
+
+[node name="Muzzle" type="Marker3D" parent="Rig/GunMount"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -0.45)
+
+[node name="CameraRig" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+script = ExtResource("2_camera")
+
+[node name="SpringArm" type="SpringArm3D" parent="CameraRig"]
+transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 0, 0)
+collision_mask = 1
+spring_length = 3.3
+
+[node name="Camera" type="Camera3D" parent="CameraRig/SpringArm"]
+current = true
+
+[node name="WeaponController" type="Node3D" parent="."]
+script = ExtResource("5_weapon")
+camera_path = NodePath("../CameraRig/SpringArm/Camera")
+muzzle_path = NodePath("../Rig/GunMount/Muzzle")
+gun_mount_path = NodePath("../Rig/GunMount")
+
+[node name="MeleeController" type="Node" parent="."]
+script = ExtResource("6_melee")
+
+[node name="GrenadeThrower" type="Node" parent="."]
+script = ExtResource("7_grenade")

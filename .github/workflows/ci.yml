@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  GODOT_VERSION: "4.6.3"
+
+jobs:
+  lint:
+    name: Format & lint (GDScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install gdtoolkit
+        run: pip install "gdtoolkit==4.*"
+      - name: gdformat --check
+        run: gdformat --check game/scripts game/tests
+      - name: gdlint
+        run: gdlint game/scripts game/tests
+
+  game:
+    name: Import, smoke & unit tests (headless Godot)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-bin
+          curl -sSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          mv "/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
+      - name: Headless import
+        run: ~/godot-bin/godot --headless --path game --import
+      - name: Smoke test
+        run: ~/godot-bin/godot --headless --path game --script res://tests/smoke_test.gd
+      - name: gdUnit4 unit tests
+        run: ~/godot-bin/godot --headless --path game --script res://tests/run_tests.gd
+      - name: Legacy unit tests
+        run: ~/godot-bin/godot --headless --path game --script res://tests/run_legacy_tests.gd
+      # The same playable-map probes tools/check.sh gates on locally: the main
+      # map's gameplay stack stays wired and the GTA core loops keep firing.
+      - name: Miami integration probes
+        run: |
+          for probe in miami_wiring_probe miami_facade_probe miami_loop_probe \
+            miami_mission_probe miami_payspray_probe miami_arrest_probe \
+            miami_helicopter_probe miami_day_night_probe miami_evade_probe \
+            miami_property_probe miami_citizen_probe; do
+            echo "== ${probe} =="
+            ~/godot-bin/godot --headless --path game --script "res://tests/${probe}.gd"
+          done
+
+  engine:
+    name: Engine modules (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            os: ubuntu-latest
+          - platform: macos
+            os: macos-latest
+          - platform: windows
+            os: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install SCons
+        run: pip install scons
+      - name: Cache godot-cpp build
+        uses: actions/cache@v4
+        with:
+          path: |
+            engine/godot-cpp/bin
+            engine/godot-cpp/gen
+            engine/godot-cpp/src
+            engine/.sconsign.dblite
+          key: godot-cpp-${{ matrix.platform }}-${{ hashFiles('.gitmodules', 'engine/godot-cpp/SConstruct') }}
+      - name: Build (template_debug)
+        working-directory: engine
+        run: scons platform=${{ matrix.platform }} target=template_debug
+      - name: Cache Godot
+        if: matrix.platform == 'linux'
+        id: cache-godot-engine
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+      - name: Download Godot
+        if: matrix.platform == 'linux' && steps.cache-godot-engine.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-bin
+          curl -sSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          mv "/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
+      # Import WITHOUT the manifest installed: `--import` boots the full
+      # editor, whose shutdown path is unrelated to what we are testing.
+      - name: Headless import
+        if: matrix.platform == 'linux'
+        run: ~/godot-bin/godot --headless --path game --import
+      - name: Install native manifest
+        if: matrix.platform == 'linux'
+        run: cp engine/worldcore.gdextension.example game/bin/worldcore.gdextension
+      - name: Native smoke test
+        if: matrix.platform == 'linux'
+        run: ~/godot-bin/godot --headless --path game --script res://tests/native_smoke_test.gd

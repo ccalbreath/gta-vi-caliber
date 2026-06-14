@@ -1,0 +1,175 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.6.3"
+  SCONS_CACHE: ${{ github.workspace }}/.scons-cache
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Build the native engine (worldcore) for each desktop platform, in
+  #    template_release, on its own native runner. macOS cannot be cross-built
+  #    from Linux, so each platform compiles on its matching OS and uploads the
+  #    resulting game/bin/ payload as an artifact for the export job.
+  # ---------------------------------------------------------------------------
+  native:
+    name: Native engine (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: macos
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SCons
+        run: pip install scons
+
+      - name: Cache SCons build
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCONS_CACHE }}
+          key: scons-${{ matrix.platform }}-${{ hashFiles('.gitmodules', 'engine/SConstruct') }}-${{ hashFiles('engine/src/**') }}
+          restore-keys: |
+            scons-${{ matrix.platform }}-${{ hashFiles('.gitmodules', 'engine/SConstruct') }}-
+            scons-${{ matrix.platform }}-
+
+      - name: Build GDExtension (template_release)
+        run: scons -C engine platform=${{ matrix.platform }} target=template_release
+
+      - name: Upload native payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}
+          path: |
+            game/bin/lib*
+            game/bin/worldcore.gdextension
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # 2. Export every desktop platform from a single Linux runner (Godot
+  #    cross-exports fine once each platform's native lib is present in
+  #    game/bin/). Publishes the zips to the GitHub Release for the tag.
+  # ---------------------------------------------------------------------------
+  export:
+    name: Export & publish release builds
+    needs: native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Download native engine payloads
+        uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          merge-multiple: true
+          path: game/bin
+
+      - name: Verify native libs are present
+        run: |
+          echo "Contents of game/bin/ after collecting native payloads:"
+          ls -lR game/bin
+          test -f game/bin/worldcore.gdextension
+          # One library per desktop platform must be present, or shipped builds
+          # would silently lose the native engine layer (the whole point).
+          test -n "$(find game/bin -name 'libworldcore.linux.template_release*' -print -quit)"
+          test -n "$(find game/bin -name 'libworldcore.windows.template_release*' -print -quit)"
+          test -d "$(find game/bin -type d -name 'libworldcore.macos.template_release.framework' -print -quit)"
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-bin
+          curl -sSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          mv "/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
+
+      - name: Cache export templates
+        id: cache-templates
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates
+          key: godot-export-templates-${{ env.GODOT_VERSION }}
+
+      - name: Download export templates
+        if: steps.cache-templates.outputs.cache-hit != 'true'
+        run: |
+          curl -sSL -o /tmp/templates.tpz \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          mkdir -p ~/.local/share/godot/export_templates
+          mv /tmp/templates/templates \
+            ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+
+      - name: Headless import (with native module present)
+        run: |
+          # First import after a native build can crash at exit in the editor's
+          # doc generator (import completes; upstream bug, see engine/README.md).
+          ~/godot-bin/godot --headless --path game --import || echo "first import exited $? (known doc-gen crash, retrying)"
+          ~/godot-bin/godot --headless --path game --import
+
+      - name: Export Linux (x86_64)
+        run: |
+          mkdir -p dist
+          ~/godot-bin/godot --headless --path game \
+            --export-release "Linux" "$PWD/dist/gta-vi-caliber-linux.x86_64"
+
+      - name: Export Windows Desktop (x86_64)
+        run: |
+          ~/godot-bin/godot --headless --path game \
+            --export-release "Windows Desktop" "$PWD/dist/gta-vi-caliber-windows.exe"
+
+      - name: Export macOS (universal)
+        run: |
+          ~/godot-bin/godot --headless --path game \
+            --export-release "macOS" "$PWD/dist/gta-vi-caliber-macos.zip"
+
+      - name: Package artifacts
+        run: |
+          cd dist
+          zip -q gta-vi-caliber-linux-x86_64.zip gta-vi-caliber-linux.x86_64
+          zip -q gta-vi-caliber-windows-x86_64.zip gta-vi-caliber-windows.exe
+          mv gta-vi-caliber-macos.zip gta-vi-caliber-macos-universal.zip
+          ls -lh
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/gta-vi-caliber-linux-x86_64.zip
+            dist/gta-vi-caliber-windows-x86_64.zip
+            dist/gta-vi-caliber-macos-universal.zip

@@ -1,0 +1,72 @@
+extends SceneTree
+## Headless boot test: the one playable world scene must instantiate and
+## contain a working player rig. Run via:
+##   godot --headless --path game --script res://tests/smoke_test.gd
+##
+## This is the "main stays playable" gate — if this fails, a clone won't run.
+## The scene is booted on its own frame: group registration needs the node to
+## be in the live tree, so it is added on one frame and checked on the next.
+
+const SCENES: PackedStringArray = [
+	"res://scenes/world/miami.tscn",
+]
+
+var _index: int = -1
+var _current: Node = null
+var _failures: PackedStringArray = []
+
+
+func _process(_delta: float) -> bool:
+	if _index >= 0 and _current != null:
+		_check_scene(SCENES[_index])
+		_current.free()
+		_current = null
+
+	_index += 1
+	if _index >= SCENES.size() or not _failures.is_empty():
+		return _finish()
+
+	var packed: PackedScene = load(SCENES[_index])
+	if packed == null:
+		_failures.append("scene failed to load: %s" % SCENES[_index])
+		return _finish()
+	_current = packed.instantiate()
+	root.add_child(_current)
+	return false
+
+
+func _check_scene(scene_path: String) -> void:
+	var players := get_nodes_in_group("player")
+	if players.size() != 1:
+		_fail(scene_path, "expected exactly 1 node in group 'player', found %d" % players.size())
+	elif players[0] is not CharacterBody3D:
+		_fail(scene_path, "player root is not a CharacterBody3D")
+	elif (players[0] as Node).find_children("*", "Camera3D", true).is_empty():
+		_fail(scene_path, "player has no Camera3D")
+
+	if get_nodes_in_group("world").is_empty():
+		_fail(scene_path, "no node in group 'world'")
+	if get_nodes_in_group("spawn_points").is_empty():
+		_fail(scene_path, "no spawn points (Marker3D in group 'spawn_points')")
+
+	# A script with a parse error leaves its node script-less while the scene
+	# still instantiates and the groups above still pass — so a broken loader
+	# once shipped a district that silently built nothing. Assert the district
+	# actually constructed its road mesh.
+	if scene_path.contains("districts") and _current.find_child("Roads", true, false) == null:
+		_fail(scene_path, "district built no Roads node — loader script did not run")
+
+
+func _fail(scene_path: String, message: String) -> void:
+	_failures.append("%s: %s" % [scene_path, message])
+
+
+func _finish() -> bool:
+	if _failures.is_empty():
+		print("smoke test: OK (%d scenes)" % SCENES.size())
+		quit(0)
+	else:
+		for failure in _failures:
+			push_error("smoke test: %s" % failure)
+		quit(1)
+	return true
