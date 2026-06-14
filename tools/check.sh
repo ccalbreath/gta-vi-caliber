@@ -157,5 +157,7 @@ step "interaction chain probe"
 "$GODOT_BIN" --headless --path game --script res://tests/interaction_chain_probe.gd
 step "store counter probe"
 "$GODOT_BIN" --headless --path game --script res://tests/store_counter_probe.gd
+step "safehouse zone probe"
+"$GODOT_BIN" --headless --path game --script res://tests/safehouse_zone_probe.gd
 
 printf '\nAll checks passed ✔\n'
