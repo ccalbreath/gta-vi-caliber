@@ -1,11 +1,11 @@
 extends RefCounted
-## Guards the playable hero scene wiring: the player must boot with the merged
-## Meshy MC visual driven by McPlayerRig, while keeping the phone pose hook,
-## foot-plant signal, and weapon gun-mount contracts.
+## Guards the playable hero scene wiring: the player must boot with the
+## merged Meshy MC visual driven by McPlayerRig, while keeping the phone pose
+## hook, foot-plant signal, and weapon gun-mount contracts.
 
 const PLAYER_SCENE := "res://scenes/player/player.tscn"
 const RIG_SCENE := "res://scenes/player/mc_rig.tscn"
-const PLAYER_VISUAL := "res://assets/characters/mc/mc_dressed_full_anims.glb"
+const PLAYER_VISUAL := "res://assets/characters/mc/mc_shirtless_full_anims.glb"
 const LEATHER_TEX := "res://assets/textures/leather.png"
 
 

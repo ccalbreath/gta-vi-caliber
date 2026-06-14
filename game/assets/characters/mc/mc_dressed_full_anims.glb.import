@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://bjgfq4s8j7wcb"
-path="res://.godot/imported/Superhero_Male_FullBody.gltf-5a710eb6195bd41f26dd968dc5cc9880.scn"
+uid="uid://bj8in4wiih8ud"
+path="res://.godot/imported/mc_dressed_full_anims.glb-a225829d18f7e960b17afac56f539f4a.scn"
 
 [deps]
 
-source_file="res://assets/characters/mc/Superhero_Male_FullBody.gltf"
-dest_files=["res://.godot/imported/Superhero_Male_FullBody.gltf-5a710eb6195bd41f26dd968dc5cc9880.scn"]
+source_file="res://assets/characters/mc/mc_dressed_full_anims.glb"
+dest_files=["res://.godot/imported/mc_dressed_full_anims.glb-a225829d18f7e960b17afac56f539f4a.scn"]
 
 [params]
 

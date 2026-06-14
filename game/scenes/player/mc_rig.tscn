@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="PackedScene" path="res://assets/characters/mc/mc_dressed_full_anims.glb" id="1_mc"]
+[ext_resource type="PackedScene" path="res://assets/characters/mc/mc_shirtless_full_anims.glb" id="1_mc"]
 [ext_resource type="Script" path="res://scripts/player/mc_player_rig.gd" id="2_adapter"]
 
 [node name="Rig" type="Node3D"]
