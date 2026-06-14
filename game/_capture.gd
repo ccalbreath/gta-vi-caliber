@@ -34,13 +34,24 @@ func _process(_delta: float) -> bool:
 func _setup() -> void:
 	var tod := OS.get_environment("TOD")
 	if tod != "":
+		# The day/night clock is owned by different nodes across scenes: the legacy
+		# DayNightCycle, or the current SkyController (group "sky"). Drive whichever
+		# exposes set_time_of_day, and freeze it so the captured hour is exact.
 		var cyc := root.find_child("DayNightCycle", true, false)
-		if cyc != null:
-			cyc.day_length_seconds = 0.0
+		if cyc == null:
+			for node in root.get_tree().get_nodes_in_group("sky"):
+				if node.has_method("set_time_of_day"):
+					cyc = node
+					break
+		if cyc == null:
+			cyc = root.find_child("SkyController", true, false)
+		if cyc != null and cyc.has_method("set_time_of_day"):
+			if "day_length_seconds" in cyc:
+				cyc.day_length_seconds = 0.0
 			cyc.set_time_of_day(float(tod))
 			print("capture: set time_of_day=%s on %s" % [tod, cyc.get_path()])
 		else:
-			print("capture: WARNING DayNightCycle not found")
+			print("capture: WARNING no time-of-day controller found")
 	# Tilt the active camera upward so the frame is mostly sky.
 	var pitch := OS.get_environment("PITCH")
 	if pitch != "":

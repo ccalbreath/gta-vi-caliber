@@ -120,3 +120,22 @@ func test_sky_sun_energy_clamped() -> bool:
 
 func test_sun_up_flag_tracks_horizon() -> bool:
 	return SkyModel.is_sun_up(12.0) and not SkyModel.is_sun_up(0.0)
+
+
+func test_haze_clears_at_noon() -> bool:
+	# High noon must be the clearest hour so the skyline keeps its depth.
+	return SkyModel.haze_factor(12.0) <= SkyModel.HAZE_NOON + 1e-3
+
+
+func test_haze_peaks_at_golden_hour() -> bool:
+	# Low-sun golden hour is the haziest — hazier than both noon and deep night.
+	var dusk := SkyModel.haze_factor(17.5)
+	return dusk > SkyModel.haze_factor(12.0) and dusk > SkyModel.haze_factor(0.0)
+
+
+func test_haze_factor_in_range() -> bool:
+	for h in [0.0, 6.0, 9.0, 12.0, 15.0, 17.5, 19.0, 21.0, 23.5]:
+		var f := SkyModel.haze_factor(h)
+		if f < 0.0 or f > 1.0:
+			return false
+	return true
