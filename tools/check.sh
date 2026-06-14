@@ -191,5 +191,7 @@ step "pawn shop probe"
 "$GODOT_BIN" --headless --path game --script res://tests/pawn_shop_probe.gd
 step "bribe official probe"
 "$GODOT_BIN" --headless --path game --script res://tests/bribe_official_probe.gd
+step "collectibles probe"
+"$GODOT_BIN" --headless --path game --script res://tests/collectibles_probe.gd
 
 printf '\nAll checks passed ✔\n'
