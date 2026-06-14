@@ -12,6 +12,9 @@ extends CharacterBody3D
 ## audio stays locked to the visible steps; surface logic is in Footsteps.
 signal footstep(surface: String, is_left: bool)
 
+const DISGUISE_TRACKER_SCRIPT := preload("res://scripts/systems/disguise_tracker.gd")
+const SKILLS_COORDINATOR_SCRIPT := preload("res://scripts/systems/skills_coordinator.gd")
+
 @export var walk_speed: float = 5.0
 @export var sprint_speed: float = 8.5
 @export var acceleration: float = 30.0
@@ -83,7 +86,7 @@ var _ladder_cache: GroupCache = null
 var _health_cache: GroupCache = null
 
 @onready var _camera_rig: OrbitCamera = $CameraRig
-@onready var _rig: AnimatedRig = $Rig
+@onready var _rig: McPlayerRig = $Rig
 
 
 func _ready() -> void:
@@ -94,6 +97,10 @@ func _ready() -> void:
 	add_child(footstep_audio)
 	footstep.connect(footstep_audio.on_footstep)
 	_rig.foot_planted.connect(_on_foot_planted)
+	var disguise_tracker := DISGUISE_TRACKER_SCRIPT.new()
+	add_child(disguise_tracker)
+	var skills_coordinator := SKILLS_COORDINATOR_SCRIPT.new()
+	add_child(skills_coordinator)
 	# The phone (UI + its own input + holding pose) is likewise code-spawned so
 	# the feature is self-contained and doesn't touch player.tscn.
 	_phone_ui = Phone.new()
@@ -107,12 +114,15 @@ func _ready() -> void:
 	# self-contained and doesn't touch player.tscn.
 	_interact_prompt = InteractPrompt.new()
 	add_child(_interact_prompt)
+	# The pause menu is likewise code-spawned so the feature stays self-contained
+	# and doesn't touch the world scene; it pauses the tree itself (it runs with
+	# PROCESS_MODE_ALWAYS) and owns the mouse cursor while open.
+	var pause_menu := preload("res://scenes/ui/pause_menu.tscn").instantiate()
+	add_child(pause_menu)
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
-		_toggle_mouse_capture()
-	elif event.is_action_pressed("interact") and not _on_phone():
+	if event.is_action_pressed("interact") and not _on_phone():
 		if not _toggle_vehicle():
 			_try_interact()
 
@@ -429,10 +439,3 @@ func _update_jump_timers(delta: float) -> void:
 		_time_since_jump_pressed = 0.0
 	else:
 		_time_since_jump_pressed += delta
-
-
-func _toggle_mouse_capture() -> void:
-	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	else:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

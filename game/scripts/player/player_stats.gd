@@ -50,12 +50,17 @@ func soak_damage(amount: float) -> float:
 
 
 func add_armor(amount: float) -> void:
-	armor = clampf(armor + amount, 0.0, max_armor)
+	# Ignore negatives (a pickup/shop only ADDS armor) — damage drains armor via
+	# soak_damage, not through here. Matches PlayerHealthModel.add_armor.
+	armor = clampf(armor + maxf(amount, 0.0), 0.0, max_armor)
 	armor_changed.emit(armor, max_armor)
 
 
 func add_money(amount: int) -> void:
-	money += amount
+	# Floor at zero so a large negative adjustment (a fine, a failed deal) can't
+	# drive the wallet negative — matches CharacterRoster.add_money. spend_money
+	# stays the guarded debit path for affordability checks.
+	money = maxi(0, money + amount)
 	money_changed.emit(money)
 
 

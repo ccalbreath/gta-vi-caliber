@@ -61,12 +61,19 @@ func tick(delta: float) -> void:
 		return
 	_since_damage += delta
 	if _since_damage >= regen_delay:
-		health = minf(health + regen_rate * delta, max_health)
+		# Only regenerate the slice of `delta` that fell PAST the delay, so the
+		# frame that crosses the threshold doesn't grant a full frame's regen for
+		# time spent still in the cooldown.
+		var over := _since_damage - regen_delay
+		health = minf(health + regen_rate * minf(delta, over), max_health)
 
 
 ## Restore health (negative ignored), capped at max. Does not resurrect — a
-## dead player must respawn, so callers should guard on is_dead().
+## dead player must respawn, so a heal on a dead model is a no-op (the doc
+## promised this, but the model used to silently revive at 0 HP).
 func heal(amount: float) -> void:
+	if is_dead():
+		return
 	health = minf(health + maxf(amount, 0.0), max_health)
 
 

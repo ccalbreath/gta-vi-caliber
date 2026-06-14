@@ -1,35 +1,34 @@
 extends RefCounted
-## Guards the playable hero scene wiring: the player must boot with the
-## imported coastal character driven by AnimatedRig, while keeping the phone
-## pose hook, foot-plant signal, and weapon gun-mount contracts.
+## Guards the playable hero scene wiring: the player must boot with the merged
+## Meshy MC visual driven by McPlayerRig, while keeping the phone pose hook,
+## foot-plant signal, and weapon gun-mount contracts.
 
 const PLAYER_SCENE := "res://scenes/player/player.tscn"
-const RIG_SCENE := "res://scenes/player/character_rig.tscn"
-const PLAYER_VISUAL := "res://assets/characters/coastal_residents/player.glb"
+const RIG_SCENE := "res://scenes/player/mc_rig.tscn"
+const PLAYER_VISUAL := "res://assets/characters/mc/mc_shirtless_full_anims.glb"
 const LEATHER_TEX := "res://assets/textures/leather.png"
 
 
-func test_player_uses_animated_rig() -> bool:
+func test_player_uses_meshy_rig() -> bool:
 	var player := _player_instance()
 	if player == null:
 		return false
 	var rig := player.get_node_or_null("Rig")
-	var ok: bool = rig is AnimatedRig and rig.scene_file_path == RIG_SCENE
+	var ok: bool = rig is McPlayerRig and rig.scene_file_path == RIG_SCENE
 	player.free()
 	return ok
 
 
-func test_player_uses_imported_coastal_visual() -> bool:
+func test_player_uses_merged_mc_visual() -> bool:
 	var player := _player_instance()
 	if player == null:
 		return false
-	var rig := player.get_node_or_null("Rig") as AnimatedRig
-	var ok: bool = (
-		rig != null
-		and rig.visual_scene != null
-		and rig.visual_scene.resource_path == PLAYER_VISUAL
-		and rig.visual_scene_options.is_empty()
-	)
+	var rig := player.get_node_or_null("Rig")
+	if rig == null:
+		player.free()
+		return false
+	var model := rig.get_node_or_null("Model")
+	var ok: bool = model != null and model.scene_file_path == PLAYER_VISUAL
 	player.free()
 	return ok
 

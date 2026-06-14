@@ -14,8 +14,8 @@ const REVERSE_SPEED_THRESHOLD: float = 1.0
 const GRAVITY: float = 9.81
 
 ## Peak crankshaft torque (N·m). Tuned with the gearing below so first gear
-## launches this 300 kg greybox at a sporty ~10 m/s² rather than a rocket.
-@export var peak_torque: float = 95.0
+## launches this 1200 kg coupe at a sporty ~11 m/s² rather than a rocket.
+@export var peak_torque: float = 420.0
 @export var idle_rpm: float = 850.0
 ## RPM where the torque curve peaks; the powerband centres here.
 @export var peak_rpm: float = 4000.0
@@ -37,9 +37,9 @@ const GRAVITY: float = 9.81
 @export var max_engine_brake: float = 6.0
 @export var max_steer: float = 0.55
 ## Speed (m/s) at which available steering lock is halved.
-@export var steer_falloff_speed: float = 12.0
+@export var steer_falloff_speed: float = 18.0
 ## How fast the wheels track the steering target (rad/s).
-@export var steer_speed: float = 3.5
+@export var steer_speed: float = 4.5
 @export var max_health: float = 100.0
 ## Velocity change (m/s) in a single physics tick that starts counting as a
 ## crash — normal driving, braking, and landings stay below this.
@@ -268,7 +268,13 @@ func _traction_scale(speed: float, drive_force: float) -> float:
 	var transfer := WeightTransfer.longitudinal_shift(mass, _long_accel, cg_height, wheelbase)
 	var load := WeightTransfer.axle_load(static_load + downforce_share, transfer)
 	var grip := Traction.grip_limit(load, tire_friction)
-	var lateral_force := mass * absf(speed * angular_velocity.y)
+	# Charge only the DRIVEN axle's share of cornering force against the rear-axle
+	# grip budget above. Using the whole car's mass here spent ~double the lateral
+	# budget, cutting drive force roughly in half in a normal corner (and to zero
+	# past a moderate yaw rate) — the car bogged down mid-bend for no real reason.
+	var lateral_force := Traction.cornering_force(
+		mass, drive_axle_load_share, speed, angular_velocity.y
+	)
 	var available := Traction.longitudinal_grip(grip, lateral_force)
 	return Traction.traction_scale(drive_force, available)
 

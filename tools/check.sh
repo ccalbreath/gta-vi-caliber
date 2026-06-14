@@ -91,6 +91,8 @@ step "headless import"
 # --- 4. smoke test (main scene boots, player rig present) --------------------
 step "smoke test"
 "$GODOT_BIN" --headless --path game --script res://tests/smoke_test.gd
+step "settings input remap probe"
+"$GODOT_BIN" --headless --path game --script res://tests/settings_input_remap_probe.gd
 
 # --- 5. gdUnit4 unit tests ----------------------------------------------------
 step "gdUnit4 unit tests"
@@ -133,20 +135,74 @@ step "miami evade probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_evade_probe.gd
 step "miami property probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_property_probe.gd
+step "miami vehicle mod probe"
+"$GODOT_BIN" --headless --path game --script res://tests/miami_vehicle_mod_probe.gd
 step "miami citizen probe"
 "$GODOT_BIN" --headless --path game --script res://tests/miami_citizen_probe.gd
+step "miami traffic law probe"
+"$GODOT_BIN" --headless --path game --script res://tests/miami_traffic_law_probe.gd
+step "miami traffic road probe"
+"$GODOT_BIN" --headless --path game --script res://tests/miami_traffic_road_probe.gd
+step "contraband market probe"
+"$GODOT_BIN" --headless --path game --script res://tests/contraband_market_probe.gd
+step "contraband bust probe"
+"$GODOT_BIN" --headless --path game --script res://tests/contraband_bust_probe.gd
+step "race probe"
+"$GODOT_BIN" --headless --path game --script res://tests/race_probe.gd
+step "crowd panic probe"
+"$GODOT_BIN" --headless --path game --script res://tests/crowd_panic_probe.gd
+step "loot drop probe"
+"$GODOT_BIN" --headless --path game --script res://tests/loot_drop_probe.gd
+step "slot machine probe"
+"$GODOT_BIN" --headless --path game --script res://tests/slot_machine_probe.gd
+step "food vendor probe"
+"$GODOT_BIN" --headless --path game --script res://tests/food_vendor_probe.gd
+step "wardrobe shop probe"
+"$GODOT_BIN" --headless --path game --script res://tests/wardrobe_shop_probe.gd
+step "wardrobe disguise probe"
+"$GODOT_BIN" --headless --path game --script res://tests/wardrobe_disguise_probe.gd
+step "business venture hub probe"
+"$GODOT_BIN" --headless --path game --script res://tests/business_venture_hub_probe.gd
+step "roulette table probe"
+"$GODOT_BIN" --headless --path game --script res://tests/roulette_table_probe.gd
+step "blackjack table probe"
+"$GODOT_BIN" --headless --path game --script res://tests/blackjack_table_probe.gd
+step "taxi stand probe"
+"$GODOT_BIN" --headless --path game --script res://tests/taxi_stand_probe.gd
+step "savepoint probe"
+"$GODOT_BIN" --headless --path game --script res://tests/savepoint_probe.gd
+step "turf claim probe"
+"$GODOT_BIN" --headless --path game --script res://tests/turf_claim_probe.gd
+step "brokerage terminal probe"
+"$GODOT_BIN" --headless --path game --script res://tests/brokerage_terminal_probe.gd
+step "robbery target probe"
+"$GODOT_BIN" --headless --path game --script res://tests/robbery_target_probe.gd
+step "hit contract board probe"
+"$GODOT_BIN" --headless --path game --script res://tests/hit_contract_board_probe.gd
+step "heist planning board probe"
+"$GODOT_BIN" --headless --path game --script res://tests/heist_planning_board_probe.gd
 
 # --- 7. systems wiring probes (scene-free: self-wiring nodes in a mock tree) --
 step "market event probe"
 "$GODOT_BIN" --headless --path game --script res://tests/market_event_probe.gd
 step "crime reaction probe"
 "$GODOT_BIN" --headless --path game --script res://tests/crime_reaction_probe.gd
+step "radio news probe"
+"$GODOT_BIN" --headless --path game --script res://tests/radio_news_probe.gd
 step "character switch probe"
 "$GODOT_BIN" --headless --path game --script res://tests/character_switch_probe.gd
 step "ambient event probe"
 "$GODOT_BIN" --headless --path game --script res://tests/ambient_event_probe.gd
+step "crowd contagion probe"
+"$GODOT_BIN" --headless --path game --script res://tests/crowd_contagion_probe.gd
+step "disguise evasion probe"
+"$GODOT_BIN" --headless --path game --script res://tests/disguise_evasion_probe.gd
+step "responder dispatcher probe"
+"$GODOT_BIN" --headless --path game --script res://tests/responder_dispatcher_probe.gd
 step "systems integration probe"
 "$GODOT_BIN" --headless --path game --script res://tests/systems_integration_probe.gd
+step "phone contact services probe"
+"$GODOT_BIN" --headless --path game --script res://tests/phone_contact_services_probe.gd
 
 # --- 8. combat audio + death-pose probes -------------------------------------
 # The CC0 weapon/footstep samples all resolve and the audio nodes voice known /

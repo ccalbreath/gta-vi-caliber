@@ -20,7 +20,12 @@ func _ready() -> void:
 		frame.visible = false
 
 	var metal := _mat(Color(0.13, 0.13, 0.15), 0.7, 0.5)
-	var paint := _mat(paint_color, 0.2, 0.3)
+	# Automotive paint: a smooth base under a clearcoat lacquer so the tank/fairing
+	# catch a tight glossy highlight and reflect the sky instead of reading matte.
+	var paint := _mat(paint_color, 0.4, 0.22)
+	paint.clearcoat_enabled = true
+	paint.clearcoat = 0.7
+	paint.clearcoat_roughness = 0.08
 	var seat := _mat(Color(0.05, 0.05, 0.06), 0.0, 0.8)
 	var chrome := _mat(Color(0.75, 0.77, 0.8), 0.95, 0.2)
 

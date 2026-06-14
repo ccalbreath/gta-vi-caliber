@@ -9,7 +9,10 @@ extends RefCounted
 
 ## v2 added stats (money/armor), progression XP, property ownership and
 ## boat/bike vehicle entries on top of v1's position/health/wanted/cars.
-const VERSION: int = 2
+## v3 added lifetime/100%-completion stats as a separate section from the
+## player wallet/armor "stats" payload.
+## v4 added activity-based player skills.
+const VERSION: int = 4
 
 
 ## Wrap a state snapshot with a version header and serialise to JSON text.
@@ -19,15 +22,26 @@ static func encode(snapshot: Dictionary) -> String:
 
 ## Bring an older snapshot up to the current shape. v1 saves predate the
 ## stats/progression/properties keys — they're normalised to empty dictionaries
-## (every restore() treats {} as "keep scene defaults"), so a v1 save loads
-## cleanly instead of being rejected. Unknown future versions pass through
-## untouched (best effort). Pure: returns a new Dictionary.
+## (every restore() treats {} as "no saved data"), so a v1 save loads cleanly
+## instead of being rejected. Unknown future versions pass through untouched
+## (best effort). Pure: returns a new Dictionary.
 static func migrate(snapshot: Dictionary, from_version: int) -> Dictionary:
+	# A failed/empty decode ({}) must stay empty: otherwise the v1->v2 section-fill
+	# below turns it into {stats:{}, progression:{}, properties:{}} — NON-empty —
+	# which slips past SaveManager.load_game's `if snapshot.is_empty(): return`
+	# guard and runs restore({}) on every tracker, silently wiping stats and
+	# progression XP from a corrupt or empty old-version save.
+	if snapshot.is_empty():
+		return {}
 	var out := snapshot.duplicate(true)
 	if from_version < 2:
 		for key in ["stats", "progression", "properties"]:
 			if not out.get(key) is Dictionary:
 				out[key] = {}
+	if from_version < 3 and not out.get("lifetime_stats") is Dictionary:
+		out["lifetime_stats"] = {}
+	if from_version < 4 and not out.get("player_skills") is Dictionary:
+		out["player_skills"] = {}
 	return out
 
 
@@ -35,7 +49,7 @@ static func migrate(snapshot: Dictionary, from_version: int) -> Dictionary:
 ## isn't a versioned object with a Dictionary payload, so callers can trust the
 ## shape without try/catch.
 static func decode(text: String) -> Dictionary:
-	var parsed: Variant = JSON.parse_string(text)
+	var parsed: Variant = _parse(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return {}
 	var data: Variant = (parsed as Dictionary).get("data")
@@ -47,10 +61,20 @@ static func decode(text: String) -> Dictionary:
 ## The format version embedded in save text, or 0 if absent/unparseable. Lets a
 ## loader migrate or reject old saves.
 static func version_of(text: String) -> int:
-	var parsed: Variant = JSON.parse_string(text)
+	var parsed: Variant = _parse(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return 0
 	return int((parsed as Dictionary).get("version", 0))
+
+
+## Parse JSON without the global ERROR log that JSON.parse_string pushes on bad
+## input. Empty/missing/old save text is a normal path here (callers fall back
+## to {} / 0), so it must stay silent instead of spamming hard errors.
+static func _parse(text: String) -> Variant:
+	var json := JSON.new()
+	if text.strip_edges().is_empty() or json.parse(text) != OK:
+		return null
+	return json.data
 
 
 ## Vector3 -> JSON-safe [x, y, z].

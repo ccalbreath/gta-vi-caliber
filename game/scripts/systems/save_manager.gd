@@ -3,12 +3,13 @@ extends Node
 ## Quick-save ("quick_save", F5) / quick-load ("quick_load", F9) of game state.
 ##
 ## Gathers a snapshot from the player and the systems that own state (health,
-## wanted, stats, progression, properties) by group, serialises it via SaveData
-## (pure, tested, versioned with migration), and writes it to
-## user://savegame.json. Finds everything by group so it needs no edits to the
-## player scene. Player position, health, wanted level, money/armor, respect
-## XP, property ownership, and every vehicle's transform (+health where the
-## vehicle has one — cars and bikes; boats are transform-only) persist.
+## wanted, player stats, respect progression, activity skills, lifetime stats, properties) by
+## group, serialises it via SaveData (pure, tested, versioned with migration),
+## and writes it to user://savegame.json. Finds everything by group so it needs
+## no edits to the player scene. Player position, health, wanted level,
+## money/armor, respect XP, activity skills, 100%-completion counters, property ownership, and
+## every vehicle's transform (+health where the vehicle has one — cars and
+## bikes; boats are transform-only) persist.
 ## Vehicles are found through the "vehicles" group and matched by node name
 ## (unique within a scene), so this stays streaming-ready.
 
@@ -55,11 +56,14 @@ func _gather() -> Dictionary:
 		["wanted", "wanted"],
 		["stats", "player_stats"],
 		["progression", "progression"],
+		["player_skills", "player_skills"],
+		["lifetime_stats", "stats"],
 	]:
 		var holder := _first(entry[1])
 		if holder != null and holder.has_method("serialize"):
 			snapshot[entry[0]] = holder.serialize()
 	snapshot["properties"] = _gather_properties()
+	snapshot["vehicle_mods"] = _gather_vehicle_mods()
 	snapshot["vehicles"] = _gather_vehicles()
 	return snapshot
 
@@ -71,6 +75,16 @@ func _gather_properties() -> Dictionary:
 		if hub.has_method("serialize"):
 			hubs[String(hub.name)] = hub.serialize()
 	return hubs
+
+
+## One entry per VehicleModGarage (its per-vehicle upgrade levels), keyed by node
+## name. Same group-discovery shape as the property hubs above.
+func _gather_vehicle_mods() -> Dictionary:
+	var garages: Dictionary = {}
+	for garage in get_tree().get_nodes_in_group("vehicle_mod_shop"):
+		if garage.has_method("serialize"):
+			garages[String(garage.name)] = garage.serialize()
+	return garages
 
 
 func _gather_vehicles() -> Dictionary:
@@ -103,12 +117,18 @@ func _apply(snapshot: Dictionary) -> void:
 		["wanted", "wanted"],
 		["stats", "player_stats"],
 		["progression", "progression"],
+		["player_skills", "player_skills"],
+		["lifetime_stats", "stats"],
 	]:
 		var holder := _first(entry[1])
 		if holder != null and holder.has_method("restore"):
 			holder.restore(snapshot.get(entry[0], {}))
 	if snapshot.get("properties") is Dictionary:
 		_apply_properties(snapshot["properties"])
+	# Before vehicles: re-applied tuning sets each car's max_health, so the
+	# vehicle health restore below clamps against the upgraded pool, not the stock one.
+	if snapshot.get("vehicle_mods") is Dictionary:
+		_apply_vehicle_mods(snapshot["vehicle_mods"])
 	if snapshot.get("vehicles") is Dictionary:
 		_apply_vehicles(snapshot["vehicles"])
 
@@ -117,6 +137,12 @@ func _apply_properties(data: Dictionary) -> void:
 	for hub in get_tree().get_nodes_in_group("property_hub"):
 		if hub.has_method("restore") and data.get(String(hub.name)) is Dictionary:
 			hub.restore(data[String(hub.name)])
+
+
+func _apply_vehicle_mods(data: Dictionary) -> void:
+	for garage in get_tree().get_nodes_in_group("vehicle_mod_shop"):
+		if garage.has_method("restore") and data.get(String(garage.name)) is Dictionary:
+			garage.restore(data[String(garage.name)])
 
 
 func _apply_vehicles(data: Dictionary) -> void:

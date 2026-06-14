@@ -2,9 +2,10 @@ class_name Minimap
 extends Control
 ## GTA-style circular minimap. Renders a top-down, player-up rotating view: a
 ## procedural street grid, the player arrow at centre, nearby pedestrian/vehicle
-## blips, a north tick and the active waypoint (clamped to the rim with an arrow
-## when off-map). Pure observation — it reads the player's position from the
-## "player" group and the facing from the active 3D camera, and never writes.
+## blips, a north tick, the GPS route line, and the active waypoint (clamped to
+## the rim with an arrow when off-map). Pure observation — it reads the player's
+## position from the "player" group and the facing from the active 3D camera, and
+## never writes.
 ##
 ## Projection lives in HudFormat.world_to_map so it matches any other map UI and
 ## is unit-tested. Segment/circle clipping keeps roads inside the disc.
@@ -22,7 +23,12 @@ const POI_COLORS: Dictionary = {
 	"park": Color(0.38, 0.75, 0.38),
 	"restroom": Color(0.55, 0.85, 0.95),
 	"street": Color(0.7, 0.7, 0.76),
+	"garage": Color(0.1, 0.95, 0.9),
 }
+
+const GPS_ARRIVE_RADIUS: float = 2.0
+const ROUTE_POINT_EPS_SQ: float = 0.0001
+const GPS_ROUTE_COORDINATOR_SCRIPT := preload("res://scripts/ui/gps_route_coordinator.gd")
 
 ## World metres mapped to one screen pixel's worth of zoom.
 @export var pixels_per_meter: float = 1.6
@@ -46,6 +52,9 @@ const POI_COLORS: Dictionary = {
 @export var ped_color: Color = Color(0.55, 0.88, 0.55)
 @export var vehicle_color: Color = Color(0.95, 0.82, 0.45)
 @export var waypoint_color: Color = Color(0.98, 0.32, 0.78)
+@export var gps_route_color: Color = Color(0.24, 0.76, 1.0, 0.95)
+@export var gps_route_casing_color: Color = Color(0.0, 0.0, 0.0, 0.58)
+@export var gps_route_width: float = 4.0
 
 ## Health / armor arcs that wrap the minimap rim (GTA-V signature read).
 @export var health_color: Color = Color(0.42, 0.86, 0.4)
@@ -62,9 +71,12 @@ var _redraw_accum: float = 0.0
 var _scan_delta: float = 0.0
 var _blip_caches: Dictionary = {}
 var _poi_caches: Dictionary = {}
+var _gps_route: Array = []
 
 
 func _ready() -> void:
+	var route_coordinator := GPS_ROUTE_COORDINATOR_SCRIPT.new()
+	add_child(route_coordinator)
 	call_deferred("_bind")
 	set_process(true)
 	for group in ["pedestrians", "police", "vehicles"]:
@@ -114,6 +126,7 @@ func _draw() -> void:
 		player_xz = Vector2(_player.global_position.x, _player.global_position.z)
 
 	_draw_streets(center, radius, player_xz, forward)
+	_draw_gps_route(center, radius, player_xz, forward)
 	_draw_blips(center, radius, player_xz, forward)
 	_draw_pois(center, radius, player_xz, forward)
 	_draw_waypoint(center, radius, player_xz, forward)
@@ -204,6 +217,30 @@ func _draw_pois(center: Vector2, radius: float, player_xz: Vector2, forward: Vec
 			_draw_diamond(p, 3.8, POI_COLORS[kind])
 
 
+func _draw_gps_route(center: Vector2, radius: float, player_xz: Vector2, forward: Vector2) -> void:
+	var player_pos := Vector3(player_xz.x, 0.0, player_xz.y)
+	var points := Minimap.route_points_from_position(
+		player_pos, _active_gps_route(player_pos), GPS_ARRIVE_RADIUS
+	)
+	if points.size() < 2:
+		return
+	for pass_idx in range(2):
+		var col := gps_route_casing_color if pass_idx == 0 else gps_route_color
+		var width := gps_route_width + 2.4 if pass_idx == 0 else gps_route_width
+		for i in range(points.size() - 1):
+			var a3 := points[i] as Vector3
+			var b3 := points[i + 1] as Vector3
+			var a := (
+				center
+				+ HudFormat.world_to_map(Vector2(a3.x, a3.z) - player_xz, forward, pixels_per_meter)
+			)
+			var b := (
+				center
+				+ HudFormat.world_to_map(Vector2(b3.x, b3.z) - player_xz, forward, pixels_per_meter)
+			)
+			_draw_clipped(a, b, center, radius - 5.0, col, width)
+
+
 func _draw_waypoint(center: Vector2, radius: float, player_xz: Vector2, forward: Vector2) -> void:
 	if _stats == null or not _stats.has_method("has_waypoint") or not _stats.has_waypoint():
 		return
@@ -288,6 +325,24 @@ func _draw_stat_arc(
 	draw_arc(center, r - 1.2, start, fill_end, 32, col.lerp(Color(1, 1, 1), 0.35), 1.4, true)
 
 
+func set_gps_route(route: Variant) -> void:
+	_gps_route = Minimap.route_to_array(route)
+	queue_redraw()
+
+
+func clear_gps_route() -> void:
+	_gps_route.clear()
+	queue_redraw()
+
+
+func _active_gps_route(player_pos: Vector3) -> Array:
+	if _gps_route.size() >= 2:
+		return _gps_route
+	if _stats == null or not _stats.has_method("has_waypoint") or not _stats.has_waypoint():
+		return []
+	return Minimap.waypoint_route(player_pos, _stats.objective_waypoint, true, GPS_ARRIVE_RADIUS)
+
+
 # --- helpers --------------------------------------------------------------
 
 
@@ -335,3 +390,73 @@ static func clip_segment_circle(a: Vector2, b: Vector2, radius: float) -> Array:
 	if lo > hi:
 		return []
 	return [a + d * lo, a + d * hi]
+
+
+## Normalize either an Array[Vector3] or a NavGrid PackedVector3Array into the
+## Array shape used by GpsNavigation's pure route helpers.
+static func route_to_array(route: Variant) -> Array:
+	var out: Array = []
+	if route is PackedVector3Array:
+		for point: Vector3 in route:
+			out.append(point)
+		return out
+	if route is Array:
+		for point in route:
+			if point is Vector3:
+				out.append(point)
+	return out
+
+
+## Straight fallback route to the active objective waypoint. Real NavGrid routes
+## can replace it through set_gps_route().
+static func waypoint_route(
+	player_pos: Vector3,
+	waypoint: Vector3,
+	has_waypoint: bool,
+	arrive_radius: float = GPS_ARRIVE_RADIUS
+) -> Array:
+	if not has_waypoint:
+		return []
+	if GpsNavigation.has_arrived(player_pos, [player_pos, waypoint], arrive_radius):
+		return []
+	return [GpsNavigation.ground(player_pos), GpsNavigation.ground(waypoint)]
+
+
+## Return the remaining route polyline to draw from the player's current
+## position. The first segment snaps from the player to the nearest point on the
+## active route, then keeps only the route points ahead of that segment.
+static func route_points_from_position(
+	player_pos: Vector3, route: Variant, arrive_radius: float = GPS_ARRIVE_RADIUS
+) -> Array:
+	var normalized := Minimap.route_to_array(route)
+	if normalized.size() < 2 or GpsNavigation.has_arrived(player_pos, normalized, arrive_radius):
+		return []
+	var seg := GpsNavigation.nearest_segment(player_pos, normalized)
+	var points: Array = []
+	_append_route_point(points, player_pos)
+	_append_route_point(
+		points,
+		_project_route_point(player_pos, normalized[seg] as Vector3, normalized[seg + 1] as Vector3)
+	)
+	for i in range(seg + 1, normalized.size()):
+		_append_route_point(points, normalized[i] as Vector3)
+	return points if points.size() >= 2 else []
+
+
+static func _append_route_point(points: Array, point: Vector3) -> void:
+	var flat := GpsNavigation.ground(point)
+	if points.is_empty():
+		points.append(flat)
+		return
+	var previous := points[points.size() - 1] as Vector3
+	if previous.distance_squared_to(flat) > ROUTE_POINT_EPS_SQ:
+		points.append(flat)
+
+
+static func _project_route_point(p: Vector3, a: Vector3, b: Vector3) -> Vector3:
+	var ab := GpsNavigation.ground(b - a)
+	var len_sq := ab.length_squared()
+	if len_sq < ROUTE_POINT_EPS_SQ:
+		return GpsNavigation.ground(a)
+	var t := clampf(GpsNavigation.ground(p - a).dot(ab) / len_sq, 0.0, 1.0)
+	return GpsNavigation.ground(a) + ab * t

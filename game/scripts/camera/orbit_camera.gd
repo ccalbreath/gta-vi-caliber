@@ -45,8 +45,8 @@ const PITCH_MAX: float = 0.5
 ## dof_far_transition) blurs gently so the eye reads depth and the distant city
 ## hazes off while the foreground stays sharp. Set dof_blur_amount to 0 to off.
 @export var dof_blur_amount: float = 0.06
-@export var dof_far_distance: float = 55.0
-@export var dof_far_transition: float = 45.0
+@export var dof_far_distance: float = 400.0
+@export var dof_far_transition: float = 120.0
 ## Auto-recenter: after recenter_delay seconds without look input, the camera
 ## eases (recenter_rate rad/s) behind the travel direction while moving faster
 ## than recenter_min_speed — so a gamepad player isn't forced to ride the stick.

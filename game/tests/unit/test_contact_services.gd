@@ -33,6 +33,8 @@ func test_lookups() -> bool:
 		s.contact_of("mechanic") == "Devin"
 		and s.cost_of("mechanic") == 1000
 		and s.kind_of("mechanic") == "vehicle"
+		and s.id_for_contact("Devin") == "mechanic"
+		and s.id_for_contact("Mara") == ""
 		and s.cost_of("nope") == -1
 	)
 

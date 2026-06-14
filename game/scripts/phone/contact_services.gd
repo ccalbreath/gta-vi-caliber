@@ -81,6 +81,15 @@ func kind_of(id: String) -> String:
 	return _services[id]["kind"]
 
 
+## The service provided by a contact display name, or "" if that friend is only a
+## normal call/social contact.
+func id_for_contact(contact_name: String) -> String:
+	for id: Variant in _services:
+		if String(_services[id]["contact"]) == contact_name:
+			return String(id)
+	return ""
+
+
 ## Seconds left on a service's cooldown at time `now` (0 when ready / unknown).
 func cooldown_remaining(id: String, now: float) -> float:
 	if not _services.has(id):
