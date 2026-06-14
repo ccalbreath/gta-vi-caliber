@@ -199,5 +199,7 @@ step "bounty hunt probe"
 "$GODOT_BIN" --headless --path game --script res://tests/bounty_hunt_probe.gd
 step "informant probe"
 "$GODOT_BIN" --headless --path game --script res://tests/informant_probe.gd
+step "romance probe"
+"$GODOT_BIN" --headless --path game --script res://tests/romance_probe.gd
 
 printf '\nAll checks passed ✔\n'
