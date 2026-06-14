@@ -198,6 +198,19 @@ static func route_samples(
 	return out
 
 
+## The beach-facing east-coast run where Miami's South Beach surf/boardwalk
+## layer lives. Ordered north -> south so builders can offset ribbons seaward.
+static func south_beach_shoreline(scale: float = DEFAULT_SCALE) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for p in outline(scale):
+		if p.x < 240.0 * scale:
+			continue
+		if p.y < -690.0 * scale or p.y > 320.0 * scale:
+			continue
+		out.append(p)
+	return out
+
+
 static func poi_markers(scale: float = DEFAULT_SCALE) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for city in city_nodes(scale):

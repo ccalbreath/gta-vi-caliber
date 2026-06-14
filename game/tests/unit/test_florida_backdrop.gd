@@ -9,6 +9,7 @@ func test_backdrop_builds_named_premium_layers() -> bool:
 		backdrop.has_node("StateOcean")
 		and backdrop.has_node("StateLandmass")
 		and backdrop.has_node("SandCoastline")
+		and backdrop.has_node("SouthBeachSurf")
 		and backdrop.has_node("StateCauseways")
 		and backdrop.has_node("SignatureBridges")
 		and backdrop.has_node("OriginalRouteDetails")
