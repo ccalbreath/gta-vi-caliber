@@ -187,5 +187,7 @@ step "responder dispatcher probe"
 "$GODOT_BIN" --headless --path game --script res://tests/responder_dispatcher_probe.gd
 step "systems integration probe"
 "$GODOT_BIN" --headless --path game --script res://tests/systems_integration_probe.gd
+step "phone contact services probe"
+"$GODOT_BIN" --headless --path game --script res://tests/phone_contact_services_probe.gd
 
 printf '\nAll checks passed ✔\n'
