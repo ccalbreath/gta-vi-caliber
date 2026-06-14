@@ -104,7 +104,7 @@ Groups the live scene already publishes: `player`, `player_health`,
 
 | System | Purpose | Key API | Wiring |
 |---|---|---|---|
-| `GpsNavigation` | route progress/ETA/next-turn | `distance_remaining`, `progress`, `next_turn`, `has_arrived` | feed a NavGrid route into the minimap GPS line |
+| `GpsNavigation` | route progress/ETA/next-turn | `distance_remaining`, `progress`, `next_turn`, `has_arrived` | `Minimap.set_gps_route()` draws the remaining GPS line and falls back to the active objective waypoint; TODO: feed mission/NavGrid routes into that hook |
 | `RadioScheduler` | song/DJ/ad/news programming | `next_segment`, `pick_song`, `advance` | bridged by `RadioNewsDirector`: advances the station program and emits a line for songs/DJ/ads/IDs/NEWS |
 | `NewsBulletin` | player deeds -> reactive radio/TV headlines | `report`, `next_bulletin`, `has_pending`, `recent` | `CrimeReactionDirector` reports crimes; `RadioNewsDirector` finds that queue and drains `next_bulletin()` when `RadioScheduler` yields a NEWS slot. CI-guarded by `tests/radio_news_probe.gd` |
 | `ContactServices` | call a contact for a favour (lower-wanted/mechanic/backup) | `request`, `can_use`, `cooldown_remaining`, `is_ready` | wired into the live `Phone`: connected service contacts charge `PlayerStats`, emit `service_requested`, and the heat service clears `WantedTracker`. CI-guarded by `tests/phone_contact_services_probe.gd`. TODO: map vehicle/weapons/transport/combat signals to actual spawns |
