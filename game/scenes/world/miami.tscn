@@ -47,7 +47,6 @@
 [ext_resource type="Script" path="res://scripts/world/floating_origin.gd" id="41_origin"]
 [ext_resource type="Script" path="res://scripts/npc/city_director.gd" id="42_city"]
 [ext_resource type="Script" path="res://scripts/world/city_poi_seeder.gd" id="43_poi"]
-[ext_resource type="PackedScene" path="res://scenes/npc/citizen.tscn" id="44_citizen"]
 [ext_resource type="Script" path="res://scripts/world/night_lights_switch.gd" id="45_nightlights"]
 [ext_resource type="Script" path="res://scripts/world/coastal_prop_placements.gd" id="40_coastal_props"]
 [ext_resource type="Script" path="res://scripts/world/vehicle_mod_garage.gd" id="46_modgarage"]
@@ -212,7 +211,6 @@ adjustment_brightness = 1.0
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("env")
 script = ExtResource("6_quality")
-minimum_tier = 2
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.94, 0.18, -0.29, 0, 0.85, 0.53, 0.34, -0.5, 0.8, 0, 80, 0)
@@ -264,8 +262,8 @@ script = ExtResource("35_islands")
 
 [node name="Streamer" type="Node3D" parent="."]
 script = ExtResource("3_streamer")
-load_radius = 8500.0
-unload_radius = 9500.0
+load_radius = 1600.0
+unload_radius = 2400.0
 
 ; Districts sit up to ~6.5 km out; beyond ~2 km float32 jitter sets in, so the
 ; world is teleported back around the player. The streamer and mission
@@ -379,7 +377,6 @@ script = ExtResource("43_poi")
 
 [node name="CrowdDirector" type="Node3D" parent="."]
 script = ExtResource("15_crowd")
-citizen_scene = ExtResource("44_citizen")
 citizen_fraction = 0.35
 target_count = 40
 spawn_max_radius = 54.0

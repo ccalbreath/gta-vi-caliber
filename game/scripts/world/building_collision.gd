@@ -7,6 +7,8 @@ extends RefCounted
 ## a wall and then fall out the bottom; a convex volume has an inside the solver
 ## ejects an overlapping capsule from. The rendered buildings mesh is untouched.
 
+const CITY_BUILDER := preload("res://scripts/world/city_builder.gd")
+
 ## Collision layer the skyline sits on. Must match the layer the crowd nav-bake
 ## raycasts (ground_mask) so building footprints stay blocked for NPC spawns,
 ## and the layer gameplay raycasts expect.
@@ -16,7 +18,7 @@ const WORLD_LAYER := 1
 ## Build the collider from the same building dictionaries and projection the
 ## visual mesh used, so the solid volumes register with the rendered skyline.
 ## Returns null when no building yields a valid prism.
-static func build(buildings: Array, proj: GeoProjection) -> StaticBody3D:
+static func build(buildings: Array, proj: Object) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.name = "Buildings_col"
 	body.collision_layer = WORLD_LAYER
@@ -32,7 +34,7 @@ static func build(buildings: Array, proj: GeoProjection) -> StaticBody3D:
 			ring.append(proj.to_local_2d(pair[0], pair[1]))
 		# Same cleanup the visual extrude runs, so a building gets a collider iff
 		# it got geometry, and no degenerate ring reaches the hull builder.
-		ring = CityBuilder.clean_ring(ring)
+		ring = CITY_BUILDER.clean_ring(ring)
 		if ring.size() < 3:
 			continue
 		var pts := PackedVector3Array()

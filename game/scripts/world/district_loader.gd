@@ -1,6 +1,5 @@
 extends Node3D
-## Builds a real-world city district from a normalized OSM data file
-## (produced by tools/osm/fetch_district.py). Reads building footprints and road
+## Builds a real-world city district from normalized OSM data. Reads footprints and road
 ## polylines, projects them into local metres via GeoProjection, and assembles
 ## batched meshes via CityBuilder. All heavy geometry math lives in those tested
 ## helpers; this node only orchestrates scene assembly.
@@ -10,14 +9,24 @@ extends Node3D
 ## collision-free ribbon mesh laid just above the ground plane.
 
 signal district_built(building_count: int, road_count: int)
-## Emitted once per completed build stage so a loading screen can show real
-## progress; done counts up to total (the stage count for this district).
-signal build_progress(done: int, total: int)
+signal streaming_step(duration_ms: float, kind: String)
 
-## Preloaded so the boot cover resolves without relying on the global class_name
-## registry being populated first (headless/CI import order is not guaranteed).
-const LOADING_SCREEN := preload("res://scripts/ui/loading_screen.gd")
-const GROUND_MATERIAL := preload("res://scripts/world/ground_material.gd")
+enum DetailMode { HLOD, NEAR }
+enum TileStage {
+	BUILDINGS,
+	ROADS,
+	SIDEWALKS,
+	OCCLUDER,
+	COLLISION,
+	GROUND,
+	NAVIGATION,
+	FACADES,
+	ROOFTOPS,
+	PALMS,
+	PARKED,
+	STREETLIGHTS,
+	DOORS,
+}
 
 ## Streetlight pole every ~this many metres of road, capped scene-wide and
 ## kept near the district origin (where the player spawns) so the cap is not
@@ -25,23 +34,13 @@ const GROUND_MATERIAL := preload("res://scripts/world/ground_material.gd")
 const STREETLIGHT_SPACING_M: float = 45.0
 const MAX_STREETLIGHTS: int = 60
 const STREETLIGHT_RADIUS_M: float = 250.0
-## Real warm OmniLight3D pools hung under the lamp heads, faded in at night by
-## the StreetlightSwitch. Capped below the pole count and shadowless so the
-## streets actually glow without paying a shadow map per lamp; range/energy tuned
-## for a soft on-ground pool cast from the ~5 m head.
-const MAX_STREETLIGHT_LIGHTS: int = 100
-const STREETLIGHT_LIGHT_RANGE_M: float = 13.0
-const STREETLIGHT_LIGHT_ENERGY: float = 4.0
-## Visual walking surfaces sit just under the ground collider top
-## (GROUND_SURFACE_Y) so the player rests flush on the street; the spawn vista's
-## hero road aligns to STREET_VISUAL_Y (see DistrictSpawnVista).
 const STREET_VISUAL_Y: float = 0.32
 const SIDEWALK_VISUAL_Y: float = 0.28
 const GROUND_SURFACE_Y: float = 0.4
-## Footprints extruded per build slice. Sized so one slice stays a small
-## fraction of a 60 Hz frame; a 1500-building district pages in across ~7
-## slices instead of one giant hitch.
-const BUILDINGS_PER_SLICE: int = 220
+const ROOFTOP_KEYS := [
+	"rooftop_ac", "rooftop_tanks", "rooftop_houses", "rooftop_masts", "rooftop_beacons"
+]
+const ROOFTOP_NAMES := ["ACUnits", "WaterTanks", "Penthouses", "Masts", "Beacons"]
 
 ## res:// path to the district JSON (OSM-derived, ODbL).
 @export_file("*.json") var district_path: String = "res://assets/world/downtown_miami.json"
@@ -60,6 +59,14 @@ const BUILDINGS_PER_SLICE: int = 220
 @export var place_player: bool = true
 ## Extra ground beyond the district footprint, in metres.
 @export var ground_margin: float = 90.0
+## Real-world streaming tile edge from docs/ARCHITECTURE.md.
+@export var tile_size: float = 128.0
+## Detailed render, collision, navigation, and props are limited to the near ring.
+@export var near_radius: float = 900.0
+## Hysteresis keeps near tiles from rebuilding at the detail boundary.
+@export var near_unload_radius: float = 1100.0
+## Re-evaluate near/HLOD ownership every few bounded streaming steps.
+@export_range(1, 120) var detail_scan_steps: int = 20
 
 var _building_mat: Material
 var _facade_glass_mat: StandardMaterial3D
@@ -67,253 +74,356 @@ var _facade_lit_mat: StandardMaterial3D
 var _roof_mat: StandardMaterial3D
 var _road_mat: Material
 var _sidewalk_mat: Material
+var _parked_coupe_mesh: Mesh
+var _parked_sedan_mesh: Mesh
+var _palm_trunk_mesh: Mesh
+var _palm_crown_mesh: Mesh
+var _palm_bark_mat: StandardMaterial3D
+var _palm_frond_mat: StandardMaterial3D
+var _rooftop_meshes: Array[Mesh] = []
+var _rooftop_materials: Array[Material] = []
+var _build_thread: Thread
+var _plan_mutex := Mutex.new()
+var _thread_plan: Dictionary = {}
+var _thread_finished: bool = false
+var _plan: Dictionary = {}
+var _projection: GeoProjection
+var _chunk_data: Dictionary[Vector2i, Dictionary] = {}
+var _chunk_nodes: Dictionary[Vector2i, Node3D] = {}
+var _chunk_modes: Dictionary[Vector2i, int] = {}
+var _pending_modes: Dictionary[Vector2i, int] = {}
+var _active_coord: Vector2i
+var _active_mode: int = -1
+var _active_stage: int = -1
+var _active_chunk: Node3D
+var _active_data: Dictionary = {}
+var _active_collision_commit: DistrictCollisionCommit
+var _active_navigation_commit: DistrictNavigationCommit
+var _active_rooftop_layer: int = 0
+var _spawn_pending: bool = false
+var _step_count: int = 0
+var _initial_complete: bool = false
+var _thread_started_usec: int = 0
+var _background_build_ms: float = 0.0
+var _max_step_ms: float = 0.0
+var _tiles_built_total: int = 0
 
 
 func _ready() -> void:
 	# TimeOfDay fades our building-window glow through set_night_amount().
 	add_to_group("night_emissive")
-	# Cover the main-thread district build with a loading screen on the spawn
-	# district only (background district streams must not flash a cover).
 	if place_player:
-		var loading := LOADING_SCREEN.new()
-		add_child(loading)
-		loading.bind(self)
+		_set_starter_vehicles_frozen(true)
 	_make_materials()
-	var data := _load_district(district_path)
-	if data.is_empty():
-		push_error("district_loader: could not load %s" % district_path)
-		return
-	_build_timesliced(data)
+	_thread_started_usec = Time.get_ticks_usec()
+	_build_thread = Thread.new()
+	var error := _build_thread.start(_build_plan)
+	if error != OK:
+		push_error("district_loader: failed to start build thread for %s" % district_path)
 
 
-## Assemble the district one stage per frame: ground, building slices, the
-## welded building mesh + collider, then each road/prop pass. Paging a district
-## in mid-drive costs many small frames instead of one long stall. Every stage
-## re-checks the loader is still in the tree, so a district unloaded mid-build
-## stops cleanly instead of building into a freed branch.
-func _build_timesliced(data: Dictionary) -> void:
-	var origin: Dictionary = data["origin"]
-	var proj := GeoProjection.new(origin["lat"], origin["lon"])
-	var buildings: Array = data.get("buildings", [])
-	var roads: Array = data.get("roads", [])
-	var tree := get_tree()
-
-	if spawn_ground:
-		_build_ground(data, proj)
-
-	# Place the player first, as soon as the ground exists, so the city streams
-	# in around an already-positioned, already-framed player instead of leaving
-	# him at the scene origin through the whole staged build and snapping him
-	# onto the road at the end. Placement only needs the parsed road data here.
+func _exit_tree() -> void:
 	if place_player:
-		_place_player_stage(data, proj)
+		_set_starter_vehicles_frozen(false)
+	if _build_thread != null:
+		_build_thread.wait_to_finish()
 
-	# Buildings: extrude footprints a slice per frame, then weld once into a
-	# single MeshInstance3D + trimesh collider (one draw call, as before).
-	var verts := PackedVector3Array()
-	var norms := PackedVector3Array()
-	var idx := PackedInt32Array()
-	var colors := PackedColorArray()
-	var meshed := 0
-	var cursor := 0
-	while cursor < buildings.size():
-		if not await _next_stage(tree):
-			return
-		var slice_end := mini(cursor + BUILDINGS_PER_SLICE, buildings.size())
-		while cursor < slice_end:
-			var b: Dictionary = buildings[cursor]
-			cursor += 1
-			var ring := _project_ring(b["footprint"], proj)
-			var geo := CityBuilder.extrude_prism(ring, 0.0, float(b["height_m"]))
-			if geo.is_empty():
-				continue
-			_append_geo(verts, norms, idx, geo)
-			# Per-building wall tint, read by the facade shader as vertex COLOR.
-			var bid := int(b.get("id", meshed))
-			var tint := CityBuilder.building_color(bid)
-			# Glassiness seed packed into vertex-colour alpha: tall buildings
-			# bias toward reflective glass curtain-wall, short toward masonry.
-			tint.a = CityBuilder.building_glass_seed(bid, float(b["height_m"]))
-			for _i in (geo["vertices"] as PackedVector3Array).size():
-				colors.append(tint)
-			meshed += 1
-	if not await _next_stage(tree):
+
+func _build_plan() -> void:
+	var prepared := DistrictTileBuilder.build_from_path(district_path, tile_size)
+	_plan_mutex.lock()
+	_thread_plan = prepared
+	_thread_finished = true
+	_plan_mutex.unlock()
+
+
+## Consume at most one bounded main-thread operation. DistrictStreamer calls
+## this once globally per physics frame across all resident districts.
+func stream_one_step(observer: Vector3, velocity: Vector3) -> bool:
+	if _plan.is_empty() and not _take_thread_plan(observer):
+		return false
+	if _spawn_pending:
+		var spawn_start := Time.get_ticks_usec()
+		_apply_spawn(_plan["spawn_position"], float(_plan["spawn_yaw"]))
+		_spawn_pending = false
+		_record_step(spawn_start, "spawn")
+		return true
+	if _active_chunk != null:
+		var active_start := Time.get_ticks_usec()
+		var kind := _stream_active_tile_step()
+		_record_step(active_start, kind)
+		return true
+
+	_step_count += 1
+	if _step_count % detail_scan_steps == 0:
+		_refresh_detail_modes(observer)
+	if _pending_modes.is_empty():
+		_mark_initial_complete()
+		return false
+
+	var coords: Array[Vector2i] = []
+	for coord: Vector2i in _pending_modes:
+		coords.append(coord)
+	var ordered := TileMath.load_order(coords, tile_size, observer, velocity)
+	var coord := ordered[0]
+	var mode: int = _pending_modes[coord]
+	_pending_modes.erase(coord)
+
+	var step_start := Time.get_ticks_usec()
+	_start_chunk_replace(coord, mode)
+	_record_step(step_start, "tile_root")
+	return true
+
+
+func streaming_stats() -> Dictionary:
+	return {
+		"prepared": not _plan.is_empty(),
+		"tiles_total": _chunk_data.size(),
+		"tiles_resident": _chunk_nodes.size(),
+		"tiles_pending": _pending_modes.size() + (1 if _active_chunk != null else 0),
+		"tiles_built_total": _tiles_built_total,
+		"background_build_ms": _background_build_ms,
+		"max_step_ms": _max_step_ms,
+		"complete": _initial_complete,
+	}
+
+
+func _take_thread_plan(observer: Vector3) -> bool:
+	_plan_mutex.lock()
+	if not _thread_finished:
+		_plan_mutex.unlock()
+		return false
+	_plan = _thread_plan
+	_thread_plan = {}
+	_plan_mutex.unlock()
+	_build_thread.wait_to_finish()
+	_build_thread = null
+	_background_build_ms = float(Time.get_ticks_usec() - _thread_started_usec) / 1000.0
+	if _plan.is_empty():
+		push_error("district_loader: could not load %s" % district_path)
+		return false
+
+	var origin: Dictionary = _plan["origin"]
+	_projection = GeoProjection.new(float(origin["lat"]), float(origin["lon"]))
+	for chunk: Dictionary in _plan["chunks"]:
+		var coord: Vector2i = chunk["coord"]
+		_chunk_data[coord] = chunk
+		_pending_modes[coord] = _desired_mode(coord, observer, -1)
+	_spawn_pending = place_player
+	return true
+
+
+func _refresh_detail_modes(observer: Vector3) -> void:
+	for coord: Vector2i in _chunk_nodes:
+		var current: int = _chunk_modes[coord]
+		var desired := _desired_mode(coord, observer, current)
+		if desired != current:
+			_pending_modes[coord] = desired
+
+
+func _desired_mode(coord: Vector2i, observer: Vector3, current: int) -> int:
+	var centre := TileMath.tile_center(coord, tile_size)
+	var distance := Vector2(centre.x, centre.z).distance_to(Vector2(observer.x, observer.z))
+	if current == DetailMode.NEAR:
+		return DetailMode.NEAR if distance <= near_unload_radius else DetailMode.HLOD
+	return DetailMode.NEAR if distance <= near_radius else DetailMode.HLOD
+
+
+func _start_chunk_replace(coord: Vector2i, mode: int) -> void:
+	if _chunk_nodes.has(coord):
+		_chunk_nodes[coord].free()
+		_chunk_nodes.erase(coord)
+		_chunk_modes.erase(coord)
+	_active_coord = coord
+	_active_mode = mode
+	_active_stage = TileStage.BUILDINGS
+	_active_data = _chunk_data[coord]
+	_active_chunk = Node3D.new()
+	_active_chunk.name = "Tile_%d_%d" % [coord.x, coord.y]
+	_active_chunk.add_to_group("district_tile")
+	_active_chunk.set_meta("coord", coord)
+	_active_chunk.set_meta("detail_mode", mode)
+	add_child(_active_chunk)
+
+
+func _stream_active_tile_step() -> String:
+	var kind := "tile"
+	var advance_stage := true
+	match _active_stage:
+		TileStage.BUILDINGS:
+			var geo: Dictionary = (
+				_active_data["buildings_geo"]
+				if _active_mode == DetailMode.NEAR
+				else _active_data["hlod_geo"]
+			)
+			_add_geo_mesh(_active_chunk, "Buildings", geo, _building_mat)
+			kind = "tile_buildings"
+		TileStage.ROADS:
+			_add_geo_mesh(_active_chunk, "Roads", _active_data["roads_geo"], _road_mat)
+			kind = "tile_roads"
+		TileStage.SIDEWALKS:
+			_add_geo_mesh(_active_chunk, "Sidewalks", _active_data["sidewalks_geo"], _sidewalk_mat)
+			kind = "tile_sidewalks"
+		TileStage.OCCLUDER:
+			_add_occluder(_active_chunk, _active_data["hlod_geo"])
+			kind = "tile_occluder"
+		TileStage.COLLISION:
+			if build_collision:
+				if _active_collision_commit == null:
+					_active_collision_commit = DistrictCollisionCommit.new(
+						_active_data["buildings"] as Array, _projection
+					)
+				advance_stage = _active_collision_commit.step(_active_chunk)
+				if advance_stage:
+					_active_collision_commit = null
+			kind = "tile_collision"
+		TileStage.GROUND:
+			if spawn_ground:
+				_add_ground_chunk(_active_chunk, _active_coord)
+			kind = "tile_ground"
+		TileStage.NAVIGATION:
+			if _active_navigation_commit == null:
+				_active_navigation_commit = DistrictNavigationCommit.new(
+					_active_data["navigation_vertices"], _active_data["navigation_polygons"]
+				)
+			advance_stage = _active_navigation_commit.step(_active_chunk)
+			if advance_stage:
+				_active_navigation_commit = null
+			kind = "tile_navigation"
+		TileStage.FACADES:
+			DistrictFacadePanels.build_transforms(
+				_active_chunk,
+				_active_data["facade_dark"] as Array[Transform3D],
+				_active_data["facade_lit"] as Array[Transform3D]
+			)
+			kind = "tile_facades"
+		TileStage.ROOFTOPS:
+			advance_stage = _stream_rooftop_layer()
+			kind = "tile_rooftops"
+		TileStage.PALMS:
+			_build_palms(_active_data["roads"], _projection, _active_chunk, 18)
+			kind = "tile_palms"
+		TileStage.PARKED:
+			_build_parked_cars(_active_data["roads"], _projection, _active_chunk, 4)
+			kind = "tile_parked"
+		TileStage.STREETLIGHTS:
+			if build_streetlights:
+				_build_streetlights(_active_data["roads"], _projection, _active_chunk, 1)
+			kind = "tile_streetlights"
+		TileStage.DOORS:
+			if build_doors:
+				BuildingDoors.build(_active_chunk, _active_data["buildings"], _projection, 2)
+			kind = "tile_doors"
+
+	if advance_stage:
+		_active_stage += 1
+	if (
+		(_active_mode == DetailMode.HLOD and _active_stage > TileStage.OCCLUDER)
+		or _active_stage > TileStage.DOORS
+	):
+		_finish_active_chunk()
+	return kind
+
+
+func _finish_active_chunk() -> void:
+	_chunk_nodes[_active_coord] = _active_chunk
+	_chunk_modes[_active_coord] = _active_mode
+	_tiles_built_total += 1
+	_active_mode = -1
+	_active_stage = -1
+	_active_chunk = null
+	_active_data = {}
+	_active_collision_commit = null
+	_active_navigation_commit = null
+	_active_rooftop_layer = 0
+	_mark_initial_complete()
+
+
+func _add_geo_mesh(parent: Node3D, node_name: String, geo: Dictionary, material: Material) -> void:
+	var mesh := CityBuilder.arrays_to_mesh(geo)
+	if mesh == null:
 		return
-	_commit_buildings(verts, norms, idx, colors)
-	# Solid per-building convex colliders, not a welded trimesh: a concave shell
-	# lets a fast sprint-jump tunnel inside with nothing to eject the capsule.
-	if build_collision:
-		var col_body := BuildingCollision.build(buildings, proj)
-		if col_body != null:
-			add_child(col_body)
-
-	# Remaining passes, one per frame.
-	var stages: Array[Callable] = [
-		func() -> void: DistrictFacadePanels.build(self, buildings, proj),
-		func() -> void: _build_rooftops(buildings, proj),
-		func() -> void: _build_roads(roads, proj),
-		func() -> void: _build_sidewalks(roads, proj),
-	]
-	if build_doors:
-		stages.append(func() -> void: BuildingDoors.build(self, buildings, proj))
-		stages.append(func() -> void: BuildingShops.build(self, buildings, proj))
-	if build_streetlights:
-		stages.append(func() -> void: _build_streetlights(roads, proj))
-	stages.append(func() -> void: _build_palms(roads, proj))
-	stages.append(func() -> void: _build_parked_cars(roads, proj))
-	stages.append(func() -> void: _build_trees(roads, proj))
-	stages.append(func() -> void: _build_street_furniture(roads, proj))
-	for i in stages.size():
-		if not await _next_stage(tree):
-			return
-		stages[i].call()
-		build_progress.emit(i + 1, stages.size())
-
-	district_built.emit(buildings.size(), roads.size())
+	mesh.surface_set_material(0, material)
+	var instance := MeshInstance3D.new()
+	instance.name = node_name
+	instance.mesh = mesh
+	parent.add_child(instance)
 
 
-func _place_player_stage(data: Dictionary, proj: GeoProjection) -> void:
-	var origin: Dictionary = data["origin"]
-	var centre_geo: Dictionary = data.get("centroid", origin)
-	var centre := proj.to_local(centre_geo["lat"], centre_geo["lon"])
-	_place_actors_on_street(data.get("roads", []), data.get("buildings", []), proj, centre)
+func _add_ground_chunk(parent: Node3D, coord: Vector2i) -> void:
+	var centre := TileMath.tile_center(coord, tile_size)
+	var body := StaticBody3D.new()
+	body.name = "Ground"
+	body.position = Vector3(centre.x, 0.0, centre.z)
+	var collision := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(tile_size, 1.0, tile_size)
+	collision.shape = box
+	collision.position = Vector3(0.0, GROUND_SURFACE_Y - box.size.y * 0.5, 0.0)
+	body.add_child(collision)
+	parent.add_child(body)
 
 
-# One frame boundary between build stages; false once the loader has left the
-# tree (district unloaded mid-build) so the rest of the build must not run.
-func _next_stage(tree: SceneTree) -> bool:
-	await tree.process_frame
-	return is_inside_tree()
+func _add_occluder(parent: Node3D, geo: Dictionary) -> void:
+	var vertices: PackedVector3Array = geo.get("vertices", PackedVector3Array())
+	var indices: PackedInt32Array = geo.get("indices", PackedInt32Array())
+	if vertices.is_empty() or indices.is_empty():
+		return
+	var resource := ArrayOccluder3D.new()
+	resource.set_arrays(vertices, indices)
+	var instance := OccluderInstance3D.new()
+	instance.name = "Occluder"
+	instance.occluder = resource
+	parent.add_child(instance)
 
 
-## Break up the flat-topped skyline with rooftop superstructure: mechanical
-## penthouses (scaled boxes) on mid/high-rises, water tanks + AC condensers on
-## the rest, and antenna masts capped with a red aircraft-warning beacon on the
-## genuine towers. Everything batches into a handful of MultiMesh draw calls
-## (one per prop type) so hundreds of props cost almost nothing.
-func _build_rooftops(buildings: Array, proj: GeoProjection) -> void:
-	var ac_tf: Array[Transform3D] = []
-	var tank_tf: Array[Transform3D] = []
-	var house_tf: Array[Transform3D] = []
-	var mast_tf: Array[Transform3D] = []
-	var beacon_tf: Array[Transform3D] = []
+func _record_step(start_usec: int, kind: String) -> void:
+	var duration_ms := float(Time.get_ticks_usec() - start_usec) / 1000.0
+	_max_step_ms = maxf(_max_step_ms, duration_ms)
+	streaming_step.emit(duration_ms, kind)
 
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 7
-	var placed := 0
-	for b in buildings:
-		if placed >= 650:
-			break
-		var height := float(b.get("height_m", 0.0))
-		if height < 6.0:
-			continue
-		var ring := _project_ring(b["footprint"], proj)
-		if ring.size() < 3:
-			continue
-		var mn := Vector2(INF, INF)
-		var mx := Vector2(-INF, -INF)
-		var centre := Vector2.ZERO
-		for p in ring:
-			centre += p
-			mn = mn.min(p)
-			mx = mx.max(p)
-		centre /= float(ring.size())
-		var ext := mx - mn  # footprint extent (metres) in x/z
-		var roof := Vector3(centre.x, height, centre.y)
 
-		# Mechanical penthouse — a smaller box, sized to a fraction of the roof,
-		# is the single biggest break to the dead-flat silhouette from afar.
-		if height >= 22.0 and ext.x > 6.0 and ext.y > 6.0:
-			var phx := clampf(ext.x * rng.randf_range(0.3, 0.5), 3.0, 16.0)
-			var phz := clampf(ext.y * rng.randf_range(0.3, 0.5), 3.0, 16.0)
-			var phh := rng.randf_range(3.0, 6.0)
-			var off := Vector3(rng.randf_range(-1.5, 1.5), 0.0, rng.randf_range(-1.5, 1.5))
-			house_tf.append(
-				Transform3D(
-					Basis.from_scale(Vector3(phx, phh, phz)), roof + off + Vector3(0, phh * 0.5, 0)
-				)
-			)
-
-		# Antenna mast + always-on red beacon on the real high-rises; a water tank
-		# on mid-rises; a small stair/elevator bulkhead on the low-rise Deco roofs
-		# so even the two-storey hotels aren't bare flat boxes.
-		if height >= 50.0:
-			var mh := rng.randf_range(8.0, 18.0)
-			mast_tf.append(
-				Transform3D(Basis.from_scale(Vector3(1, mh, 1)), roof + Vector3(0, mh * 0.5, 0))
-			)
-			beacon_tf.append(Transform3D(Basis.IDENTITY, roof + Vector3(0, mh, 0)))
-		elif height >= 12.0:
-			tank_tf.append(
-				Transform3D(
-					Basis.IDENTITY,
-					roof + Vector3(rng.randf_range(-2.5, 2.5), 1.1, rng.randf_range(-2.5, 2.5))
-				)
-			)
-		elif ext.x > 4.0 and ext.y > 4.0:
-			var bw := clampf(minf(ext.x, ext.y) * rng.randf_range(0.25, 0.4), 2.0, 5.0)
-			var bh := rng.randf_range(1.8, 2.8)
-			house_tf.append(
-				Transform3D(
-					Basis.from_scale(Vector3(bw, bh, bw)),
-					roof + Vector3(rng.randf_range(-1.0, 1.0), bh * 0.5, rng.randf_range(-1.0, 1.0))
-				)
-			)
-
-		# AC condenser on (almost) every roof, randomly yawed.
-		var ac_basis := Basis(Vector3.UP, rng.randf() * TAU)
-		ac_tf.append(
-			Transform3D(
-				ac_basis, roof + Vector3(rng.randf_range(-3, 3), 0.6, rng.randf_range(-3, 3))
-			)
+func _mark_initial_complete() -> void:
+	if (
+		_initial_complete
+		or _active_chunk != null
+		or _chunk_nodes.size() != _chunk_data.size()
+		or not _pending_modes.is_empty()
+	):
+		return
+	_initial_complete = true
+	var building_count := int(_plan["building_count"])
+	var road_count := int(_plan["road_count"])
+	print(
+		(
+			"district_loader: streamed %s — %d buildings, %d roads, %d tiles"
+			% [_plan["name"], building_count, road_count, _chunk_nodes.size()]
 		)
-		placed += 1
+	)
+	district_built.emit(building_count, road_count)
 
-	var container := Node3D.new()
-	container.name = "Rooftops"
-	add_child(container)
 
-	var tank_mat := StandardMaterial3D.new()
-	tank_mat.albedo_color = Color(0.4, 0.36, 0.3)
-	tank_mat.roughness = 0.85
-	var ac_mat := StandardMaterial3D.new()
-	ac_mat.albedo_color = Color(0.5, 0.51, 0.54)
-	ac_mat.metallic = 0.5
-	ac_mat.roughness = 0.5
-	var house_mat := StandardMaterial3D.new()
-	house_mat.albedo_color = Color(0.42, 0.43, 0.45)
-	house_mat.roughness = 0.8
-	var mast_mat := StandardMaterial3D.new()
-	mast_mat.albedo_color = Color(0.12, 0.12, 0.13)
-	mast_mat.metallic = 0.7
-	mast_mat.roughness = 0.45
-	var beacon_mat := StandardMaterial3D.new()
-	beacon_mat.albedo_color = Color(0.9, 0.1, 0.08)
-	beacon_mat.emission_enabled = true
-	beacon_mat.emission = Color(1.0, 0.12, 0.06)
-	beacon_mat.emission_energy_multiplier = 3.0
-
-	var tank_mesh := CylinderMesh.new()
-	tank_mesh.top_radius = 1.1
-	tank_mesh.bottom_radius = 1.1
-	tank_mesh.height = 2.2
-	var ac_mesh := BoxMesh.new()
-	ac_mesh.size = Vector3(2.6, 1.2, 2.0)
-	var house_mesh := BoxMesh.new()  # unit box, scaled per instance
-	house_mesh.size = Vector3.ONE
-	var mast_mesh := CylinderMesh.new()  # unit-height, scaled per instance
-	mast_mesh.top_radius = 0.1
-	mast_mesh.bottom_radius = 0.22
-	mast_mesh.height = 1.0
-	var beacon_mesh := SphereMesh.new()
-	beacon_mesh.radius = 0.32
-	beacon_mesh.height = 0.64
-
-	_rooftop_layer("ACUnits", ac_mesh, ac_mat, ac_tf, container)
-	_rooftop_layer("WaterTanks", tank_mesh, tank_mat, tank_tf, container)
-	_rooftop_layer("Penthouses", house_mesh, house_mat, house_tf, container)
-	_rooftop_layer("Masts", mast_mesh, mast_mat, mast_tf, container)
-	_rooftop_layer("Beacons", beacon_mesh, beacon_mat, beacon_tf, container)
+func _stream_rooftop_layer() -> bool:
+	while _active_rooftop_layer < ROOFTOP_KEYS.size():
+		var index := _active_rooftop_layer
+		_active_rooftop_layer += 1
+		var transforms: Array[Transform3D] = _active_data[ROOFTOP_KEYS[index]]
+		if transforms.is_empty():
+			continue
+		var container := _active_chunk.get_node_or_null("Rooftops") as Node3D
+		if container == null:
+			container = Node3D.new()
+			container.name = "Rooftops"
+			_active_chunk.add_child(container)
+		_rooftop_layer(
+			ROOFTOP_NAMES[index],
+			_rooftop_meshes[index],
+			_rooftop_materials[index],
+			transforms,
+			container
+		)
+		return _active_rooftop_layer >= ROOFTOP_KEYS.size()
+	return true
 
 
 ## Pack a set of instance transforms into one MultiMeshInstance3D (a single draw
@@ -336,137 +446,21 @@ func _rooftop_layer(
 	parent.add_child(mmi)
 
 
-## Sprinkle sidewalk furniture — trash bins and fire hydrants — along the kerb of
-## the wider roads. Orientation-free props (rotationally symmetric), so no road
-## tangent is needed; shared meshes/materials and a hard cap keep it cheap.
-func _build_street_furniture(roads: Array, proj: GeoProjection) -> void:
-	var bin_mat := StandardMaterial3D.new()
-	bin_mat.albedo_color = Color(0.16, 0.28, 0.2)
-	bin_mat.metallic = 0.3
-	bin_mat.roughness = 0.6
-	var hydrant_mat := StandardMaterial3D.new()
-	hydrant_mat.albedo_color = Color(0.7, 0.13, 0.1)
-	hydrant_mat.roughness = 0.5
-	var bin_mesh := CylinderMesh.new()
-	bin_mesh.top_radius = 0.2
-	bin_mesh.bottom_radius = 0.22
-	bin_mesh.height = 0.66
-	var hydrant_mesh := CylinderMesh.new()
-	hydrant_mesh.top_radius = 0.11
-	hydrant_mesh.bottom_radius = 0.12
-	hydrant_mesh.height = 0.42
-	var hydrant_cap := SphereMesh.new()
-	hydrant_cap.radius = 0.12
-	hydrant_cap.height = 0.18
-
-	var container := Node3D.new()
-	container.name = "StreetFurniture"
-	container.position.y = 0.15  # sit props on the raised sidewalk, not the gutter
-	add_child(container)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 99
-	var placed := 0
-	for r in roads:
-		if placed >= 70:
-			break
-		if float(r.get("width_m", 0.0)) < 8.0:
-			continue
-		var path := _project_ring(r["path"], proj)
-		for p in StreetLight.sample_along(path, 38.0, float(r["width_m"]) * 0.5 + 1.5):
-			if placed >= 70:
-				break
-			var prop := Node3D.new()
-			prop.position = Vector3(p.x, 0.0, p.y)
-			if rng.randf() < 0.85:
-				_add_mesh(prop, bin_mesh, Vector3(0.0, 0.33, 0.0), bin_mat)
-			else:
-				_add_mesh(prop, hydrant_mesh, Vector3(0.0, 0.21, 0.0), hydrant_mat)
-				_add_mesh(prop, hydrant_cap, Vector3(0.0, 0.42, 0.0), hydrant_mat)
-			container.add_child(prop)
-			placed += 1
-	LodUtil.apply_range(container, 120.0)
-
-
-func _add_mesh(parent: Node, mesh: Mesh, pos: Vector3, mat: Material) -> void:
-	var mi := MeshInstance3D.new()
-	mi.mesh = mesh
-	mi.material_override = mat
-	mi.position = pos
-	parent.add_child(mi)
-
-
-## Scatter street trees on the setback behind the kerb of the wider roads, with
-## per-tree scale and yaw variety. Shares one trunk + one canopy mesh across all
-## trees and caps the count, so a whole green avenue costs almost nothing.
-func _build_trees(roads: Array, proj: GeoProjection) -> void:
-	var bark := StandardMaterial3D.new()
-	bark.albedo_color = Color(0.32, 0.23, 0.16)
-	bark.roughness = 0.95
-	var leaf := StandardMaterial3D.new()
-	leaf.albedo_color = Color(0.21, 0.42, 0.18)
-	leaf.roughness = 0.9
-	leaf.cull_mode = BaseMaterial3D.CULL_DISABLED
-	var trunk_mesh := TreeMesh.to_mesh(TreeMesh.trunk())
-	var canopy_mesh := TreeMesh.to_mesh(TreeMesh.canopy())
-
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 1337
-	var container := Node3D.new()
-	container.name = "Trees"
-	add_child(container)
-
-	var placed := 0
-	for r in roads:
-		if placed >= 55:
-			break
-		if float(r.get("width_m", 0.0)) < 9.0:
-			continue
-		var path := _project_ring(r["path"], proj)
-		for p in StreetLight.sample_along(path, 36.0, float(r["width_m"]) * 0.5 + 2.6):
-			if placed >= 55:
-				break
-			var tree := Node3D.new()
-			tree.position = Vector3(p.x, 0.0, p.y)
-			var scale_factor := rng.randf_range(0.8, 1.25)
-			tree.scale = Vector3(scale_factor, scale_factor, scale_factor)
-			tree.rotation.y = rng.randf() * TAU
-			var trunk := MeshInstance3D.new()
-			trunk.mesh = trunk_mesh
-			trunk.material_override = bark
-			tree.add_child(trunk)
-			var crown := MeshInstance3D.new()
-			crown.mesh = canopy_mesh
-			crown.material_override = leaf
-			crown.position = Vector3(0.0, 3.9, 0.0)
-			tree.add_child(crown)
-			container.add_child(tree)
-			placed += 1
-	LodUtil.apply_range(container, 300.0)
-
-
 ## Palm-lined avenues — the signature Miami streetscape. Trunks and frond crowns
 ## are two MultiMeshes sharing one per-instance transform list, so hundreds of
 ## palms cost two draw calls. The crown mesh is authored at the trunk top so the
 ## same transform places both. Denser + on more roads than the broadleaf trees.
-func _build_palms(roads: Array, proj: GeoProjection) -> void:
-	var trunk_mesh := TreeMesh.to_mesh(TreeMesh.palm_trunk(9.0))
-	var crown_mesh := TreeMesh.to_mesh(TreeMesh.palm_crown(11, 3.0, 9.0))
-	if trunk_mesh == null or crown_mesh == null:
+func _build_palms(
+	roads: Array, proj: GeoProjection, target_parent: Node3D = null, limit: int = 900
+) -> void:
+	if _palm_trunk_mesh == null or _palm_crown_mesh == null:
 		return
-	var bark := StandardMaterial3D.new()
-	bark.albedo_color = Color(0.55, 0.47, 0.36)  # pale grey-brown palm bark
-	bark.roughness = 0.9
-	var frond := StandardMaterial3D.new()
-	frond.albedo_color = Color(0.30, 0.49, 0.22)  # tropical frond green
-	frond.roughness = 0.85
-	frond.cull_mode = BaseMaterial3D.CULL_DISABLED
-	frond.backlight = Color(0.10, 0.16, 0.07)  # soft leaf translucency in sun
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 9151
 	var transforms: Array[Transform3D] = []
 	for r in roads:
-		if transforms.size() >= 900:
+		if transforms.size() >= limit:
 			break
 		var width := float(r.get("width_m", 0.0))
 		if width < 7.0:
@@ -480,7 +474,7 @@ func _build_palms(roads: Array, proj: GeoProjection) -> void:
 			sides.append(-kerb)
 		for off in sides:
 			for p in StreetLight.sample_along(path, 18.0, off):
-				if transforms.size() >= 900:
+				if transforms.size() >= limit:
 					break
 				var s := rng.randf_range(0.82, 1.3)
 				var basis := Basis.from_euler(Vector3(0.0, rng.randf() * TAU, 0.0)).scaled(
@@ -490,12 +484,17 @@ func _build_palms(roads: Array, proj: GeoProjection) -> void:
 
 	if transforms.is_empty():
 		return
-	_add_palm_layer(trunk_mesh, bark, transforms, "PalmTrunks")
-	_add_palm_layer(crown_mesh, frond, transforms, "PalmCrowns")
+	var parent := target_parent if target_parent != null else self
+	_add_palm_layer(_palm_trunk_mesh, _palm_bark_mat, transforms, "PalmTrunks", parent)
+	_add_palm_layer(_palm_crown_mesh, _palm_frond_mat, transforms, "PalmCrowns", parent)
 
 
 func _add_palm_layer(
-	mesh: Mesh, mat: Material, transforms: Array[Transform3D], node_name: String
+	mesh: Mesh,
+	mat: Material,
+	transforms: Array[Transform3D],
+	node_name: String,
+	target_parent: Node3D = null
 ) -> void:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -509,170 +508,147 @@ func _add_palm_layer(
 	mmi.material_override = mat
 	mmi.visibility_range_end = 300.0
 	mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-	add_child(mmi)
+	(target_parent if target_parent != null else self).add_child(mmi)
 
 
-## Parked cars line the kerbs using decimated versions of the production coupe
-## and sedan, batched into one MultiMesh per model. They have no AI or physics;
-## moving traffic is populated separately by TrafficDirector.
-func _build_parked_cars(roads: Array, proj: GeoProjection) -> void:
-	const PARKED_CAR_LIMIT: int = 240
-	const PARKED_CAR_SPACING: float = 14.0
-	var coupe_mesh := VehicleVisualLibrary.traffic_mesh(VehicleVisualLibrary.Variant.SPORT_COUPE)
-	var sedan_mesh := VehicleVisualLibrary.traffic_mesh(VehicleVisualLibrary.Variant.CLASSIC_SEDAN)
-	if coupe_mesh == null or sedan_mesh == null:
+func _build_parked_cars(
+	roads: Array, proj: GeoProjection, target_parent: Node3D, limit: int
+) -> void:
+	if _parked_coupe_mesh == null or _parked_sedan_mesh == null:
 		return
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 2207
+
 	var coupe_transforms: Array[Transform3D] = []
 	var sedan_transforms: Array[Transform3D] = []
-	for r in roads:
-		if coupe_transforms.size() + sedan_transforms.size() >= PARKED_CAR_LIMIT:
+	var placed := 0
+	for road: Dictionary in roads:
+		if placed >= limit:
 			break
-		var width := float(r.get("width_m", 0.0))
+		var width := float(road.get("width_m", 0.0))
 		if width < 7.0:
 			continue
-		var path := _project_ring(r["path"], proj)
-		var off := width * 0.5 - 1.1  # just inside the kerb (parallel parking)
-		for i in path.size() - 1:
-			if coupe_transforms.size() + sedan_transforms.size() >= PARKED_CAR_LIMIT:
-				break
-			var a: Vector2 = path[i]
-			var seg: Vector2 = path[i + 1] - a
-			var seg_len := seg.length()
-			if seg_len < 7.0:
+		var path := _project_ring(road.get("path", []), proj)
+		var offset := width * 0.5 - 1.1
+		for index in path.size() - 1:
+			var start := path[index]
+			var segment := path[index + 1] - start
+			var segment_length := segment.length()
+			if segment_length < 9.0:
 				continue
-			var dir := seg / seg_len
-			var nrm := Vector2(-dir.y, dir.x)
-			var yaw := atan2(dir.x, dir.y)  # align the car's length with the road
-			var t := 5.0
-			while (
-				t < seg_len - 4.0
-				and coupe_transforms.size() + sedan_transforms.size() < PARKED_CAR_LIMIT
-			):
-				if rng.randf() < 0.85:  # leave gaps so it's not bumper-to-bumper
-					var p := a + dir * t + nrm * off
-					var basis := Basis.from_euler(Vector3(0.0, yaw, 0.0))
-					var transform := Transform3D(
-						basis,
-						Vector3(
-							p.x, STREET_VISUAL_Y + VehicleVisualLibrary.MODEL_FLOOR_OFFSET_Y, p.y
-						)
+			var direction := segment / segment_length
+			var normal := Vector2(-direction.y, direction.x)
+			var yaw := atan2(direction.x, direction.y)
+			var distance := 5.0
+			while distance < segment_length - 4.0 and placed < limit:
+				var point := start + direction * distance + normal * offset
+				var transform := Transform3D(
+					Basis.from_euler(Vector3(0.0, yaw, 0.0)),
+					Vector3(
+						point.x,
+						STREET_VISUAL_Y + VehicleVisualLibrary.MODEL_FLOOR_OFFSET_Y,
+						point.y
 					)
-					if rng.randi() % VehicleVisualLibrary.variant_count() == 0:
-						coupe_transforms.append(transform)
-					else:
-						sedan_transforms.append(transform)
-				t += PARKED_CAR_SPACING
-	_add_parked_car_layer(coupe_mesh, coupe_transforms, "ParkedSportCoupes")
-	_add_parked_car_layer(sedan_mesh, sedan_transforms, "ParkedClassicSedans")
+				)
+				if placed % 2 == 0:
+					coupe_transforms.append(transform)
+				else:
+					sedan_transforms.append(transform)
+				placed += 1
+				distance += 14.0
+	_add_parked_car_layer(_parked_coupe_mesh, coupe_transforms, "ParkedSportCoupes", target_parent)
+	_add_parked_car_layer(
+		_parked_sedan_mesh, sedan_transforms, "ParkedClassicSedans", target_parent
+	)
 
 
-func _add_parked_car_layer(mesh: Mesh, transforms: Array[Transform3D], node_name: String) -> void:
+func _add_parked_car_layer(
+	mesh: Mesh, transforms: Array[Transform3D], node_name: String, parent: Node3D
+) -> void:
 	if transforms.is_empty():
 		return
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = mesh
-	mm.instance_count = transforms.size()
-	for i in transforms.size():
-		mm.set_instance_transform(i, transforms[i])
-	var mmi := MultiMeshInstance3D.new()
-	mmi.name = node_name
-	mmi.multimesh = mm
-	add_child(mmi)
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.mesh = mesh
+	multimesh.instance_count = transforms.size()
+	for index in transforms.size():
+		multimesh.set_instance_transform(index, transforms[index])
+	var instance := MultiMeshInstance3D.new()
+	instance.name = node_name
+	instance.multimesh = multimesh
+	parent.add_child(instance)
 
 
-## Drop emissive lamp posts along the major roads (kerb side, ~42 m apart). They
-## glow day and night and turn the dark city into a field of streetlights. Shared
-## meshes/materials and a hard cap keep it cheap; the posts are visual only.
-func _build_streetlights(roads: Array, proj: GeoProjection) -> void:
-	var pole_mat := StandardMaterial3D.new()
-	pole_mat.albedo_color = Color(0.1, 0.1, 0.12)
-	pole_mat.metallic = 0.6
-	pole_mat.roughness = 0.5
-	var lamp_mat := StandardMaterial3D.new()
-	lamp_mat.albedo_color = Color(1.0, 0.92, 0.72)
-	lamp_mat.emission_enabled = true
-	lamp_mat.emission = Color(1.0, 0.85, 0.55)
-	lamp_mat.emission_energy_multiplier = 2.5
+func _build_streetlights(
+	roads: Array, proj: GeoProjection, target_parent: Node3D, limit: int
+) -> void:
+	var transforms: Array[Transform3D] = []
+	for road: Dictionary in roads:
+		if transforms.size() >= limit:
+			break
+		var width := float(road.get("width_m", 0.0))
+		if width < 8.0:
+			continue
+		var path := _project_ring(road.get("path", []), proj)
+		for point: Vector2 in StreetLight.sample_along(path, 42.0, width * 0.5 + 1.2):
+			transforms.append(Transform3D(Basis.IDENTITY, Vector3(point.x, 0.0, point.y)))
+			if transforms.size() >= limit:
+				break
+	if transforms.is_empty():
+		return
+
+	var root := Node3D.new()
+	root.name = "StreetLights"
+	target_parent.add_child(root)
+	var pole_material := StandardMaterial3D.new()
+	pole_material.albedo_color = Color(0.1, 0.1, 0.12)
+	pole_material.metallic = 0.6
+	pole_material.roughness = 0.5
+	var lamp_material := StandardMaterial3D.new()
+	lamp_material.albedo_color = Color(1.0, 0.92, 0.72)
+	lamp_material.emission_enabled = true
+	lamp_material.emission = Color(1.0, 0.85, 0.55)
+	lamp_material.emission_energy_multiplier = 2.5
+	var switch := StreetlightSwitch.new()
+	switch.setup(lamp_material, lamp_material.emission_energy_multiplier)
+	root.add_child(switch)
+
 	var pole_mesh := BoxMesh.new()
 	pole_mesh.size = Vector3(0.14, 5.0, 0.14)
 	var head_mesh := BoxMesh.new()
 	head_mesh.size = Vector3(0.5, 0.22, 0.32)
-
-	var container := Node3D.new()
-	container.name = "StreetLights"
-	container.position.y = 0.15  # poles rise from the raised sidewalk
-	add_child(container)
-	# All lamp heads share lamp_mat, so one switch fades them all with day/night.
-	var switch := StreetlightSwitch.new()
-	switch.setup(lamp_mat, lamp_mat.emission_energy_multiplier)
-	container.add_child(switch)
-
-	var placed := 0
-	var lights: Array[OmniLight3D] = []
-	for r in roads:
-		if placed >= 180:
-			break
-		if float(r.get("width_m", 0.0)) < 8.0:
-			continue
-		var path := _project_ring(r["path"], proj)
-		for p in StreetLight.sample_along(path, 42.0, float(r["width_m"]) * 0.5 + 1.2):
-			if placed >= 180:
-				break
-			var lamp := Node3D.new()
-			lamp.position = Vector3(p.x, 0.0, p.y)
-			var pole := MeshInstance3D.new()
-			pole.mesh = pole_mesh
-			pole.material_override = pole_mat
-			pole.position = Vector3(0.0, 2.5, 0.0)
-			lamp.add_child(pole)
-			var head := MeshInstance3D.new()
-			head.mesh = head_mesh
-			head.material_override = lamp_mat
-			head.position = Vector3(0.0, 5.0, 0.0)
-			lamp.add_child(head)
-			# A real warm pool under the first N heads turns the dark street into
-			# lit asphalt at night; the rest stay emissive-only to keep the count
-			# in budget. Shadowless and out of the volumetric pass for cheapness.
-			if lights.size() < MAX_STREETLIGHT_LIGHTS:
-				var glow := OmniLight3D.new()
-				glow.omni_range = STREETLIGHT_LIGHT_RANGE_M
-				glow.omni_attenuation = 1.5
-				glow.light_color = Color(1.0, 0.85, 0.55)
-				glow.light_energy = 0.0
-				glow.light_volumetric_fog_energy = 0.0
-				glow.shadow_enabled = false
-				glow.visible = false
-				glow.position = Vector3(0.0, 4.7, 0.0)
-				lamp.add_child(glow)
-				lights.append(glow)
-			container.add_child(lamp)
-			placed += 1
-	switch.bind_lights(lights, STREETLIGHT_LIGHT_ENERGY)
-	LodUtil.apply_range(container, 200.0)
+	var pole_transforms: Array[Transform3D] = []
+	var head_transforms: Array[Transform3D] = []
+	for transform: Transform3D in transforms:
+		pole_transforms.append(
+			Transform3D(transform.basis, transform.origin + Vector3(0.0, 2.65, 0.0))
+		)
+		head_transforms.append(
+			Transform3D(transform.basis, transform.origin + Vector3(0.0, 5.15, 0.0))
+		)
+	_add_prop_layer("StreetlightPoles", pole_mesh, pole_material, pole_transforms, root, 200.0)
+	_add_prop_layer("StreetlightHeads", head_mesh, lamp_material, head_transforms, root, 200.0)
 
 
-func _load_district(path: String) -> Dictionary:
-	if not FileAccess.file_exists(path):
-		return {}
-	var text := FileAccess.get_file_as_string(path)
-	var parsed: Variant = JSON.parse_string(text)
-	return parsed if parsed is Dictionary else {}
-
-
-## Merge a geometry dict into accumulator arrays, offsetting indices.
-static func _append_geo(
-	verts: PackedVector3Array, norms: PackedVector3Array, idx: PackedInt32Array, geo: Dictionary
+func _add_prop_layer(
+	node_name: String,
+	mesh: Mesh,
+	material: Material,
+	transforms: Array[Transform3D],
+	parent: Node3D,
+	visibility_end: float
 ) -> void:
-	if geo.is_empty():
-		return
-	var offset := verts.size()
-	verts.append_array(geo["vertices"])
-	norms.append_array(geo["normals"])
-	for i in geo["indices"] as PackedInt32Array:
-		idx.append(offset + i)
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.mesh = mesh
+	multimesh.instance_count = transforms.size()
+	for index in transforms.size():
+		multimesh.set_instance_transform(index, transforms[index])
+	var instance := MultiMeshInstance3D.new()
+	instance.name = node_name
+	instance.multimesh = multimesh
+	instance.material_override = material
+	instance.visibility_range_end = visibility_end
+	instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	parent.add_child(instance)
 
 
 func _project_ring(raw: Array, proj: GeoProjection) -> PackedVector2Array:
@@ -682,134 +658,6 @@ func _project_ring(raw: Array, proj: GeoProjection) -> PackedVector2Array:
 	return ring
 
 
-## Weld the accumulated building geometry into the single "Buildings" mesh (one
-## draw call). Collision is built separately as solid per-building convex prisms
-## (see the BuildingCollision call in _build_timesliced), not a welded trimesh.
-func _commit_buildings(
-	verts: PackedVector3Array,
-	norms: PackedVector3Array,
-	idx: PackedInt32Array,
-	colors: PackedColorArray
-) -> void:
-	if verts.is_empty():
-		return
-	var mesh := CityBuilder.arrays_to_mesh(
-		{"vertices": verts, "normals": norms, "indices": idx, "colors": colors}
-	)
-	mesh.surface_set_material(0, _building_mat)
-	var mi := MeshInstance3D.new()
-	mi.name = "Buildings"
-	mi.mesh = mesh
-	add_child(mi)
-
-
-func _build_roads(roads: Array, proj: GeoProjection) -> void:
-	var verts := PackedVector3Array()
-	var norms := PackedVector3Array()
-	var idx := PackedInt32Array()
-	var uvs := PackedVector2Array()
-
-	for r in roads:
-		var path := _project_ring(r["path"], proj)
-		var geo := CityBuilder.road_ribbon(path, float(r["width_m"]), STREET_VISUAL_Y)
-		if geo.is_empty():
-			continue
-		_append_geo(verts, norms, idx, geo)
-		uvs.append_array(geo["uvs"])
-
-	if verts.is_empty():
-		return
-	var mesh := CityBuilder.arrays_to_mesh(
-		{"vertices": verts, "normals": norms, "indices": idx, "uvs": uvs}
-	)
-	mesh.surface_set_material(0, _road_mat)
-	var mi := MeshInstance3D.new()
-	mi.name = "Roads"
-	mi.mesh = mesh
-	add_child(mi)
-
-
-## Raised concrete sidewalks flanking the wider roads — real curb geometry so the
-## street reads as a kerbed avenue, not a flat painted floor. Merged into one
-## MeshInstance3D (one draw call) like the roads. Narrow alleys/footways (<6 m)
-## are skipped so they don't get double curbs.
-func _build_sidewalks(roads: Array, proj: GeoProjection) -> void:
-	var verts := PackedVector3Array()
-	var norms := PackedVector3Array()
-	var idx := PackedInt32Array()
-	var uvs := PackedVector2Array()
-
-	for r in roads:
-		var w := float(r.get("width_m", 0.0))
-		if w < 6.0:
-			continue
-		var walk_width := 2.4 if w >= 10.0 else 1.8
-		var path := _project_ring(r["path"], proj)
-		var geo := CityBuilder.sidewalk_ribbon(path, w, walk_width, 0.15, SIDEWALK_VISUAL_Y)
-		if geo.is_empty():
-			continue
-		_append_geo(verts, norms, idx, geo)
-		uvs.append_array(geo["uvs"])
-
-	if verts.is_empty():
-		return
-	var mesh := CityBuilder.arrays_to_mesh(
-		{"vertices": verts, "normals": norms, "indices": idx, "uvs": uvs}
-	)
-	mesh.surface_set_material(0, _sidewalk_mat)
-	var mi := MeshInstance3D.new()
-	mi.name = "Sidewalks"
-	mi.mesh = mesh
-	add_child(mi)
-
-
-## Spawn a flat ground tile covering the district's projected footprint so the
-## player and vehicles have something to stand on, wherever the district sits in
-## the shared world.
-func _build_ground(data: Dictionary, proj: GeoProjection) -> void:
-	var min_x := INF
-	var max_x := -INF
-	var min_z := INF
-	var max_z := -INF
-	for collection in [data.get("buildings", []), data.get("roads", [])]:
-		for item in collection:
-			var pts: Array = item.get("footprint", item.get("path", []))
-			for pair in pts:
-				var p := proj.to_local(pair[0], pair[1])
-				min_x = minf(min_x, p.x)
-				max_x = maxf(max_x, p.x)
-				min_z = minf(min_z, p.z)
-				max_z = maxf(max_z, p.z)
-	if min_x == INF:
-		return
-
-	var size_x := (max_x - min_x) + ground_margin * 2.0
-	var size_z := (max_z - min_z) + ground_margin * 2.0
-	var centre := Vector3((min_x + max_x) * 0.5, 0.0, (min_z + max_z) * 0.5)
-
-	var mat := GROUND_MATERIAL.build()
-	var ground_mesh := BoxMesh.new()
-	ground_mesh.size = Vector3(size_x, 0.08, size_z)
-	ground_mesh.material = mat
-
-	var body := StaticBody3D.new()
-	body.name = "Ground"
-	body.position = centre
-	var mi := MeshInstance3D.new()
-	mi.mesh = ground_mesh
-	# Sit the tile top just under the collider top (y=0) so the player rests on
-	# the visible ground; the 0.08-thick slab is centred at -0.08 → top -0.04.
-	mi.position.y = -0.08
-	body.add_child(mi)
-	var col := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(size_x, 1.0, size_z)
-	col.shape = box
-	col.position = Vector3(0, GROUND_SURFACE_Y - box.size.y * 0.5, 0)
-	body.add_child(col)
-	add_child(body)
-
-
 ## TimeOfDay (group "night_emissive") fades building windows in/out, 0..1.
 func set_night_amount(amount: float) -> void:
 	var shaded := _building_mat as ShaderMaterial
@@ -817,71 +665,21 @@ func set_night_amount(amount: float) -> void:
 		shaded.set_shader_parameter("night_mix", amount)
 
 
-## Move the player + spawn marker onto a wide road segment near this district's
-## centre so the first playable view opens down a street corridor, not at an
-## arbitrary road endpoint or inside a building footprint.
-func _place_actors_on_street(
-	roads: Array, buildings: Array, proj: GeoProjection, centre: Vector3
-) -> void:
-	var best := centre
-	var best_yaw := 0.0
-	var best_score := INF
-	var centre_xz := Vector2(centre.x, centre.z)
-	var building_rings := _project_building_rings(buildings, proj)
-	for r in roads:
-		var width := float(r.get("width_m", 0.0))
-		if width < 6.0:
-			continue
-		var path := _project_ring(r["path"], proj)
-		for i in range(path.size() - 1):
-			var a := path[i]
-			var b := path[i + 1]
-			var seg := b - a
-			var seg_len := seg.length()
-			if seg_len < 12.0:
-				continue
-			var mid := (a + b) * 0.5
-			var dir := seg / seg_len
-			var yaw := atan2(-dir.x, -dir.y)
-			var forward := Vector2(-sin(yaw), -cos(yaw))
-			var right := Vector2(cos(yaw), -sin(yaw))
-			var camera_sample := mid - forward * 8.0 + right * 2.0
-			var view_sample := mid + forward * 20.0
-			var clearance := minf(
-				_building_clearance(mid, building_rings),
-				minf(
-					_building_clearance(camera_sample, building_rings),
-					_building_clearance(view_sample, building_rings)
-				)
-			)
-			if clearance < 35.0:
-				continue
-			var score := (
-				mid.distance_to(centre_xz)
-				- minf(width, 16.0) * 12.0
-				- minf(seg_len, 90.0)
-				- minf(clearance, 80.0) * 8.0
-			)
-			if score < best_score:
-				best_score = score
-				best = Vector3(mid.x, 1.0, mid.y)
-				best_yaw = yaw
-	best.y = 1.0
-
+func _apply_spawn(spawn: Vector3, yaw: float) -> void:
 	var tree := get_tree()
 	if tree == null:
 		return
 	for marker in tree.get_nodes_in_group("spawn_points"):
 		if marker is Node3D:
-			(marker as Node3D).global_position = best
+			(marker as Node3D).global_position = spawn
 	for player in tree.get_nodes_in_group("player"):
 		if player is Node3D:
-			(player as Node3D).global_position = best + Vector3(0, 0.5, 0)
+			(player as Node3D).global_position = spawn + Vector3(0, 0.5, 0)
 			var camera_rig := (player as Node).get_node_or_null("CameraRig") as Node3D
 			if camera_rig != null:
-				camera_rig.rotation.y = best_yaw
-	DistrictSpawnVista.build(self, best, best_yaw, STREET_VISUAL_Y)
-	_place_starter_vehicles(best, best_yaw)
+				camera_rig.rotation.y = yaw
+	_place_starter_vehicles(spawn, yaw)
+	_build_spawn_vista(spawn, yaw)
 
 
 func _place_starter_vehicles(spawn: Vector3, yaw: float) -> void:
@@ -896,55 +694,122 @@ func _place_starter_vehicles(spawn: Vector3, yaw: float) -> void:
 		if vehicle is RigidBody3D:
 			(vehicle as RigidBody3D).linear_velocity = Vector3.ZERO
 			(vehicle as RigidBody3D).angular_velocity = Vector3.ZERO
+			(vehicle as RigidBody3D).freeze = false
 
 
-static func _project_building_rings(
-	buildings: Array, proj: GeoProjection
-) -> Array[PackedVector2Array]:
-	var rings: Array[PackedVector2Array] = []
-	for b in buildings:
-		var raw: Array = b.get("footprint", [])
-		if raw.size() < 3:
-			continue
-		var ring := _project_ring_static(raw, proj)
-		if ring.size() >= 3:
-			rings.append(ring)
-	return rings
+func _set_starter_vehicles_frozen(frozen: bool) -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	for vehicle: Node in tree.get_nodes_in_group("starter_vehicles"):
+		if vehicle is RigidBody3D:
+			(vehicle as RigidBody3D).freeze = frozen
+			if frozen:
+				_align_vehicle_visual_to_surface(vehicle as Node3D)
 
 
-static func _building_clearance(point: Vector2, rings: Array[PackedVector2Array]) -> float:
-	var nearest := INF
-	for ring in rings:
-		nearest = minf(nearest, _point_to_ring_distance(point, ring))
-	return nearest
+func _align_vehicle_visual_to_surface(vehicle: Node3D) -> void:
+	var visual := VehicleVisualLibrary.first_mesh_instance(vehicle)
+	if visual == null:
+		return
+	var bounds := visual.get_aabb()
+	var bottom_y := INF
+	for x: float in [bounds.position.x, bounds.end.x]:
+		for y: float in [bounds.position.y, bounds.end.y]:
+			for z: float in [bounds.position.z, bounds.end.z]:
+				bottom_y = minf(bottom_y, (visual.global_transform * Vector3(x, y, z)).y)
+	vehicle.global_position.y += STREET_VISUAL_Y - bottom_y
 
 
-static func _point_to_ring_distance(point: Vector2, ring: PackedVector2Array) -> float:
-	if Geometry2D.is_point_in_polygon(point, ring):
-		return 0.0
-	var nearest := INF
-	for i in ring.size():
-		nearest = minf(
-			nearest, _point_to_segment_distance(point, ring[i], ring[(i + 1) % ring.size()])
-		)
-	return nearest
+func _build_spawn_vista(spawn: Vector3, yaw: float) -> void:
+	var root := Node3D.new()
+	root.name = "SpawnVistaStreet"
+	var forward := Vector3(-sin(yaw), 0.0, -cos(yaw))
+	root.position = Vector3(spawn.x, STREET_VISUAL_Y + 0.12, spawn.z) + forward * 4.0
+	root.rotation.y = yaw
+	add_child(root)
+
+	var asphalt_mat := StandardMaterial3D.new()
+	asphalt_mat.albedo_color = Color(0.025, 0.028, 0.03)
+	asphalt_mat.roughness = 0.94
+	asphalt_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var road_mesh := BoxMesh.new()
+	road_mesh.size = Vector3(18.0, 0.12, 160.0)
+	_add_surface(root, "HeroRoad", road_mesh, asphalt_mat, Vector3.ZERO)
+
+	var sidewalk_mat := StandardMaterial3D.new()
+	sidewalk_mat.albedo_color = Color(0.30, 0.30, 0.28)
+	sidewalk_mat.roughness = 0.88
+	sidewalk_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var sidewalk_mesh := BoxMesh.new()
+	sidewalk_mesh.size = Vector3(4.0, 0.12, 160.0)
+	_add_surface(root, "LeftSidewalk", sidewalk_mesh, sidewalk_mat, Vector3(11.0, 0.04, 0.0))
+	_add_surface(root, "RightSidewalk", sidewalk_mesh, sidewalk_mat, Vector3(-11.0, 0.04, 0.0))
+
+	var paint_mat := StandardMaterial3D.new()
+	paint_mat.albedo_color = Color(0.86, 0.82, 0.68)
+	paint_mat.roughness = 0.82
+	var dash_mesh := BoxMesh.new()
+	dash_mesh.size = Vector3(0.22, 0.025, 4.8)
+	for z in [-60.0, -48.0, -36.0, -24.0, -12.0, 0.0, 12.0, 24.0, 36.0, 48.0, 60.0]:
+		_add_surface(root, "LaneDash", dash_mesh, paint_mat, Vector3(0.0, 0.07, z))
+
+	var crosswalk_mesh := BoxMesh.new()
+	crosswalk_mesh.size = Vector3(13.5, 0.025, 0.48)
+	for z in [-70.0, -69.1, -68.2, 68.2, 69.1, 70.0]:
+		_add_surface(root, "CrosswalkBar", crosswalk_mesh, paint_mat, Vector3(0.0, 0.075, z))
+
+	_build_spawn_palms(root)
+	_build_spawn_cones(root)
 
 
-static func _point_to_segment_distance(point: Vector2, a: Vector2, b: Vector2) -> float:
-	var ab := b - a
-	var len_sq := ab.length_squared()
-	if len_sq <= 0.0001:
-		return point.distance_to(a)
-	var t := clampf((point - a).dot(ab) / len_sq, 0.0, 1.0)
-	return point.distance_to(a + ab * t)
+func _add_surface(parent: Node, node_name: String, mesh: Mesh, mat: Material, pos: Vector3) -> void:
+	var mi := MeshInstance3D.new()
+	mi.name = node_name
+	mi.mesh = mesh
+	mi.material_override = mat
+	mi.position = pos
+	parent.add_child(mi)
 
 
-static func _project_ring_static(raw: Array, proj: GeoProjection) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	for pair in raw:
-		var p := proj.to_local(pair[0], pair[1])
-		pts.append(Vector2(p.x, p.z))
-	return pts
+func _build_spawn_palms(parent: Node3D) -> void:
+	var trunk_mesh := TreeMesh.to_mesh(TreeMesh.palm_trunk(8.0))
+	var crown_mesh := TreeMesh.to_mesh(TreeMesh.palm_crown(11, 2.7, 8.0))
+	if trunk_mesh == null or crown_mesh == null:
+		return
+	var bark := StandardMaterial3D.new()
+	bark.albedo_color = Color(0.52, 0.44, 0.34)
+	bark.roughness = 0.92
+	var frond := StandardMaterial3D.new()
+	frond.albedo_color = Color(0.24, 0.45, 0.18)
+	frond.roughness = 0.86
+	frond.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	for side in [-1.0, 1.0]:
+		for i in 6:
+			var z := -48.0 + float(i) * 19.0
+			var palm := Node3D.new()
+			palm.name = "SpawnPalm"
+			palm.position = Vector3(side * 13.2, 0.0, z)
+			palm.rotation.y = side * 0.25 + float(i) * 0.31
+			var s := 0.86 + float(i % 3) * 0.08
+			palm.scale = Vector3(s, s, s)
+			parent.add_child(palm)
+			_add_surface(palm, "Trunk", trunk_mesh, bark, Vector3.ZERO)
+			_add_surface(palm, "Crown", crown_mesh, frond, Vector3.ZERO)
+
+
+func _build_spawn_cones(parent: Node3D) -> void:
+	var cone_mat := StandardMaterial3D.new()
+	cone_mat.albedo_color = Color(1.0, 0.36, 0.08)
+	cone_mat.roughness = 0.72
+	var cone_mesh := CylinderMesh.new()
+	cone_mesh.top_radius = 0.08
+	cone_mesh.bottom_radius = 0.28
+	cone_mesh.height = 0.72
+	cone_mesh.radial_segments = 10
+	for z in [-34.0, -18.0, 18.0, 34.0]:
+		_add_surface(parent, "TrafficCone", cone_mesh, cone_mat, Vector3(7.4, 0.36, z))
 
 
 func _make_materials() -> void:
@@ -956,10 +821,9 @@ func _make_materials() -> void:
 	_building_mat = _shader_or_fallback("res://shaders/facade.gdshader", Color(0.62, 0.63, 0.66))
 	_road_mat = _shader_or_fallback("res://shaders/road.gdshader", Color(0.33, 0.32, 0.31))
 	_sidewalk_mat = _shader_or_fallback("res://shaders/sidewalk.gdshader", Color(0.62, 0.60, 0.56))
-	# Photoreal grain from the Codex-generated tileable albedos: asphalt on the
-	# roads, troweled stucco breaking up the masonry facade fills.
+	# Photoreal asphalt grain from the Codex-generated tileable albedo.
 	_set_detail_texture(_road_mat, "res://assets/textures/asphalt_albedo.png")
-	_set_detail_texture(_building_mat, "res://assets/textures/stucco_albedo.png")
+	# #160 facade PBR: bind the texture set onto the consolidated facade shader.
 	FacadeMaterialBindings.apply_to(_building_mat)
 
 	_facade_glass_mat = StandardMaterial3D.new()
@@ -977,6 +841,61 @@ func _make_materials() -> void:
 	_roof_mat = StandardMaterial3D.new()
 	_roof_mat.albedo_color = Color(0.4, 0.41, 0.45)
 	_roof_mat.roughness = 0.95
+	_palm_trunk_mesh = TreeMesh.to_mesh(TreeMesh.palm_trunk(9.0))
+	_palm_crown_mesh = TreeMesh.to_mesh(TreeMesh.palm_crown(11, 3.0, 9.0))
+	_palm_bark_mat = StandardMaterial3D.new()
+	_palm_bark_mat.albedo_color = Color(0.55, 0.47, 0.36)
+	_palm_bark_mat.roughness = 0.9
+	_palm_frond_mat = StandardMaterial3D.new()
+	_palm_frond_mat.albedo_color = Color(0.30, 0.49, 0.22)
+	_palm_frond_mat.roughness = 0.85
+	_palm_frond_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_palm_frond_mat.backlight = Color(0.10, 0.16, 0.07)
+	_parked_coupe_mesh = VehicleVisualLibrary.traffic_mesh(VehicleVisualLibrary.Variant.SPORT_COUPE)
+	_parked_sedan_mesh = VehicleVisualLibrary.traffic_mesh(
+		VehicleVisualLibrary.Variant.CLASSIC_SEDAN
+	)
+	_make_rooftop_resources()
+
+
+func _make_rooftop_resources() -> void:
+	var ac_mat := StandardMaterial3D.new()
+	ac_mat.albedo_color = Color(0.5, 0.51, 0.54)
+	ac_mat.metallic = 0.5
+	ac_mat.roughness = 0.5
+	var tank_mat := StandardMaterial3D.new()
+	tank_mat.albedo_color = Color(0.4, 0.36, 0.3)
+	tank_mat.roughness = 0.85
+	var house_mat := StandardMaterial3D.new()
+	house_mat.albedo_color = Color(0.42, 0.43, 0.45)
+	house_mat.roughness = 0.8
+	var mast_mat := StandardMaterial3D.new()
+	mast_mat.albedo_color = Color(0.12, 0.12, 0.13)
+	mast_mat.metallic = 0.7
+	mast_mat.roughness = 0.45
+	var beacon_mat := StandardMaterial3D.new()
+	beacon_mat.albedo_color = Color(0.9, 0.1, 0.08)
+	beacon_mat.emission_enabled = true
+	beacon_mat.emission = Color(1.0, 0.12, 0.06)
+	beacon_mat.emission_energy_multiplier = 3.0
+	_rooftop_materials.assign([ac_mat, tank_mat, house_mat, mast_mat, beacon_mat])
+
+	var ac_mesh := BoxMesh.new()
+	ac_mesh.size = Vector3(2.6, 1.2, 2.0)
+	var tank_mesh := CylinderMesh.new()
+	tank_mesh.top_radius = 1.1
+	tank_mesh.bottom_radius = 1.1
+	tank_mesh.height = 2.2
+	var house_mesh := BoxMesh.new()
+	house_mesh.size = Vector3.ONE
+	var mast_mesh := CylinderMesh.new()
+	mast_mesh.top_radius = 0.1
+	mast_mesh.bottom_radius = 0.22
+	mast_mesh.height = 1.0
+	var beacon_mesh := SphereMesh.new()
+	beacon_mesh.radius = 0.32
+	beacon_mesh.height = 0.64
+	_rooftop_meshes.assign([ac_mesh, tank_mesh, house_mesh, mast_mesh, beacon_mesh])
 
 
 ## Assign a tileable detail albedo onto a shader material's `detail_tex` uniform,

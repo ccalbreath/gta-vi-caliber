@@ -22,6 +22,7 @@ extends RefCounted
 ## GPU-budget tiers, cheapest → richest. Each tier is a superset of the one
 ## below it (see apply_quality). Ordering matters — code compares with `>=`.
 enum Quality { LOW, MEDIUM, HIGH, ULTRA }
+const GRAPHICS_QUALITY := preload("res://scripts/world/graphics_quality.gd")
 
 
 ## Apply the premium grade/AO/reflections/bloom/fog to an existing Environment,
@@ -229,17 +230,4 @@ static func apply_quality(env: Environment, tier: int = Quality.MEDIUM) -> Envir
 ## `rendering/quality_tier` (int 0–3); otherwise MEDIUM — the safe default that
 ## ships SSAO/SSR but holds back the GI pair that tanks FPS on weaker GPUs.
 static func resolved_tier() -> int:
-	match OS.get_environment("GTA_QUALITY").strip_edges().to_lower():
-		"low":
-			return Quality.LOW
-		"medium":
-			return Quality.MEDIUM
-		"high":
-			return Quality.HIGH
-		"ultra":
-			return Quality.ULTRA
-	if ProjectSettings.has_setting("rendering/quality_tier"):
-		return clampi(
-			int(ProjectSettings.get_setting("rendering/quality_tier")), Quality.LOW, Quality.ULTRA
-		)
-	return Quality.MEDIUM
+	return GRAPHICS_QUALITY.resolved_tier()

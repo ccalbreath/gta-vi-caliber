@@ -31,6 +31,7 @@ Goal: every clone runs instantly; contribution pipeline works end to end.
 - [x] GitHub Actions CI, issue templates, PR template
 - [x] Vendor [gdUnit4](https://github.com/MikeSchulze/gdUnit4) into `game/addons/` and port the unit-test runner to it
 - [x] First exported build artifacts (Linux/Windows/macOS) uploaded by CI on tag
+- [x] Stable menu-to-world startup with bounded district and crowd loading
 
 ## M1 — Locomotion & camera feel
 
@@ -61,6 +62,8 @@ Goal: get in a car, drive it, crash it, get out.
 Goal: walk or drive 4 km in any direction with no loading screen.
 
 - [ ] World partitioned into tiles with seam-free LOD terrain
+- [x] GDScript district residency with threaded 128 m tile preparation, near-ring
+  collision/navigation, HLOD/occluders, and one bounded main-thread step per frame
 - [ ] **`engine/`: async tile streamer GDExtension** (load/unload around camera, priority by velocity vector)
 - [ ] **`engine/`: runtime impostor baker** for distant buildings
 - [x] Floating-origin shift to dodge float precision at distance
@@ -108,6 +111,9 @@ Goal: the acceptance test — a 90-second in-engine trailer from a release build
 - [ ] Crowd density pass (**`engine/`: GPU-driven crowd rendering**)
 - [x] Cinematic camera tooling for capture
 - [ ] Performance lockdown: 60 FPS @ 1080p mid-range GPU, captured profiles
+  - [x] Phase 0 deterministic release harness, strict runtime gate, and working
+    visibility-range culling ([#53](https://github.com/duolahypercho/gta-vi-caliber/issues/53))
+  - [ ] Capture the Phase 0 baseline on RTX 3060-class target hardware
 - [ ] Cut, score, and publish the trailer
 
 ---

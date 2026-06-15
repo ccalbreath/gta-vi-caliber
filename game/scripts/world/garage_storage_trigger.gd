@@ -59,8 +59,14 @@ func _vehicle_id_of(car: Node) -> String:
 
 
 func _on_body_entered(body: Node) -> void:
-	if body is Car or body.is_in_group("starter_vehicles"):
-		park_vehicle(body)
+	if not (body is Car or body.is_in_group("starter_vehicles")):
+		return
+	# Only store a car the player actually drives in. A starter car merely placed
+	# in the zone at world spawn sits at rest; ignore it so the boot-time vehicle
+	# placement can't get a starter car silently swallowed by the garage.
+	if body is RigidBody3D and (body as RigidBody3D).linear_velocity.length() < 1.0:
+		return
+	park_vehicle(body)
 
 
 ## Park a car: store its id in the model, then pull the node out of the active world by

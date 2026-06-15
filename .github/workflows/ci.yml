@@ -25,7 +25,7 @@ jobs:
         run: gdlint game/scripts game/tests
 
   game:
-    name: Import, smoke & unit tests (headless Godot)
+    name: Full game gate (headless Godot)
     runs-on: ubuntu-latest
     steps:
       # Do NOT let checkout smudge LFS here: a plain `lfs: true` re-downloads the
@@ -62,6 +62,11 @@ jobs:
             git lfs ls-files | grep '^[0-9a-f]* -' | head
             exit 1
           fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install gdtoolkit
+        run: pip install "gdtoolkit==4.*"
       - name: Cache Godot
         id: cache-godot
         uses: actions/cache@v4
@@ -77,25 +82,8 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp/godot
           mv "/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" ~/godot-bin/godot
           chmod +x ~/godot-bin/godot
-      - name: Headless import
-        run: ~/godot-bin/godot --headless --path game --import
-      - name: Smoke test
-        run: ~/godot-bin/godot --headless --path game --script res://tests/smoke_test.gd
-      - name: gdUnit4 unit tests
-        run: ~/godot-bin/godot --headless --path game --script res://tests/run_tests.gd
-      - name: Legacy unit tests
-        run: ~/godot-bin/godot --headless --path game --script res://tests/run_legacy_tests.gd
-      # The same playable-map probes tools/check.sh gates on locally: the main
-      # map's gameplay stack stays wired and the GTA core loops keep firing.
-      - name: Miami integration probes
-        run: |
-          for probe in miami_wiring_probe miami_facade_probe miami_loop_probe \
-            miami_mission_probe miami_payspray_probe miami_arrest_probe \
-            miami_helicopter_probe miami_day_night_probe miami_evade_probe \
-            miami_property_probe miami_citizen_probe; do
-            echo "== ${probe} =="
-            ~/godot-bin/godot --headless --path game --script "res://tests/${probe}.gd"
-          done
+      - name: Run full game gate
+        run: GODOT=~/godot-bin/godot tools/check.sh
 
   engine:
     name: Engine modules (${{ matrix.platform }})

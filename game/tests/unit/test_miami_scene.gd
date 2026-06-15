@@ -25,19 +25,13 @@ func test_miami_game_hud_contains_full_map() -> bool:
 	return ok
 
 
-func test_miami_keeps_cinematic_quality_floor() -> bool:
-	# The map now ships a HIGH floor so SSIL (indirect bounce) and volumetric fog
-	# are on by default — the authored Environment enables both, and a MEDIUM
-	# floor used to silently gate them off at runtime. A capable machine can
-	# still resolve ULTRA via $GTA_QUALITY, hence the >= comparison.
+func test_miami_allows_the_low_quality_tier() -> bool:
 	var packed := MIAMI_SCENE
 	if packed == null:
 		return false
 	var scene := packed.instantiate()
 	var world_quality := scene.get_node("WorldEnvironment") as WorldQuality
-	var ok := (
-		world_quality != null and world_quality.minimum_tier >= CinematicEnvironment.Quality.HIGH
-	)
+	var ok := world_quality != null and world_quality.minimum_tier == GraphicsQuality.Tier.LOW
 	scene.free()
 	return ok
 

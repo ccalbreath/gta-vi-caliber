@@ -10,14 +10,20 @@ extends Node3D
 ## from the player's Y — flat-world assumption for now; a navmesh/raycast
 ## sample is a later refinement.
 
-## Pedestrian scene to populate the crowd with. Defaults to the standard one so
-## the director works the moment it is dropped into a scene.
-@export var pedestrian_scene: PackedScene = preload("res://scenes/npc/pedestrian.tscn")
+## Optional scene override. The production scene is loaded after startup so its
+## large character textures do not compete with the world transition.
+@export var pedestrian_scene: PackedScene
+@export_file("*.tscn") var pedestrian_scene_path: String = "res://scenes/npc/pedestrian.tscn"
+@export var pedestrian_load_delay: float = 2.0
 ## Optional Citizen scene (life-sim pedestrians: schedules, needs, barks).
 ## When set, citizen_fraction of spawns use it instead of pedestrian_scene,
 ## interleaved deterministically (CrowdDistribution.is_citizen_slot) so the
 ## street reads as a mix of commuters and drifters.
 @export var citizen_scene: PackedScene = null
+## Script-only production path: citizen.tscn adds no nodes, it only replaces
+## pedestrian.gd with citizen.gd. Swapping before _ready avoids holding the
+## nested Citizen -> Pedestrian PackedScene that leaks resources at exit.
+@export var citizen_script: Script = preload("res://scripts/npc/citizen.gd")
 @export_range(0.0, 1.0) var citizen_fraction: float = 0.0
 ## How many peds to keep alive around the player.
 @export var target_count: int = 12
@@ -58,6 +64,8 @@ extends Node3D
 ## Candidate spawn offsets to try per ped when a nav grid is set, before giving
 ## up for this tick — keeps peds out of buildings/water without busy-looping.
 @export var walkable_attempts: int = 8
+## Zero randomizes for normal play; benchmarks set a stable non-zero seed.
+@export var random_seed: int = 0
 
 ## Auto-build a walkability map from the physics world the first time the crowd
 ## ticks: a coarse grid is raycast straight down and any cell whose ground is
@@ -85,27 +93,37 @@ var _accum: float = 0.0
 # Monotonic spawn counter driving the citizen/pedestrian interleave.
 var _spawn_slot: int = 0
 var _base_target_count: int = -1
+var _scene_load_elapsed: float = 0.0
+var _scene_load_requested: bool = false
+var _scene_load_failed: bool = false
 
 
 func _ready() -> void:
-	_rng.randomize()
-	add_to_group("density_aware")
-	apply_graphics_setting(int(SettingsPanel.load_settings().get("graphics", 1)))
+	if random_seed == 0:
+		_rng.randomize()
+	else:
+		_rng.seed = random_seed
+	add_to_group("graphics_quality_aware")
+	apply_graphics_quality(GraphicsQuality.resolved_tier())
 
 
-func apply_graphics_setting(quality: int) -> void:
+func apply_graphics_quality(quality: int) -> void:
 	if _base_target_count == -1:
 		_base_target_count = target_count
-	match quality:
-		0:
-			target_count = maxi(1, int(_base_target_count * 0.25))
-		1:
-			target_count = maxi(1, int(_base_target_count * 0.6))
-		2:
-			target_count = _base_target_count
+	var multiplier := float(GraphicsQuality.profile(quality)["crowd_multiplier"])
+	target_count = maxi(1, int(round(_base_target_count * multiplier)))
+	_trim_to_target()
+
+
+func _trim_to_target() -> void:
+	while _peds.size() > target_count:
+		var ped: Node3D = _peds.pop_back()
+		if is_instance_valid(ped):
+			ped.queue_free()
 
 
 func _physics_process(delta: float) -> void:
+	_update_pedestrian_scene(delta)
 	_accum += delta
 	if _accum < tick_interval:
 		return
@@ -117,6 +135,30 @@ func _physics_process(delta: float) -> void:
 		_bake_nav(player.global_position)
 	_cull(player.global_position)
 	_spawn(player.global_position)
+
+
+func _update_pedestrian_scene(delta: float) -> void:
+	if pedestrian_scene != null or _scene_load_failed:
+		return
+	_scene_load_elapsed += delta
+	if SceneLoadState.should_request(
+		_scene_load_elapsed, pedestrian_load_delay, _scene_load_requested, pedestrian_scene != null
+	):
+		var error := ResourceLoader.load_threaded_request(pedestrian_scene_path, "PackedScene")
+		if error != OK:
+			_scene_load_failed = true
+			push_error("CrowdDirector: could not request %s" % pedestrian_scene_path)
+			return
+		_scene_load_requested = true
+	if not _scene_load_requested:
+		return
+	var status := ResourceLoader.load_threaded_get_status(pedestrian_scene_path)
+	if status == ResourceLoader.THREAD_LOAD_LOADED:
+		pedestrian_scene = ResourceLoader.load_threaded_get(pedestrian_scene_path) as PackedScene
+		_scene_load_failed = pedestrian_scene == null
+	elif SceneLoadState.has_failed(status):
+		_scene_load_failed = true
+		push_error("CrowdDirector: failed loading %s" % pedestrian_scene_path)
 
 
 ## Recycle peds that have drifted past the cull radius (or were freed elsewhere,
@@ -143,7 +185,7 @@ func _spawn(center: Vector3) -> void:
 		var pos := _find_spawn(center)
 		if pos == Vector3.INF:
 			continue  # nowhere walkable this tick; try again next tick
-		var ped := _next_scene().instantiate() as Node3D
+		var ped := _instantiate_next()
 		if ped == null:
 			return
 		_spawn_slot += 1
@@ -153,12 +195,19 @@ func _spawn(center: Vector3) -> void:
 		_peds.append(ped)
 
 
-## The scene for the next successful spawn: a Citizen on citizen slots when a
-## citizen scene is wired, the plain pedestrian otherwise.
-func _next_scene() -> PackedScene:
-	if citizen_scene != null and CrowdDistribution.is_citizen_slot(_spawn_slot, citizen_fraction):
-		return citizen_scene
-	return pedestrian_scene
+## Build the next pedestrian. Tests may provide a full citizen_scene override;
+## production swaps the script on the deferred pedestrian scene because
+## citizen.tscn contains no additional nodes.
+func _instantiate_next() -> Node3D:
+	var use_citizen := (
+		(citizen_scene != null or citizen_script != null)
+		and CrowdDistribution.is_citizen_slot(_spawn_slot, citizen_fraction)
+	)
+	var source := citizen_scene if use_citizen and citizen_scene != null else pedestrian_scene
+	var ped := source.instantiate() as Node3D
+	if ped != null and use_citizen and citizen_scene == null:
+		ped.set_script(citizen_script)
+	return ped
 
 
 ## Raycast a coarse grid of the surrounding area into a NavGrid: every cell whose

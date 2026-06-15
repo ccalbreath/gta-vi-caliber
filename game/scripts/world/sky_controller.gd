@@ -15,6 +15,9 @@ extends Node
 ## Real seconds for one full in-game day. 0 freezes time at `time_of_day`.
 @export var day_length_seconds: float = 1200.0
 
+## Allows deterministic benchmarks to isolate the cost of all key-light shadows.
+@export var shadows_enabled: bool = true
+
 ## The world's key light. Its basis is reoriented to point along the sun ray.
 @export var sun_light: DirectionalLight3D
 
@@ -37,8 +40,18 @@ var _base_volumetric_density: float = -1.0
 func _ready() -> void:
 	_resolve_refs()
 	_resolve_sky_material()
+	add_to_group("graphics_quality_aware")
+	apply_graphics_quality(GraphicsQuality.resolved_tier())
 	_cache_base_fog()
 	_apply(time_of_day)
+
+
+func apply_graphics_quality(tier: int) -> void:
+	var distance := float(GraphicsQuality.profile(tier)["shadow_distance"])
+	if sun_light != null:
+		sun_light.directional_shadow_max_distance = distance
+	if moon_light != null:
+		moon_light.directional_shadow_max_distance = distance
 
 
 ## Fill any unset node references by searching the scene. Lets the controller be
@@ -108,13 +121,13 @@ func _orient_sun(sun_dir: Vector3, tod: float) -> void:
 		_aim_light(sun_light, -sun_dir)
 		sun_light.light_color = SkyModel.light_color(tod)
 		sun_light.light_energy = SkyModel.light_energy(tod) * dim
-		sun_light.shadow_enabled = SkyModel.is_sun_up(tod)
+		sun_light.shadow_enabled = shadows_enabled and SkyModel.is_sun_up(tod)
 	if moon_light != null:
 		var moon_dir := SkyModel.moon_direction(tod)
 		_aim_light(moon_light, -moon_dir)
 		var night := SkyModel.night_amount(tod)
 		moon_light.light_energy = SkyModel.MOON_LIGHT_ENERGY * night * dim
-		moon_light.shadow_enabled = night > 0.5 and moon_dir.y > 0.0
+		moon_light.shadow_enabled = shadows_enabled and night > 0.5 and moon_dir.y > 0.0
 
 
 ## The weather layer's key-light scale (1.0 with no weather in the scene).
