@@ -271,6 +271,8 @@ step "ambient event probe"
 run_godot_checked "ambient event probe" "$GODOT_BIN" --headless --path game --script res://tests/ambient_event_probe.gd
 step "ambient street race probe"
 run_godot_checked "ambient street race probe" "$GODOT_BIN" --headless --path game --script res://tests/ambient_street_race_probe.gd
+step "ambient mugging probe"
+run_godot_checked "ambient mugging probe" "$GODOT_BIN" --headless --path game --script res://tests/ambient_mugging_probe.gd
 step "crowd contagion probe"
 run_godot_checked "crowd contagion probe" "$GODOT_BIN" --headless --path game --script res://tests/crowd_contagion_probe.gd
 step "disguise evasion probe"

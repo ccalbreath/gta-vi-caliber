@@ -71,7 +71,7 @@ Groups the live scene already publishes: `player`, `player_health`,
 | `TrafficSignal` | junction light cycle + right-of-way | `tick`, `light_for`, `should_stop`, `yields_to` | place at intersections; gate `TrafficCar` at the stop line |
 | `EmergencyServices` | ambulance/fire dispatch | `service_for`, `nearest_responder`, `should_dispatch`, `eta`, response timer | **wired live** via `ResponderDispatcher` (Node): group-polls `weapon_controller`, and on a player kill rolls out an ambulance that drives in, treats the scene, and clears. CI-guarded by `tests/responder_dispatcher_probe.gd`. TODO: WRECK/FIRE incidents off `VehicleHealth.just_exploded`, + a visible on-scene treat dwell |
 | `WeatherEffects` | rain/fog gameplay impact | `grip_multiplier`, `visibility_range`, `ai_sight_multiplier`, `ai_sight_range` | `WeatherController` exposes normalized wetness/fog, and `Police` now shortens spotting range in heavy rain/fog. TODO: feed wetness into vehicle grip/traffic speed |
-| `AmbientEvents` | weighted freeroam encounters (mugging/race/heist) | `trigger_next`, `eligible_ids`, `can_fire`, `trigger` | **wired live** via `AmbientEventDirector` (timer rolls by stars+district) + `AmbientEncounterSpawner` (handles `street_race` by activating the live `RaceController` and setting a `PlayerStats` objective). CI-guarded by `tests/ambient_event_probe.gd` + `tests/ambient_street_race_probe.gd`. TODO: spawn handlers for the remaining default ids (`mugging`, `getaway_driver`, …) |
+| `AmbientEvents` | weighted freeroam encounters (mugging/race/heist) | `trigger_next`, `eligible_ids`, `can_fire`, `trigger` | **wired live** via `AmbientEventDirector` (timer rolls by stars+district) + `AmbientEncounterSpawner` (handles `street_race` by activating the live `RaceController` and `mugging` by spawning a live mugging via `AmbientMuggingController`, both setting `PlayerStats` objectives). CI-guarded by `tests/ambient_event_probe.gd`, `tests/ambient_street_race_probe.gd`, and `tests/ambient_mugging_probe.gd`. TODO: spawn handlers for the remaining default ids (`getaway_driver`, `gang_shootout`, …) |
 
 ## Missions / activities
 
@@ -159,4 +159,7 @@ headless by `tests/character_switch_probe.gd`.
 `tests/miami_wiring_probe.gd`. `AmbientEncounterSpawner` listens for those signals
 and, for `street_race`, calls `RaceController.start_challenge()` plus a HUD
 objective on `PlayerStats` — CI-guarded by `tests/ambient_street_race_probe.gd`.
+For `mugging`, `AmbientMuggingController` spawns a victim + mugger, resolves when
+the mugger is killed or scared away, and sets/clears a HUD objective with a small
+cash reward — CI-guarded by `tests/ambient_mugging_probe.gd`.
 Remaining to wire: spawn/act handlers for the other default encounter ids.
