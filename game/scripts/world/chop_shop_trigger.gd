@@ -51,6 +51,11 @@ func _on_body_entered(body: Node) -> void:
 		return
 	if not (body is Car or body.is_in_group("starter_vehicles")):
 		return
+	# Only chop a car the player actually drives in. A starter car merely placed
+	# in the zone at world spawn sits at rest; ignore it so the boot-time vehicle
+	# placement can't get a starter car silently chopped on spawn.
+	if body is RigidBody3D and (body as RigidBody3D).linear_velocity.length() < 1.0:
+		return
 	resolve_chop(body as Node3D)
 
 

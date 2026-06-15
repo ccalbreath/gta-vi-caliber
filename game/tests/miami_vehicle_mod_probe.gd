@@ -54,6 +54,8 @@ func _resolve() -> bool:
 		return _fail("no VehicleModGarage in group 'vehicle_mod_shop'")
 	if _car == null:
 		return _fail("no drivable car in group 'vehicles'")
+	if not _garage.global_position.is_equal_approx(GARAGE_POS):
+		return _fail("garage moved from its authored position")
 	# Front the player enough to afford a tier so the probe exercises the buy path.
 	if _stats.has_method("add_money"):
 		_stats.add_money(50000)
@@ -62,12 +64,14 @@ func _resolve() -> bool:
 	# Sit in the car so the garage tunes a *driven* vehicle (parked cars are ignored).
 	if _car.has_method("enter"):
 		_car.enter(_player)
+	# Move the Area3D for the synthetic park. Teleporting a VehicleBody3D from
+	# SceneTree._process fights the rigid-body solver and can skip body_entered.
+	_garage.global_position = _car.global_position
 	_phase = "drive"
 	return false
 
 
 func _phase_drive() -> bool:
-	_car.global_position = GARAGE_POS
 	if _car is RigidBody3D:
 		(_car as RigidBody3D).linear_velocity = Vector3.ZERO
 	_t += 1
@@ -78,7 +82,16 @@ func _phase_drive() -> bool:
 			return _fail("upgrade installed but no car stat changed")
 		return _pass()
 	if _t >= DWELL_FRAMES:
-		return _fail("car parked in the garage but no upgrade was bought")
+		var overlaps: Array[Node3D] = _garage.get_overlapping_bodies()
+		var overlap_names: PackedStringArray = []
+		for body in overlaps:
+			overlap_names.append(body.name)
+		return _fail(
+			(
+				"car parked in the garage but no upgrade was bought (overlaps=%s)"
+				% ",".join(overlap_names)
+			)
+		)
 	return false
 
 

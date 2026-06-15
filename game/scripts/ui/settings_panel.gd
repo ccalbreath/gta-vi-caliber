@@ -215,23 +215,7 @@ static func apply(cfg: Dictionary, tree: SceneTree = null) -> void:
 
 ## Applies the graphics quality presets.
 static func apply_graphics(quality: int, tree: SceneTree) -> void:
-	if not tree or not tree.root:
-		return
-	var root := tree.root
-	match quality:
-		0:  # Low
-			root.msaa_3d = Viewport.MSAA_DISABLED
-			root.scaling_3d_scale = 0.75
-			RenderingServer.directional_shadow_atlas_set_size(2048, true)
-		1:  # Medium
-			root.msaa_3d = Viewport.MSAA_2X
-			root.scaling_3d_scale = 1.0
-			RenderingServer.directional_shadow_atlas_set_size(4096, true)
-		2:  # High
-			root.msaa_3d = Viewport.MSAA_4X
-			root.scaling_3d_scale = 1.0
-			RenderingServer.directional_shadow_atlas_set_size(8192, true)
-	tree.call_group("density_aware", "apply_graphics_setting", quality)
+	GraphicsQuality.apply_to_tree(GraphicsQuality.clamp_menu_tier(quality), tree)
 
 
 # --- Pure helpers (unit-tested) ------------------------------------------
@@ -273,7 +257,9 @@ static func load_settings() -> Dictionary:
 	out["sensitivity"] = clampf(
 		float(cfg.get_value(SECTION, "sensitivity", out["sensitivity"])), 0.0, 1.0
 	)
-	out["graphics"] = int(cfg.get_value(SECTION, "graphics", out["graphics"]))
+	out["graphics"] = GraphicsQuality.clamp_menu_tier(
+		int(cfg.get_value(SECTION, "graphics", out["graphics"]))
+	)
 	return out
 
 

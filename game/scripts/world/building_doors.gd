@@ -13,8 +13,10 @@ const DOOR_Y: float = 1.2
 
 ## Add an enter-door under `loader` for each enterable building. `proj` projects
 ## footprints into the loader's local metre frame (the same frame as the meshes).
-static func build(loader: Node3D, buildings: Array, proj: GeoProjection) -> void:
-	for b in Enterable.pick(buildings, MAX_DOORS):
+static func build(
+	loader: Node3D, buildings: Array, proj: GeoProjection, max_doors: int = MAX_DOORS
+) -> void:
+	for b in Enterable.pick(buildings, max_doors):
 		if BuildingUse.is_shop(String(b.get("kind", ""))):
 			continue
 		var ring := _project_ring(b.get("footprint", []), proj)

@@ -63,7 +63,7 @@ func _initialize() -> void:
 		var cop := Node3D.new()
 		cop.add_to_group("police")
 		root.add_child(cop)
-		cop.global_position = Vector3(POLICE_DIST + float(i), 0, 0)
+		cop.position = Vector3(POLICE_DIST + float(i), 0, 0)
 		_police.append(cop)
 
 

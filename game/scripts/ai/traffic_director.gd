@@ -40,6 +40,8 @@ extends Node3D
 @export var max_walkable_rise: float = 2.5
 @export_flags_3d_physics var ground_mask: int = 1
 @export var road_surface_y: float = 0.32
+## Zero randomizes for normal play; benchmarks set a stable non-zero seed.
+@export var random_seed: int = 0
 ## Ambient cars route along the real OSM road graph (RoadNetwork), staying this
 ## far to the RIGHT of travel so two-way streets don't meet head-on. The graph is
 ## built once off-thread from the district manifest; routing falls back to the
@@ -63,12 +65,15 @@ var _origin_offset: Vector3 = Vector3.ZERO
 
 
 func _ready() -> void:
-	_rng.randomize()
+	if random_seed == 0:
+		_rng.randomize()
+	else:
+		_rng.seed = random_seed
 	# Native worldcore SpatialHash when built, GDScript buckets otherwise.
 	_flow_grid = NeighborGrid.new(flow_range * 0.5)
-	add_to_group("density_aware")
+	add_to_group("graphics_quality_aware")
+	apply_graphics_quality(GraphicsQuality.resolved_tier())
 	add_to_group("traffic_director")
-	apply_graphics_setting(int(SettingsPanel.load_settings().get("graphics", 1)))
 	# Parse the map-wide road graph off the main thread (heavy: thousands of
 	# polylines) so it never competes with district streaming during load. Cars
 	# spawned before it is ready use the NavGrid/straight fallback for a beat.
@@ -82,16 +87,19 @@ func _exit_tree() -> void:
 		_roads_thread = null
 
 
-func apply_graphics_setting(quality: int) -> void:
+func apply_graphics_quality(quality: int) -> void:
 	if _base_target_count == -1:
 		_base_target_count = target_count
-	match quality:
-		0:
-			target_count = maxi(1, int(_base_target_count * 0.25))
-		1:
-			target_count = maxi(1, int(_base_target_count * 0.6))
-		2:
-			target_count = _base_target_count
+	var multiplier := float(GraphicsQuality.profile(quality)["traffic_multiplier"])
+	target_count = maxi(1, int(round(_base_target_count * multiplier)))
+	_trim_to_target()
+
+
+func _trim_to_target() -> void:
+	while _cars.size() > target_count:
+		var car: TrafficCar = _cars.pop_back()
+		if is_instance_valid(car):
+			car.queue_free()
 
 
 func _physics_process(delta: float) -> void:
