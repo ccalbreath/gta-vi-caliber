@@ -203,6 +203,8 @@ step "systems integration probe"
 "$GODOT_BIN" --headless --path game --script res://tests/systems_integration_probe.gd
 step "phone contact services probe"
 "$GODOT_BIN" --headless --path game --script res://tests/phone_contact_services_probe.gd
+step "phone mechanic probe"
+"$GODOT_BIN" --headless --path game --script res://tests/phone_mechanic_probe.gd
 
 # --- 8. combat audio + death-pose + weapon-mount + aim-pose probes -----------
 # The CC0 weapon/footstep samples all resolve and the audio nodes voice known /
