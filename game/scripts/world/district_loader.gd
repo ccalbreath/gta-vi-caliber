@@ -960,6 +960,7 @@ func _make_materials() -> void:
 	# roads, troweled stucco breaking up the masonry facade fills.
 	_set_detail_texture(_road_mat, "res://assets/textures/asphalt_albedo.png")
 	_set_detail_texture(_building_mat, "res://assets/textures/stucco_albedo.png")
+	FacadeMaterialBindings.apply_to(_building_mat)
 
 	_facade_glass_mat = StandardMaterial3D.new()
 	_facade_glass_mat.albedo_color = Color(0.045, 0.065, 0.085, 0.92)
