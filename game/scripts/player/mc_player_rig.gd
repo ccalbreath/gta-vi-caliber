@@ -34,6 +34,8 @@ var _weapon_controller: Node = null
 var _was_floor: bool = true
 var _step_accum: float = 0.0
 var _left_foot: bool = false
+var _aiming: bool = false
+var _planar_speed: float = 0.0
 
 
 func _ready() -> void:
@@ -116,7 +118,13 @@ func animate(
 	_was_floor = on_floor
 	_update_facing(planar_velocity, delta)
 	var speed := planar_velocity.length()
-	_ctrl.update_locomotion(speed, on_floor)
+	_planar_speed = speed
+	# Aiming on the ground holds the run-and-gun stance; everything else (armed but
+	# not aiming, airborne) uses normal locomotion with the gun in hand.
+	if _aiming and on_floor and _ctrl.has_clip(MeshyAnimController.AIM_CLIP):
+		_ctrl.aim(speed)
+	else:
+		_ctrl.update_locomotion(speed, on_floor)
 	_tick_footsteps(speed, on_floor, delta)
 
 
@@ -151,6 +159,45 @@ func _aim_yaw() -> float:
 func set_phone(raised: bool) -> void:
 	if _ctrl != null and raised:
 		_ctrl.play_action("phone")
+
+
+## Carried-weapon pose, pushed each frame by the player's WeaponController (same
+## contract as the old AnimatedRig). Armed-but-not-aiming keeps normal locomotion
+## with the gun in hand; disarming also drops any aim so the stance can't stick.
+func set_armed(armed: bool) -> void:
+	if not armed:
+		_aiming = false
+
+
+## Raise/lower the aim stance. The MC is a run-and-gun rig with no static aim clip,
+## so animate() holds the Run_and_Shoot stance while this is set (frozen standing,
+## looped moving). pitch is unused: the model has no up/down aim variants, and
+## bullets come from the camera regardless of the held pose.
+func set_aiming(active: bool, _pitch: float) -> void:
+	_aiming = active
+
+
+## Fire feedback. While aiming, the gun is already raised, so the muzzle flash and
+## recoil (driven by the WeaponController) carry the shot and the held stance is
+## left untouched. Hip-firing snaps into a brief run-and-gun burst so the gun still
+## comes up; it is not restarted mid-burst so sustained auto-fire stays smooth.
+func play_shoot() -> void:
+	if _ctrl == null or _aiming:
+		return
+	if not _ctrl.is_action_playing(MeshyAnimController.AIM_CLIP):
+		_ctrl.play_action(MeshyAnimController.AIM_CLIP)
+
+
+## Reload one-shot: the standing clip when settled, the running clip when on the
+## move, so reloading mid-sprint doesn't snap the legs to a halt. Locomotion (or
+## the aim stance, if still aiming) resumes automatically when the clip ends.
+func play_reload() -> void:
+	if _ctrl == null:
+		return
+	if _planar_speed > _ctrl.idle_speed and _ctrl.has_clip("reload_run"):
+		_ctrl.play_action("reload_run")
+	else:
+		_ctrl.play_action("reload")
 
 
 ## Synthesise footstep beats from the gait, since the Meshy clips carry no
