@@ -72,9 +72,7 @@ func test_prepares_render_navigation_and_facade_inputs() -> void:
 func test_collision_commit_attaches_one_convex_building_per_step() -> void:
 	var district := _district_data()
 	var parent := Node3D.new()
-	var commit := DistrictCollisionCommit.new(
-		district["buildings"], GeoProjection.new(25.0, -80.0)
-	)
+	var commit := DistrictCollisionCommit.new(district["buildings"], GeoProjection.new(25.0, -80.0))
 	assert_bool(commit.step(parent)).is_false()
 	var body := parent.get_node("Collision") as StaticBody3D
 	assert_int(body.collision_layer).is_equal(BuildingCollision.WORLD_LAYER)

@@ -22,6 +22,7 @@ extends RefCounted
 ## GPU-budget tiers, cheapest → richest. Each tier is a superset of the one
 ## below it (see apply_quality). Ordering matters — code compares with `>=`.
 enum Quality { LOW, MEDIUM, HIGH, ULTRA }
+const GRAPHICS_QUALITY := preload("res://scripts/world/graphics_quality.gd")
 
 
 ## Apply the premium grade/AO/reflections/bloom/fog to an existing Environment,
@@ -230,4 +231,3 @@ static func apply_quality(env: Environment, tier: int = Quality.MEDIUM) -> Envir
 ## ships SSAO/SSR but holds back the GI pair that tanks FPS on weaker GPUs.
 static func resolved_tier() -> int:
 	return GRAPHICS_QUALITY.resolved_tier()
-const GRAPHICS_QUALITY := preload("res://scripts/world/graphics_quality.gd")
